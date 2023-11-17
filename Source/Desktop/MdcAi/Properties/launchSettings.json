@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "MdcAi (Package)": {
+      "commandName": "MsixPackage",      
+    },
+    "MdcAi (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

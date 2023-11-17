@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<local:ConversationBase
+  x:Class="MdcAi.ChatUI.Views.Conversation"
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:local="using:MdcAi.ChatUI.Views"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  xmlns:c="using:CommunityToolkit.WinUI.Controls"
+  xmlns:winUi="using:Sala.Extensions.WinUI"
+  xmlns:winUi1="using:CommunityToolkit.WinUI"
+  xmlns:chatUi="using:MdcAi.ChatUI"
+  mc:Ignorable="d">
+
+  <UserControl.Resources>
+    <winUi:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+    <winUi:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
+  </UserControl.Resources>
+
+  <c:DockPanel>
+
+    <CommandBar c:DockPanel.Dock="Top" DefaultLabelPosition="Right">
+      <AppBarToggleButton Icon="Library" Label="Streamed"
+                          IsChecked="{x:Bind ViewModel.Settings.Streaming, Mode=TwoWay}" />
+      <AppBarButton Icon="Edit" Label="Edit" Command="{x:Bind ViewModel.EditSelectedCmd}" />
+      <AppBarButton Icon="Refresh" Label="Regenerate" Command="{x:Bind ViewModel.RegenerateSelectedCmd}" />
+      <AppBarButton Icon="Delete" Label="Delete" Command="{x:Bind ViewModel.DeleteSelectedCmd}" />
+      <AppBarSeparator />
+      <AppBarButton Icon="Previous" Label="Prev" Command="{x:Bind ViewModel.SelectedMessage.PrevCmd, Mode=OneWay}" />
+      <AppBarButton Icon="Next" Label="Next" Command="{x:Bind ViewModel.SelectedMessage.NextCmd, Mode=OneWay}" />
+      <AppBarSeparator />
+      <AppBarButton Icon="Add" Label="Add" Command="{x:Bind ViewModel.AddCmd}" />
+
+      <AppBarButton Icon="Favorite"
+                    Label="Test"
+                    Command="{x:Bind ViewModel.DebugCmd}"
+                    Visibility="{x:Bind chatUi:Debugging.Enabled, Converter={StaticResource BoolToVisibilityConverter}}" />
+    </CommandBar>
+
+    <c:DockPanel>
+      <c:DockPanel c:DockPanel.Dock="Bottom">
+        <StackPanel c:DockPanel.Dock="Right" Margin="0,10,10,10" VerticalAlignment="Bottom">
+          <SplitButton Command="{x:Bind ViewModel.SendPromptCmd}" Padding="10,5,10,5">
+            <StackPanel Orientation="Horizontal">
+              <TextBlock Text="{x:Bind ViewModel.Settings.Model, Mode=OneWay}" />
+              <SymbolIcon Symbol="Send" VerticalAlignment="Center" Margin="10,1,10,0" />
+            </StackPanel>
+            <SplitButton.Flyout>
+              <MenuFlyout x:Name="modelsMenu" />
+            </SplitButton.Flyout>
+          </SplitButton>
+        </StackPanel>
+
+        <StackPanel>
+          <StackPanel Margin="10,10,10,0"
+                      Orientation="Horizontal"
+                      Visibility="{x:Bind ViewModel.EditMessage, Converter={StaticResource NullToVisibilityConverter}, Mode=OneWay}">
+            <TextBlock FontSize="12"
+                       Foreground="{ThemeResource SystemAccentColorLight1}">
+              <Run Text="Editing message sent on" />
+              <Run Text="{x:Bind ViewModel.EditMessage.Message.CreatedTs, Mode=OneWay}" />
+              <Hyperlink winUi1:HyperlinkExtensions.Command="{x:Bind ViewModel.CancelEditCmd}">
+                <Run Text="(Cancel Edit)" />
+              </Hyperlink>
+            </TextBlock>
+          </StackPanel>
+          <TextBox x:Name="PromptField"
+                   Margin="10"
+                   MaxHeight="400"
+                   AcceptsReturn="True"
+                   PlaceholderText="Write your prompt here"
+                   ScrollViewer.VerticalScrollBarVisibility="Auto"
+                   TextWrapping="Wrap"
+                   Text="{x:Bind ViewModel.Prompt.Contents, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+        </StackPanel>
+      </c:DockPanel>
+      <Grid>
+        <WebView2 x:Name="ChatWebView" DefaultBackgroundColor="Transparent" Visibility="Visible" />
+
+        <Grid VerticalAlignment="Bottom"
+              HorizontalAlignment="Right"
+              Margin="0,0,30,20"
+              Visibility="{x:Bind ViewModel.Tail.Message.IsCompleting, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, FallbackValue=Collapsed}">
+          <Button Content="Stop Generating"
+                  Padding="10,5,10,8"
+                  Command="{x:Bind ViewModel.Tail.Message.StopCompletionCmd, Mode=OneWay}">
+            <Button.Resources>
+              <!-- Transparent backgrounds so the button is visible but translucent -->
+              <SolidColorBrush x:Key="ButtonBackground" Color="#96b83b32" />
+              <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#CBde574e" />
+              <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#96962a23" />
+              <SolidColorBrush x:Key="ButtonBackgroundDisabled" Color="#64b83b32" />
+            </Button.Resources>
+          </Button>
+        </Grid>
+      </Grid>
+    </c:DockPanel>
+  </c:DockPanel>
+</local:ConversationBase>

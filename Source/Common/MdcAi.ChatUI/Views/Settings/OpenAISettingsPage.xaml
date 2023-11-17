@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<local:OpenAISettingsPageBase
+  x:Class="MdcAi.ChatUI.Views.OpenAISettingsPage"
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:local="using:MdcAi.ChatUI.Views"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  xmlns:controls="using:CommunityToolkit.WinUI.Controls"
+  xmlns:controls1="using:CommunityToolkit.WinUI.UI.Controls"
+  xmlns:winUi="using:Sala.Extensions.WinUI"
+  mc:Ignorable="d"
+  Background="Transparent">
+
+  <Page.Resources>
+    <winUi:NullToVisibilityConverter x:Key="NullToVisibilityConverterInv" />
+  </Page.Resources>
+
+  <controls:SettingsExpander x:Name="apiExpander"
+                             Header="OpenAI API Access"
+                             HeaderIcon="Permissions"
+                             Description="Your OpenAI API Credentials. These settings are saved to your account's Windows Credentials and only you can access them.">
+    <controls:SettingsExpander.Items>
+      <controls:SettingsCard Header="API Keys">
+        <controls:SettingsCard.Description>
+          <RichTextBlock>
+            <Paragraph>
+              API keys you wish to use with this app. Separate your keys with
+              <Bold>ENTER</Bold> key. First key is going to be used.
+            </Paragraph>
+          </RichTextBlock>
+        </controls:SettingsCard.Description>
+        <StackPanel>
+          <TextBox MinWidth="400"
+                   AcceptsReturn="True"
+                   IsSpellCheckEnabled="False"
+                   Text="{x:Bind ViewModel.ApiKeys, Mode=TwoWay, TargetNullValue='{x:Null}'}" />
+          <HyperlinkButton Content="Remove Keys" 
+                           Click="ButtonBase_OnClick" 
+                           Margin="0,10,0,0" 
+                           Visibility="{x:Bind ViewModel.ApiKeys, Mode=OneWay, Converter={StaticResource NullToVisibilityConverterInv}}"/>
+        </StackPanel>
+      </controls:SettingsCard>
+
+      <controls:SettingsCard Header="Organisation Name">
+        <controls:SettingsCard.Description>
+          <RichTextBlock>
+            <Paragraph>
+              Your or your organisation's name (optional), which will be sent as part of the request to OpenAI.
+            </Paragraph>
+          </RichTextBlock>
+        </controls:SettingsCard.Description>
+        <TextBox MinWidth="400"
+                 IsSpellCheckEnabled="False"
+                 Text="{x:Bind ViewModel.OrganisationName, Mode=TwoWay}" />
+      </controls:SettingsCard>
+
+    </controls:SettingsExpander.Items>
+
+  </controls:SettingsExpander>
+</local:OpenAISettingsPageBase>

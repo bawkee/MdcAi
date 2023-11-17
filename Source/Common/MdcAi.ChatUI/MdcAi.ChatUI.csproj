@@ -1,0 +1,89 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net6.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>MdcAi.ChatUI</RootNamespace>
+    <RuntimeIdentifiers>win10-x86;win10-x64;win10-arm64</RuntimeIdentifiers>
+    <Platforms>AnyCPU;x86;x64;ARM64</Platforms>
+    <UseWinUI>true</UseWinUI>
+    <EnableMsixTooling>true</EnableMsixTooling>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="MdcAi.ChatUI.csproj.DotSettings" />
+    <None Remove="Views\Conversation.xaml" />
+    <None Remove="Views\OpenAISettingsPage.xaml" />
+    <None Remove="Views\Settings.xaml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.WinUI.Controls.SettingsControls" Version="8.0.230907" />
+    <PackageReference Include="CommunityToolkit.WinUI.UI.Controls.Markdown" Version="7.1.2" />
+    <PackageReference Include="Markdig" Version="0.33.0" />
+    <PackageReference Include="ReactiveMarbles.ObservableEvents.SourceGenerator" Version="1.3.1" />
+    <PackageReference Include="ReactiveUI.Fody" Version="19.5.1" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.4.231008000" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.22621.756" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MdcAi.Extensions\MdcAi.Extensions.csproj" />
+    <ProjectReference Include="..\Sala.Extensions.Orm\Sala.Extensions.Orm.csproj" />
+    <ProjectReference Include="..\Sala.Extensions.WinUI\Sala.Extensions.WinUI.csproj" />
+    <ProjectReference Include="..\Mdc.OpenAiApi\Mdc.OpenAiApi.csproj" />
+    <ProjectReference Include="..\MdcAi.ChatUI.LocalDal\MdcAi.ChatUI.LocalDal.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="System" />
+    <Using Include="System.Collections" />
+    <Using Include="System.Collections.Generic" />
+    <Using Include="System.Collections.ObjectModel" />
+    <Using Include="System.Linq" />
+    <Using Include="System.Diagnostics" />
+    <Using Include="System.Threading.Tasks" />
+    <Using Include="System.Reactive" />
+    <Using Include="System.Reactive.Disposables" />
+    <Using Include="System.Reactive.Subjects" />
+    <Using Include="System.Reactive.Linq" />
+    <Using Include="ReactiveUI" />
+    <Using Include="ReactiveUI.Fody.Helpers" />
+    <Using Include="DynamicData.Binding" />
+    <Using Include="System.Text" />
+    <Using Include="Sala.Extensions.WinUI" />
+    <Using Include="MdcAi.Extensions" />
+    <Using Include="Sala.Extensions.Orm" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Chat.Designer.cs">
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Chat.settings</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Chat.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Chat.Designer.cs</LastGenOutput>
+    </None>
+    <Page Update="Views\OpenAISettingsPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Update="Views\Settings.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Page Update="Views\Conversation.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Themes\" />
+    <Folder Include="Views\Settings\" />
+  </ItemGroup>
+</Project>

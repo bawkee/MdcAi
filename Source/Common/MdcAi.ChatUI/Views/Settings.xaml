@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<local:SettingsBase
+  x:Class="MdcAi.ChatUI.Views.Settings"
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:local="using:MdcAi.ChatUI.Views"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  xmlns:winUi="using:Sala.Extensions.WinUI"
+  mc:Ignorable="d">
+
+  <StackPanel Margin="20">
+    <winUi:ViewHost ViewModel="{x:Bind ViewModel.OpenAi}" />
+  </StackPanel>
+</local:SettingsBase>

@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<Page
+  x:Class="MdcAi.Views.RootPage"
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:local="using:MdcAi.Views"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  xmlns:winUi="using:Sala.Extensions.WinUI"
+  mc:Ignorable="d"
+  Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+  <Grid>
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="Auto" />
+      <ColumnDefinition />
+    </Grid.ColumnDefinitions>
+
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="*" />
+    </Grid.RowDefinitions>
+
+    <VisualStateManager.VisualStateGroups>
+      <VisualStateGroup x:Name="TitleBarStates">
+        <VisualState x:Name="Default" />
+        <VisualState x:Name="Compact">
+          <VisualState.Setters>
+            <Setter Target="AppTitleBar.Margin" Value="96,0,0,0" />
+            <Setter Target="NaviPivot.Margin" Value="0,48,0,0" />
+          </VisualState.Setters>
+        </VisualState>
+        <VisualState x:Name="Top">
+          <VisualState.Setters>
+            <Setter Target="AppTitleBar.Margin" Value="16,0,0,0" />
+          </VisualState.Setters>
+        </VisualState>
+      </VisualStateGroup>
+      <VisualStateGroup x:Name="WindowActivationStates">
+        <VisualState x:Name="Activated" />
+        <VisualState x:Name="Deactivated">
+          <VisualState.Setters>
+            <Setter Target="AppTitle.Foreground" Value="{ThemeResource TextFillColorTertiaryBrush}" />
+          </VisualState.Setters>
+        </VisualState>
+      </VisualStateGroup>
+    </VisualStateManager.VisualStateGroups>
+
+    <Border
+      x:Name="AppTitleBar"
+      Grid.Column="1"
+      Height="{Binding ElementName=NavigationViewControl, Path=CompactPaneLength}"
+      Margin="48,0,0,0"
+      VerticalAlignment="Stretch"
+      AutomationProperties.AutomationId="AppTitleBar"
+      Canvas.ZIndex="1"
+      IsHitTestVisible="True">
+
+      <StackPanel VerticalAlignment="Center"
+                  Orientation="Horizontal">
+        <Image Width="18" />
+
+        <TextBlock
+          x:Name="AppTitle"
+          Margin="0,0,0,0"
+          VerticalAlignment="Center"
+          Style="{ThemeResource CaptionTextBlockStyle}"
+          FontSize="15"
+          Text="MdcAi" />
+      </StackPanel>
+    </Border>
+
+    <NavigationView x:Name="NavigationViewControl"
+                    OpenPaneLength="200"
+                    ExpandedModeThresholdWidth="1500"
+                    CompactModeThresholdWidth="800"
+                    SelectionChanged="NavigationView_OnSelectionChanged"
+                    DisplayModeChanged="NavigationView_OnDisplayModeChanged"
+                    IsTitleBarAutoPaddingEnabled="False"
+                    Canvas.ZIndex="0"
+                    Grid.RowSpan="2"
+                    Grid.Column="1">
+      <NavigationView.MenuItems>
+        <NavigationViewItem Icon="Message" Content="Chat" x:Name="ChatNaviItem" />
+      </NavigationView.MenuItems>
+
+      <Pivot x:Name="NaviPivot" Padding="0">
+        <Pivot.Resources>
+          <Style TargetType="PivotItem">
+            <Setter Property="Margin" Value="0,-50,0,0" />
+          </Style>
+        </Pivot.Resources>
+        <PivotItem x:Name="ConversationPivotItem">
+          <winUi:ViewHost ViewModel="{x:Bind ViewModel.Conversation}" />
+        </PivotItem>
+        <PivotItem x:Name="SettingsPivotItem">
+          <winUi:ViewHost ViewModel="{x:Bind ViewModel.Settings}" />
+        </PivotItem>
+      </Pivot>
+    </NavigationView>
+  </Grid>
+
+</Page>

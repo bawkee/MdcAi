@@ -1,0 +1,122 @@
+.chat-list {
+  font-family: Arial, sans-serif;
+}
+
+/* Main host for the item */
+.chat-item {
+  padding: 5px 5px 5px 10px;
+  position: relative;
+  cursor: pointer;
+  user-select: none;
+  text-align: left;
+}
+
+.chat-item::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  /* Important to ensure the overlay doesn't interfere with clicks */
+  pointer-events: none;
+}
+
+/* Lighter overlay for user messages */
+.chat-item.user::before {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+/* Selection marque */
+.chat-item-marque {
+  position: absolute;
+  top: 50%;
+  left: 0px;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 100%;
+  background-color: transparent;
+}
+
+/* When the chat item is active, adjust the marque's color */
+.chat-item.active .chat-item-marque {
+  background-color: #007BFF;
+}
+
+.chat-item-content {
+  padding: 5px;
+  user-select: text;
+}
+
+/* Little informational text (role, timestmap, version etc.) */
+.chat-item-info {
+  font-size: 8pt;
+  color: #777;
+  margin-bottom: 5px;
+  display: inline-block;
+}
+
+.chat-item-info-role {
+  font-weight: 900;
+}
+
+.chat-item-info-version {
+  margin: 0px 8px 0px 8px;
+  padding-top: 3px;
+  padding-bottom: 2px;
+  line-height: 1;
+  padding-left: 8px;
+  padding-right: 8px;
+  border: 1px solid transparent;
+  background-color: #007BFF;
+  color: white;
+  border-radius: 10px;
+}
+
+.chat-item-info-createdts {
+  margin: 0px 4px 0px 4px;
+}
+
+@keyframes blink {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  20% {
+    opacity: 0.3;
+  }
+}
+
+#caret {
+  border-left: 8px solid white;
+  height: 0.5em;
+  width: 0;
+  margin-left: 5px;
+  animation: blink 1s infinite 0.3s;
+}
+
+.markdown-body pre {
+  border: 1px solid transparent;
+}
+
+.selected-code-block {
+  border: 1px solid white !important;
+}
+
+.code-block-div {
+  position: relative;
+}
+
+.code-block-copy-button {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  opacity: 0.4;
+  transition: all 0.3s ease;
+}
+
+.code-block-copy-button:hover {
+  opacity: 1;
+}

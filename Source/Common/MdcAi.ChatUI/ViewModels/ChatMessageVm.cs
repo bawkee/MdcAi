@@ -119,7 +119,7 @@ public class ChatMessageVm : ViewModel
 
     private static string ToUserHtml(string content) =>
         HttpUtility.HtmlEncode(content)
-                   .Replace("\r\n", "<br />");
+                   .Replace("\r", "<br />");
 
     private async Task<string> GenerateResponse()
     {

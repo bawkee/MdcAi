@@ -15,7 +15,7 @@ public class ChatSettingsVm : ViewModel
 
     [Reactive, Map]
     public string Premise { get; set; } =
-        "You are a helpful but cynical and humorous assistant, a joker of sorts. You give short and hesitant answers. Use md syntax.";
+        "You are a helpful but cynical and humorous assistant, a joker of sorts. You give short answers, but when asked to generate code (especially tedious, repetitive code), you are generous and tend to obide. Use md syntax and be sure to specify language for code blocks.";
 
     public ChatSettingsVm(ChatSettingsVm copyFrom = null) { copyFrom?.MapTo(this); }
 }

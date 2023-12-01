@@ -10,6 +10,7 @@ namespace MdcAi.Views
     using ViewModels;
     using Microsoft.UI.Xaml;
     using Microsoft.UI.Xaml.Controls;
+    using ReactiveMarbles.ObservableEvents;
 
     /// <summary>
     /// An empty window that can be used on its own or navigated to within a Frame.
@@ -25,7 +26,13 @@ namespace MdcAi.Views
             InitializeComponent();
 
             ExtendsContentIntoTitleBar = true;
-        }
+
+            this.Events()
+                .Activated
+                .Take(1)
+                .Do(_ => ViewModel.Activator.Activate())
+                .Subscribe();
+        }        
 
         //private async void btn1_Click(object sender, RoutedEventArgs e)
         //{

@@ -57,6 +57,8 @@ public static class DbExtensions
         convo.Name = source.Name;
         convo.CreatedTs = source.CreatedTs;
 
+        convo.Head = source.Messages.FromDbMessages(convo);
+
         return convo;
     }
 

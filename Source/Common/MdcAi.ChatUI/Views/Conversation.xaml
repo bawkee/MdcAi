@@ -23,25 +23,25 @@
     <CommandBar c:DockPanel.Dock="Top" DefaultLabelPosition="Right">
       <AppBarToggleButton Icon="Library" Label="Streamed"
                           IsChecked="{x:Bind ViewModel.Settings.Streaming, Mode=TwoWay}" />
-      <AppBarButton Icon="Edit" Label="Edit" Command="{x:Bind ViewModel.EditSelectedCmd}" />
-      <AppBarButton Icon="Refresh" Label="Regenerate" Command="{x:Bind ViewModel.RegenerateSelectedCmd}" />
-      <AppBarButton Icon="Delete" Label="Delete" Command="{x:Bind ViewModel.DeleteSelectedCmd}" />
+      <AppBarButton Icon="Edit" Label="Edit" Command="{x:Bind ViewModel.EditSelectedCmd, Mode=OneWay}" />
+      <AppBarButton Icon="Refresh" Label="Regenerate" Command="{x:Bind ViewModel.RegenerateSelectedCmd, Mode=OneWay}" />
+      <AppBarButton Icon="Delete" Label="Delete" Command="{x:Bind ViewModel.DeleteSelectedCmd, Mode=OneWay}" />
       <AppBarSeparator />
       <AppBarButton Icon="Previous" Label="Prev" Command="{x:Bind ViewModel.SelectedMessage.PrevCmd, Mode=OneWay}" />
       <AppBarButton Icon="Next" Label="Next" Command="{x:Bind ViewModel.SelectedMessage.NextCmd, Mode=OneWay}" />
       <AppBarSeparator />
-      <AppBarButton Icon="Add" Label="Add" Command="{x:Bind ViewModel.AddCmd}" />
+      <AppBarButton Icon="Add" Label="Add" Command="{x:Bind ViewModel.AddCmd, Mode=OneWay}" />
 
       <AppBarButton Icon="Favorite"
                     Label="Test"
-                    Command="{x:Bind ViewModel.DebugCmd}"
+                    Command="{x:Bind ViewModel.DebugCmd, Mode=OneWay}"
                     Visibility="{x:Bind chatUi:Debugging.Enabled, Converter={StaticResource BoolToVisibilityConverter}}" />
     </CommandBar>
 
     <c:DockPanel>
       <c:DockPanel c:DockPanel.Dock="Bottom">
         <StackPanel c:DockPanel.Dock="Right" Margin="0,10,10,10" VerticalAlignment="Bottom">
-          <SplitButton Command="{x:Bind ViewModel.SendPromptCmd}" Padding="10,5,10,5">
+          <SplitButton Command="{x:Bind ViewModel.SendPromptCmd, Mode=OneWay}" Padding="10,5,10,5">
             <StackPanel Orientation="Horizontal">
               <TextBlock Text="{x:Bind ViewModel.Settings.Model, Mode=OneWay}" />
               <SymbolIcon Symbol="Send" VerticalAlignment="Center" Margin="10,1,10,0" />

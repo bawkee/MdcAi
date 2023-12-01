@@ -8,10 +8,30 @@
   xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
   xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
   xmlns:winUi="using:Sala.Extensions.WinUI"
+  xmlns:viewModels="using:MdcAi.ChatUI.ViewModels"
   mc:Ignorable="d"
   Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
   <Grid>
+    <Grid.Resources>
+      <DataTemplate x:Key="NavigationViewCategoryTemplate" x:DataType="viewModels:ConversationCategoryVm">
+        <NavigationViewItem Content="{x:Bind Name, Mode=OneWay}"
+                            MenuItemsSource="{x:Bind Items, Mode=OneWay}"
+                            Icon="Message" 
+                            Loaded="CategoryItem_OnLoaded"
+                            Tag="{x:Bind}"/>
+      </DataTemplate>
+
+      <DataTemplate x:Key="NavigationViewItemTemplate" x:DataType="viewModels:ConversationPreviewVm">
+        <NavigationViewItem Content="{x:Bind Name, Mode=OneWay}" />
+      </DataTemplate>
+
+      <local:NavigationViewDataTemplateSelector
+        x:Key="NavigationViewDataTemplateSelector"
+        ItemTemplate="{StaticResource NavigationViewItemTemplate}"
+        CategoryTemplate="{StaticResource NavigationViewCategoryTemplate}" />
+    </Grid.Resources>
+
     <Grid.ColumnDefinitions>
       <ColumnDefinition Width="Auto" />
       <ColumnDefinition />
@@ -67,23 +87,27 @@
           VerticalAlignment="Center"
           Style="{ThemeResource CaptionTextBlockStyle}"
           FontSize="15"
-          Text="MdcAi" />
+          Text="Mdc AI" />
       </StackPanel>
     </Border>
 
     <NavigationView x:Name="NavigationViewControl"
-                    OpenPaneLength="200"
-                    ExpandedModeThresholdWidth="1500"
+                    OpenPaneLength="250"
+                    ExpandedModeThresholdWidth="1100"
                     CompactModeThresholdWidth="800"
                     SelectionChanged="NavigationView_OnSelectionChanged"
                     DisplayModeChanged="NavigationView_OnDisplayModeChanged"
                     IsTitleBarAutoPaddingEnabled="False"
                     Canvas.ZIndex="0"
                     Grid.RowSpan="2"
-                    Grid.Column="1">
-      <NavigationView.MenuItems>
-        <NavigationViewItem Icon="Message" Content="Chat" x:Name="ChatNaviItem" />
-      </NavigationView.MenuItems>
+                    Grid.Column="1"
+                    MenuItemsSource="{x:Bind ViewModel.Conversations.Items, Mode=OneWay}"
+                    MenuItemTemplateSelector="{StaticResource NavigationViewDataTemplateSelector}"
+                    SelectedItem="{x:Bind ViewModel.Conversations.SelectedConversationPreview, Mode=TwoWay}">
+
+      <NavigationView.AutoSuggestBox>
+        <AutoSuggestBox x:Name="NavViewSearchBox" QueryIcon="Find" />
+      </NavigationView.AutoSuggestBox>
 
       <Pivot x:Name="NaviPivot" Padding="0">
         <Pivot.Resources>
@@ -92,7 +116,7 @@
           </Style>
         </Pivot.Resources>
         <PivotItem x:Name="ConversationPivotItem">
-          <winUi:ViewHost ViewModel="{x:Bind ViewModel.Conversation}" />
+          <winUi:ViewHost ViewModel="{x:Bind ViewModel.Conversations.SelectedConversation, Mode=OneWay}" CacheType="ByType" />
         </PivotItem>
         <PivotItem x:Name="SettingsPivotItem">
           <winUi:ViewHost ViewModel="{x:Bind ViewModel.Settings}" />

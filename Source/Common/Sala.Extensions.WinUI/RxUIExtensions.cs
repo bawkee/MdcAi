@@ -1,10 +1,12 @@
 ﻿namespace Sala.Extensions.WinUI;
 
 using System.Reactive;
+using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Windows.Input;
 using ReactiveUI;
 using MdcAi.Extensions;
+using System.Diagnostics;
 
 public static class RxUIExtensions
 {
@@ -73,4 +75,22 @@ public static class RxUIExtensions
            .PairWithPrevious()
            .Where(p => p.Item1 == false && p.Item2 == true)
            .Select(_ => Unit.Default);
+
+    /// <summary>
+    /// An idiomatic WhenActivated which combines view model and activation logic, crucial when you expect view model to change on a single view.
+    /// </summary>
+    public static IDisposable WhenActivated<TVm>(this IViewFor<TVm> item, Action<CompositeDisposable, TVm> block) where TVm : class =>
+        item.WhenActivated(disposables =>
+        {
+            item.WhenAnyValue(v => v.ViewModel)
+                .Select(vm => new { Vm = vm, Disposables = new CompositeDisposable() })
+                .SeriallyDispose(x => x.Disposables)
+                .Where(vm => vm != null)
+                .ObserveOn(RxApp.MainThreadScheduler)
+                .Do(x => block(x.Disposables, x.Vm))
+                .Subscribe()
+                .DisposeWith(disposables);
+
+            Disposable.Create(() => Debug.WriteLine($"Deactivated view for real this time")).DisposeWith(disposables);
+        });
 }

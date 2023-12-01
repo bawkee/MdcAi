@@ -1,7 +1,6 @@
 ﻿namespace MdcAi.ChatUI.ViewModels;
 
 using Windows.Storage;
-using LocalDal;
 using Mdc.OpenAiApi;
 using Newtonsoft.Json;
 
@@ -36,7 +35,7 @@ public class ConversationVm : ActivatableViewModel
     public ReactiveCommand<Unit, Unit> DebugCmd { get; }
 
     [Reactive] public ObservableCollection<ChatMessageVm> Messages { get; set; }
-    [Reactive] public WebViewRequestDto LastWebViewRequest { get; set; }
+    [Reactive] public WebViewRequestDto LastMessagesRequest { get; set; }
 
     public ConversationVm(IOpenAIApi api, SettingsVm globalSettings)
     {
@@ -44,7 +43,7 @@ public class ConversationVm : ActivatableViewModel
         GlobalSettings = globalSettings;
         Id = Guid.NewGuid().ToString();
         CreatedTs = DateTime.Now;
-        Name = "My Conversation";        
+        Name = "My Conversation";
 
         this.WhenAnyValue(vm => vm.Head)
             .Select(i => i == null ? Observable.Return((ChatMessageSelectorVm)null) : TrackNext(i))
@@ -90,7 +89,7 @@ public class ConversationVm : ActivatableViewModel
             .Switch()
             .Select(m => m.CreateWebViewSetMessageRequest())
             .ObserveOnMainThread()
-            .Do(r => LastWebViewRequest = r)
+            .Do(r => LastMessagesRequest = r)
             .Subscribe();
 
         this.WhenAnyValue(vm => vm.Tail)
@@ -286,23 +285,25 @@ public class ConversationVm : ActivatableViewModel
 
         DebugCmd = ReactiveCommand.Create(() =>
         {
-            var json = JsonConvert.SerializeObject(this.ToDbConversation(), Formatting.Indented);
+            var _ = JsonConvert.SerializeObject(this.ToDbConversation(), Formatting.Indented);
         });
+
+        Activator.Activated.Take(1)
+                 .Select(_ => this.WhenAnyValue(vm => vm.IsOpenAIReady)
+                                  .Where(i => i)
+                                  .Select(_ => Unit.Default))
+                 .Switch()
+                 .InvokeCommand(LoadModelsCmd);
+
+        if (Debugging.Enabled &&
+            Debugging.MockMessages &&
+            Debugging.AutoSendFirstMessage)
+            Activator.Activated.Take(1).InvokeCommand(AddCmd);
 
         this.WhenActivated(disposables =>
         {
-            this.WhenAnyValue(vm => vm.IsOpenAIReady)
-                .Where(i => i)
-                .Select(_ => Unit.Default)
-                .InvokeCommand(LoadModelsCmd)
-                .DisposeWith(disposables);
-
-            if (Debugging.Enabled &&
-                Debugging.MockMessages &&
-                Debugging.AutoSendFirstMessage)
-                Observable.Return(Unit.Default)
-                          .InvokeCommand(AddCmd)
-                          .DisposeWith(disposables);
+            Debug.WriteLine($"Activated {GetType()} - {Name}");
+            Disposable.Create(() => Debug.WriteLine($"Deactivated {GetType()} - {Name}")).DisposeWith(disposables);
         });
     }
 

@@ -12,7 +12,7 @@ public static class Debugging
     
     public static bool MockMessages = true; // Mocks system messages (doesn't use api)
     public static bool NumberedMessages = true; // If MockMessages true then mocked messages are simple generic numbered messages rather than some md
-    public static bool AutoSendFirstMessage = true; // If MockMessages true then automatically send the first user message 
+    public static bool AutoSendFirstMessage = false; // If MockMessages true then automatically send the first user message 
 
     public static bool MockModels = true; // Don't spam the api, mock models    
     public static bool NpmRenderer = false; // Render messages from the npm start loopback (localhost:3000)

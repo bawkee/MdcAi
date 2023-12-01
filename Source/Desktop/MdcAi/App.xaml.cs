@@ -30,6 +30,7 @@ using NLog.Common;
 using MdcAi.ChatUI.LocalDal;
 using MdcAi.ChatUI.ViewModels;
 using Microsoft.EntityFrameworkCore;
+using Windows.UI.Popups;
 
 /// <summary>
 /// Provides application-specific behavior to supplement the default Application class.
@@ -109,6 +110,7 @@ public partial class App : ILogging
 
     private async Task HandleException(Exception ex)
     {
+        // TODO: Must handle scenario where mutliple errors happen, they have to stack and be shown in the one single content dialog
         this.LogError(ex);
         var dialog = new ContentDialog
         {

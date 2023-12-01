@@ -1,6 +1,7 @@
 ﻿namespace MdcAi.ChatUI.LocalDal;
 
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 
@@ -30,7 +31,9 @@ public class UserProfileDbContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        var connString = DbPath == null ? null : $"Data Source={DbPath}";
+        if (optionsBuilder.IsConfigured)
+            return;
+        var connString = DbPath == null ? null : $"Data Source={DbPath}";        
         optionsBuilder.UseSqlite(connString);
     }
 }
@@ -39,6 +42,8 @@ public class DbConversation
 {
     [Key] public string IdConversation { get; set; }
     public string Name { get; set; }    
+    public string Category { get; set; }
+    public bool IsTrash { get; set; }
     public DateTime CreatedTs { get; set; }
 
     public List<DbMessage> Messages { get; set; }

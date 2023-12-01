@@ -3,6 +3,8 @@
 
 namespace MdcAi.Views;
 
+using Castle.MicroKernel.Registration;
+using MdcAi.ChatUI.ViewModels;
 using MdcAi.ViewModels;
 using Microsoft.UI;
 using Microsoft.UI.Xaml;
@@ -16,9 +18,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reactive.Concurrency;
 using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
+using ReactiveMarbles.ObservableEvents;
 
 /// <summary>
 /// An empty page that can be used on its own or navigated to within a Frame.
@@ -33,6 +37,8 @@ public sealed partial class RootPage
 
         InitializeComponent();
 
+        //CreateNavigationViewItems();
+
         Loaded += (s, e) =>
         {
             var wnd = ((App)Application.Current).Window;
@@ -40,15 +46,42 @@ public sealed partial class RootPage
         };
     }
 
+    private void CreateNavigationViewItems()
+    {
+        var parentItem = new NavigationViewItem
+        {
+            Icon = new SymbolIcon(Symbol.Message),
+            Content = "General",
+            Name = "ParentItem"
+        };
+
+        for (var i = 0; i < 100; i++)
+        {
+            var item1 = new NavigationViewItem
+            {
+                Icon = new SymbolIcon(Symbol.Message),
+                Content = $"Item {i}",
+                Tag = parentItem // Keeping inline with your XAML, although binding would make more sense
+            };
+
+            parentItem.MenuItems.Add(item1);
+        }
+
+        NavigationViewControl.MenuItems.Add(parentItem);
+    }
+
     private void NavigationView_OnSelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
     {
-        var selectedItem = (NavigationViewItem)args.SelectedItem;
-
-        if (selectedItem == ChatNaviItem)
-            NaviPivot.SelectedItem = ConversationPivotItem;
+        //if (selectedItem == ChatNaviItem)
+        //    NaviPivot.SelectedItem = ConversationPivotItem;
 
         if (args.IsSettingsSelected)
             NaviPivot.SelectedItem = SettingsPivotItem;
+        else
+        {
+            if (args.SelectedItem is ConversationPreviewVm)
+                NaviPivot.SelectedItem = ConversationPivotItem;
+        }
     }
 
     private void NavigationView_OnDisplayModeChanged(NavigationView sender, NavigationViewDisplayModeChangedEventArgs args)
@@ -62,4 +95,34 @@ public sealed partial class RootPage
                                              "Default",
                                          true);
     }
+
+    private void CategoryItem_OnLoaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is not NavigationViewItem { Tag: ConversationCategoryVm cat } item)
+            return;
+
+        if (ViewModel.Conversations.Items.First() == cat)
+            RxApp.MainThreadScheduler.Schedule(
+                // Hopefully this doesn't crash the delicate WinUI when there are hundreds of items... hopefully.
+                () =>  item.IsExpanded = true);
+    }
+}
+
+public class NavigationViewDataTemplateSelector : DataTemplateSelector
+{
+    public DataTemplate CategoryTemplate { get; set; }
+    public DataTemplate ItemTemplate { get; set; }
+
+    public NavigationViewDataTemplateSelector()
+    {
+        // Get x:DataType from the DataTemplate
+    }
+
+    protected override DataTemplate SelectTemplateCore(object item) =>
+        item switch
+        {
+            ConversationCategoryVm => CategoryTemplate,
+            ConversationPreviewVm => ItemTemplate,
+            _ => base.SelectTemplateCore(item)
+        };
 }

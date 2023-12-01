@@ -1,15 +1,22 @@
 ﻿namespace MdcAi.ViewModels;
 
+using MdcAi.ChatUI.LocalDal;
 using MdcAi.ChatUI.ViewModels;
 
+[Singleton]
 public class MainVm : ActivatableViewModel
 {
-    public ConversationVm Conversation { get; }
+    public ConversationsVm Conversations { get; }
     public SettingsVm Settings { get; }
 
-    public MainVm(ConversationVm conversation, SettingsVm settings)
+    public MainVm(ConversationsVm conversations, SettingsVm settings)
     {
-        Conversation = conversation;
+        Conversations = conversations;
         Settings = settings;
+
+        Activator.Activated                 
+                 .InvokeCommand(Conversations.LoadItems);
+
+        //this.WhenActivated(disposables => { });
     }
 }

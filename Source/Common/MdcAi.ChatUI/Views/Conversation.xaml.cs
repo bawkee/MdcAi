@@ -31,6 +31,7 @@ using Windows.System;
 using DynamicData;
 using DynamicData.Kernel;
 using ReactiveMarbles.ObservableEvents;
+using System.Reactive.Disposables;
 
 public sealed partial class Conversation : ILogging
 {
@@ -38,19 +39,105 @@ public sealed partial class Conversation : ILogging
     {
         InitializeComponent();
 
+        Debug.WriteLine($"Created view {GetType()}");
+
+        var initCoreInt = Observable.FromAsync(async () =>
+                                 {
+                                     await ChatWebView.EnsureCoreWebView2Async();
+                                     return ChatWebView.CoreWebView2;
+                                 })
+                                 .ObserveOnMainThread()                                 
+                                 .Publish();
+
+        initCoreInt.Connect();
+
+        var initCore = initCoreInt.Replay();
+
+        initCore.Connect();
+
+        // Feed the WebView2 all the resources it needs.
+        initCore.Select(core => core.Events()
+                                    .WebResourceRequested
+                                    .Select(e => new { Sender = core, Args = e.args }))
+                .Switch()
+                .SelectMany(async e =>
+                {
+                    await ProcessWebResource(e.Sender, e.Args);
+                    return Unit.Default;
+                })
+                .LogErrors(this)
+                .Subscribe();
+
+        initCore.Do(core =>
+                {
+                    core.Settings.IsWebMessageEnabled = true;
+                    core.AddWebResourceRequestedFilter("http://localhost:3431/*", CoreWebView2WebResourceContext.All);
+
+                    if (Debugging.Enabled && Debugging.NpmRenderer)
+                        ChatWebView.Source = new(@"http://localhost:3000/");
+                    else
+                        // Ideally localhost because otherwise you get security restrictions and need special flags to 
+                        // circumvent it.
+                        ChatWebView.Source = new(@"http://localhost:3431/index.html");
+                })
+                .LogErrors(this)
+                .Subscribe();
+
+        var messages = initCore
+                       .Select(core => core.Events()
+                                           .WebMessageReceived)
+                       .Switch()
+                       .Select(e =>
+                       {
+                           var req = JsonConvert.DeserializeObject<WebViewRequestDto>(e.args.WebMessageAsJson);
+                           return req;
+                       })
+                       .Publish()
+                       .RefCount();
+
+        var webReady = messages.Where(r => r.Name == "Ready")
+                               .Select(_ => Unit.Default)
+                               .Replay();
+
+        var isScrolledDown = true;
+
+        messages.Where(m => m.Name == "IsScrollToBottom")
+                .ObserveOnMainThread()
+                .Do(m => isScrolledDown = (bool)m.Data)
+                .Subscribe();
+
+        Subject<Unit> scrollToBottom = new();
+
+        scrollToBottom.Where(_ => isScrolledDown)
+                      // We delay because of animations and other UI gimmicks so as not to prematurely scroll
+                      .Throttle(TimeSpan.FromMilliseconds(500))
+                      .ObserveOnMainThread()
+                      .SelectMany(_ => Observable.FromAsync(async () => await ChatWebView.ScrollToBottom()))
+                      .Subscribe();
+
+        // Since this field is on autosize it will jump up and down and this will in turn cause webview to scroll up (for reasons unknown)
+        // so to work around that we try to pick up these cues and schedule scrolling back down.
+        PromptField.Events()
+                   .BeforeTextChanging
+                   .Where(e => e.args.NewText.Contains("\r") || e.args.NewText.Contains("\n"))
+                   .Do(_ => scrollToBottom.OnNext(Unit.Default))
+                   .Subscribe();
+
+        webReady.Connect();
+
+        initCore.Connect();
+
         this.WhenActivated(disposables =>
         {
-            var initCore = Observable.FromAsync(async () =>
-                                     {
-                                         await ChatWebView.EnsureCoreWebView2Async();
-                                         return ChatWebView.CoreWebView2;
-                                     })
-                                     .ObserveOnMainThread()
-                                     .Publish();
+            Debug.WriteLine($"Activated view {GetType()} - {GetHashCode()}");
+            Disposable.Create(() => Debug.WriteLine($"Deactivated view {GetType()} - {GetHashCode()}")).DisposeWith(disposables);
+        });
 
+        this.WhenActivated((disposables, viewModel) =>
+        {
             initCore.Select(core =>
                                 // Whenever system completes the message...
-                                ViewModel
+                                viewModel
                                     .WhenAnyValue(vm => vm.Messages)
                                     .WhereNotNull()
                                     .Select(m => m.LastOrDefault())
@@ -70,41 +157,13 @@ public sealed partial class Conversation : ILogging
                     .Subscribe()
                     .DisposeWith(disposables);
 
-            // Feed the WebView2 all the resources it needs.
-            initCore.Select(core => core.Events()
-                                        .WebResourceRequested
-                                        .Select(e => new { Sender = core, Args = e.args }))
-                    .Switch()
-                    .SelectMany(async e =>
-                    {
-                        await ProcessWebResource(e.Sender, e.Args);
-                        return Unit.Default;
-                    })
-                    .LogErrors(this)
-                    .Subscribe()
-                    .DisposeWith(disposables);
-
-            var messages = initCore
-                           .Select(core => core.Events()
-                                               .WebMessageReceived)
-                           .Switch()
-                           .Select(e =>
-                           {
-                               var req = JsonConvert.DeserializeObject<WebViewRequestDto>(e.args.WebMessageAsJson);
-                               return req;
-                           })
-                           .Publish()
-                           .RefCount();
-
             messages.Where(r => r.Name == "SetSelection")
-                    .Do(r => ViewModel.SelectedMessage = ViewModel.Messages[Convert.ToInt32(r.Data)].Selector)
+                    .Do(r => viewModel.SelectedMessage = viewModel.Messages[Convert.ToInt32(r.Data)].Selector)
                     .LogErrors(this)
                     .Subscribe()
                     .DisposeWith(disposables);
 
-            var webReady = messages.Where(r => r.Name == "Ready");
-
-            webReady.Select(_ => ViewModel.WhenAnyValue(vm => vm.LastWebViewRequest)
+            webReady.Select(_ => viewModel.WhenAnyValue(vm => vm.LastMessagesRequest)                                          
                                           .WhereNotNull())
                     .Switch()
                     .Do(r => ChatWebView.CoreWebView2.PostWebMessageAsJson(JsonConvert.SerializeObject(r)))
@@ -112,6 +171,7 @@ public sealed partial class Conversation : ILogging
                     .Subscribe()
                     .DisposeWith(disposables);
 
+            // TODO: Don't remember what is this supposed to serve?
             webReady.Throttle(TimeSpan.FromMilliseconds(500))
                     .ObserveOnMainThread()
                     .Do(_ => HideCaret())
@@ -119,34 +179,16 @@ public sealed partial class Conversation : ILogging
                     .Subscribe()
                     .DisposeWith(disposables);
 
-            webReady.Select(_ => ViewModel.WhenAnyValue(vm => vm.SelectedMessage)
+            webReady.Select(_ => viewModel.WhenAnyValue(vm => vm.SelectedMessage)
                                           .Skip(1))
                     .Switch()
-                    .Select(msg => msg?.Message == null ? -1 : ViewModel.Messages.IndexOf(msg.Message))
+                    .Select(msg => msg?.Message == null ? -1 : viewModel.Messages.IndexOf(msg.Message))
                     .Do(i => SetSelectedMessage(i))
                     .Subscribe()
                     .DisposeWith(disposables);
 
-
-            initCore.Do(core =>
-                    {
-                        core.Settings.IsWebMessageEnabled = true;
-                        core.AddWebResourceRequestedFilter("http://localhost:3431/*", CoreWebView2WebResourceContext.All);
-                        
-                        if (Debugging.Enabled && Debugging.NpmRenderer)
-                            ChatWebView.Source = new(@"http://localhost:3000/");
-                        else
-                            // Ideally localhost because otherwise you get security restrictions and need special flags to 
-                            // circumvent it.
-                            ChatWebView.Source = new(@"http://localhost:3431/index.html");
-                    })
-                    .LogErrors(this)
-                    .Subscribe()
-                    .DisposeWith(disposables);
-
-            initCore.Connect().DisposeWith(disposables);
-
-            ViewModel.WhenAnyValue(vm => vm.Models)
+            viewModel.WhenAnyValue(vm => vm.Models)
+                     .Skip(1)
                      .WhereNotNull()
                      .ObserveOnMainThread()
                      .Do(models =>
@@ -155,7 +197,7 @@ public sealed partial class Conversation : ILogging
                          modelsMenu.Items.AddRange(models.Select(m => new MenuFlyoutItem()
                          {
                              Text = m.ModelID,
-                             Command = ViewModel.SelectModelCmd,
+                             Command = viewModel.SelectModelCmd,
                              CommandParameter = (string)m
                          }));
 
@@ -179,33 +221,6 @@ public sealed partial class Conversation : ILogging
                      .Subscribe()
                      .DisposeWith(disposables);
 
-            var isScrolledDown = true;
-
-            messages.Where(m => m.Name == "IsScrollToBottom")
-                    .ObserveOnMainThread()
-                    .Do(m => isScrolledDown = (bool)m.Data)
-                    .Subscribe()
-                    .DisposeWith(disposables);
-
-            Subject<Unit> scrollToBottom = new();
-
-            scrollToBottom.Where(_ => isScrolledDown)
-                          // We delay because of animations and other UI gimmicks so as not to prematurely scroll
-                          .Throttle(TimeSpan.FromMilliseconds(500))
-                          .ObserveOnMainThread()
-                          .SelectMany(_ => Observable.FromAsync(async () => await ChatWebView.ScrollToBottom()))
-                          .Subscribe()
-                          .DisposeWith(disposables);
-
-            // Since this field is on autosize it will jump up and down and this will in turn cause webview to scroll up (for reasons unknown)
-            // so to work around that we try to pick up these cues and schedule scrolling back down.
-            PromptField.Events()
-                       .BeforeTextChanging
-                       .Where(e => e.args.NewText.Contains("\r") || e.args.NewText.Contains("\n"))
-                       .Do(_ => scrollToBottom.OnNext(Unit.Default))
-                       .Subscribe()
-                       .DisposeWith(disposables);
-
             PromptField.Events()
                        .PreviewKeyDown
                        .Select(e =>
@@ -216,8 +231,8 @@ public sealed partial class Conversation : ILogging
                                if (!isShift)
                                {
                                    e.Handled = true;
-                                   if (!string.IsNullOrEmpty(ViewModel.Prompt.Contents))
-                                       return ViewModel.SendPromptCmd.Execute();
+                                   if (!string.IsNullOrEmpty(viewModel.Prompt.Contents))
+                                       return viewModel.SendPromptCmd.Execute();
                                }
                            }
 
@@ -227,7 +242,7 @@ public sealed partial class Conversation : ILogging
                        .Subscribe()
                        .DisposeWith(disposables);
 
-            ViewModel.EditSelectedCmd
+            viewModel.EditSelectedCmd
                      .Do(_ =>
                      {
                          PromptField.Focus(FocusState.Keyboard);
@@ -240,7 +255,7 @@ public sealed partial class Conversation : ILogging
                        .KeyDown
                        .Where(e => e.Key == VirtualKey.Escape)
                        .Select(_ => Unit.Default)
-                       .InvokeCommand(ViewModel.CancelEditCmd);
+                       .InvokeCommand(viewModel.CancelEditCmd);
         });
 
         return;

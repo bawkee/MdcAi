@@ -1,2 +1,2 @@
-*.shm
-*.wal
+*.db-shm
+*.db-wal

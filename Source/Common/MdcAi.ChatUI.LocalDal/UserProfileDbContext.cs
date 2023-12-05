@@ -35,6 +35,12 @@ public class UserProfileDbContext : DbContext
             return;
         var connString = DbPath == null ? null : $"Data Source={DbPath}";        
         optionsBuilder.UseSqlite(connString);
+        optionsBuilder.LogTo(message =>
+        {
+            if (message.Contains("CommandExecuted"))
+                Debug.WriteLine(message);
+        });
+
     }
 }
 
@@ -45,7 +51,7 @@ public class DbConversation
     public string Category { get; set; }
     public bool IsTrash { get; set; }
     public DateTime CreatedTs { get; set; }
-
+    
     public List<DbMessage> Messages { get; set; }
 }
 

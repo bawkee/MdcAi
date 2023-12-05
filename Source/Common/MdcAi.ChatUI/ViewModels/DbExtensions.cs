@@ -41,7 +41,8 @@ public static class DbExtensions
             IdConversation = source.Id,
             Name = source.Name,
             CreatedTs = source.CreatedTs,
-            Messages = messages.ToList()
+            Messages = messages.ToList(),
+            Category = source.Category,
         };
 
         return convo;

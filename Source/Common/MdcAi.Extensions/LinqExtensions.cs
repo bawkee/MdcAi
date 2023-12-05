@@ -83,4 +83,10 @@ public static class LinqExtensions
     public static IEnumerable<T> WhereNotNull<T>(this IEnumerable<T?> source) where T : struct =>
         source.Where(i => i.HasValue)
               .Select(i => i.Value);
+
+    /// <summary>
+    /// Simply filters out null values.
+    /// </summary>
+    public static IEnumerable<T> WhereNotNull<T>(this IEnumerable<T> source) where T : class =>
+        source.Where(i => i != null);
 }

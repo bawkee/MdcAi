@@ -2,6 +2,7 @@
 
 using LocalDal;
 using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
 using System.Windows.Navigation;
 
 public class ConversationsVm : ViewModel
@@ -11,22 +12,23 @@ public class ConversationsVm : ViewModel
     [Reactive] public ObservableCollectionExtended<IConversationItem> Items { get; private set; }
 
     public ReactiveCommand<Unit, IConversationItem[]> LoadItems { get; }
+    public ReactiveCommand<IConversationItem[], Unit> SaveConversationsCmd { get; }
 
     public ConversationsVm()
     {
         LoadItems = ReactiveCommand.CreateFromTask(async () =>
         {
-            await using var db = Services.Container.Resolve<UserProfileDbContext>();
+            await using var ctx = Services.Container.Resolve<UserProfileDbContext>();
 
-            var data = await db.Conversations
-                               .Where(c => !c.IsTrash)
-                               .Select(c => new
-                               {
-                                   c.Name,
-                                   c.Category,
-                                   c.IdConversation
-                               })
-                               .ToArrayAsync();
+            var data = await ctx.Conversations
+                                .Where(c => !c.IsTrash)
+                                .Select(c => new
+                                {
+                                    c.Name,
+                                    c.Category,
+                                    c.IdConversation
+                                })
+                                .ToArrayAsync();
 
             var categories = data.GroupBy(d => d.Category)
                                  .Select(c =>
@@ -89,6 +91,77 @@ public class ConversationsVm : ViewModel
             .ObserveOnMainThread()
             .Do(c => c.Category.Items.Insert(0, c.Category.CreateNewItemPlaceholder()))
             .Subscribe();
+
+        SaveConversationsCmd = ReactiveCommand.CreateFromTask(async (IConversationItem[] items) =>
+        {
+            // TODO: Add Categories table... also, after all, I think most of this logic should be in convo vm and batch called from here
+            // I only have dillema with SaveChangesAsync - call THAT here
+
+            await using var ctx = Services.Container.Resolve<UserProfileDbContext>();
+
+            var convos = Items.OfType<ConversationCategoryVm>()
+                              .GetConversations()
+                              .Select(c => c.Conversation)
+                              .WhereNotNull()
+                              .ToArray();
+
+            foreach (var convo in convos.Where(c => c.IsDirty))
+            {
+                var dbconvo = convo.ToDbConversation();
+
+                if (await ctx.Conversations.AllAsync(c => c.IdConversation != dbconvo.IdConversation))
+                    ctx.Conversations.Add(dbconvo);
+                else
+                    ctx.Conversations.Update(dbconvo);
+            }
+
+            //foreach (var convo in dirtyConvos)
+            //    await ctx.Conversations
+
+            //             .Upsert(convo)                         
+            //             .RunAsync();
+
+            await ctx.SaveChangesAsync();
+
+            //var existingConvos =
+            //    (await ctx.Conversations
+            //              .Select(c => c.IdConversation)
+            //              .ToArrayAsync())
+            //    .ToHashSet();
+
+            //var convos = Items.OfType<ConversationCategoryVm>()
+            //                  .GetConversations()
+            //                  .Select(c => c.Conversation.ToDbConversation())
+            //                  //.Select(c => new
+            //                  //{
+            //                  //    Item = c,
+            //                  //    IsNew = !existingConvos.Contains(c.IdConversation)
+            //                  //})
+            //                  .ToArray();
+
+            //var newConvos = convos.Where(c => c.IsNew)
+            //                      .Select(c => c.Item)
+            //                      .ToArray();
+
+            //var updateConvos = convos.Where(c => !c.IsNew)
+            //                         .Select(c => c.Item)
+            //                         .ToArray();
+
+            //var newConvos = new List<DbConversation>();
+
+            //foreach(var convo in convos)
+            //{
+            //    if (!existingConvos.Contains(convo.IdConversation))
+            //        newConvos.Add(convo);
+            //    else
+            //    {
+
+            //    }
+            //}
+
+            //if (newConvos.Any())
+            //    ctx.Conversations.AddRange(newConvos);
+        });
     }
 }
 
@@ -116,7 +189,7 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationItem
     public string Id { get; set; }
     [Reactive] public string Name { get; set; }
     [Reactive] public bool IsNewPlaceholder { get; set; }
-    public ConversationCategoryVm Category { get; set; }
+    [Reactive] public ConversationCategoryVm Category { get; set; }
     [Reactive] public ConversationVm Conversation { get; private set; }
 
     public ConversationPreviewVm()
@@ -149,10 +222,23 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationItem
             .Skip(1)
             .Where(i => !i)
             .ObserveOnMainThread()
-            .Do(_ => Conversation.Name = Name = $"Chat {Category.Items.Count}")
+            .Do(_ => Name = $"Chat {Category.Items.Count}")
             .Subscribe();
 
+        UpdateField(vm => vm.Category, (c, v) => c.Category = v?.Name).Subscribe();
+        UpdateField(vm => vm.Name, (c, v) => c.Name = v).Subscribe();
 
+        return;
+
+        // Lets you propagate this preview data to the conversation automatically
+        IObservable<Unit> UpdateField<T>(Expression<Func<ConversationPreviewVm, T>> prop, Action<ConversationVm, T> action) =>
+            Observable.CombineLatest(this.WhenAnyValue(prop),
+                                     this.WhenAnyValue(vm => vm.Conversation),
+                                     (thing, convo) => (thing, convo))
+                      .Where(x => x is { convo: not null })
+                      .ObserveOnMainThread()
+                      .Do(x => action(x.convo, x.thing))
+                      .Select(_ => Unit.Default);
 
         //this.WhenActivated(disposables =>
         //{
@@ -160,4 +246,10 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationItem
         //    Disposable.Create(() => Debug.WriteLine($"Deactivated {Name}")).DisposeWith(disposables);
         //});
     }
+}
+
+public static class IConversationItemExtensions
+{
+    public static IEnumerable<ConversationPreviewVm> GetConversations(this IEnumerable<ConversationCategoryVm> categories) =>
+        categories.SelectMany(c => c.Items);
 }

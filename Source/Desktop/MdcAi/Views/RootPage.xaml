@@ -109,6 +109,10 @@
         <AutoSuggestBox x:Name="NavViewSearchBox" QueryIcon="Find" />
       </NavigationView.AutoSuggestBox>
 
+      <NavigationView.PaneHeader>
+        <Button Command="{x:Bind ViewModel.Conversations.SaveConversationsCmd}" Content="Save" />
+      </NavigationView.PaneHeader>
+
       <Pivot x:Name="NaviPivot" Padding="0">
         <Pivot.Resources>
           <Style TargetType="PivotItem">

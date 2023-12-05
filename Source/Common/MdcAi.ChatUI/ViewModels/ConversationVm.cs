@@ -3,6 +3,7 @@
 using Windows.Storage;
 using Mdc.OpenAiApi;
 using Newtonsoft.Json;
+using MdcAi.ChatUI.LocalDal;
 
 public class ConversationVm : ActivatableViewModel
 {
@@ -20,7 +21,10 @@ public class ConversationVm : ActivatableViewModel
     [Reactive] public bool IsOpenAIReady { get; private set; }
     [Reactive] public AiModel[] Models { get; private set; }
     [Reactive] public bool IsLoadingModels { get; private set; }
-
+    [Reactive] public bool IsNew { get; set; } = true;
+    [Reactive] public bool IsDirty { get; private set; } = true;
+    [Reactive] public bool IsTrash { get; set; }
+    [Reactive] public string Category { get; set; }
     [Reactive] public bool IsSendPromptEnabled { get; private set; }
 
     public ReactiveCommand<Unit, Unit> AddCmd { get; }
@@ -33,6 +37,8 @@ public class ConversationVm : ActivatableViewModel
     public ReactiveCommand<string, Unit> SelectModelCmd { get; }
     public ReactiveCommand<Unit, Unit> SendPromptCmd { get; }
     public ReactiveCommand<Unit, Unit> DebugCmd { get; }
+    public ReactiveCommand<Unit, Unit> SaveCmd { get; }
+    public ReactiveCommand<Unit, DbConversation> LoadCmd { get; }
 
     [Reactive] public ObservableCollection<ChatMessageVm> Messages { get; set; }
     [Reactive] public WebViewRequestDto LastMessagesRequest { get; set; }
@@ -262,6 +268,8 @@ public class ConversationVm : ActivatableViewModel
                 Prompt = new();
             });
 
+        // load?
+
         this.WhenAnyValue(vm => vm.GlobalSettings)
             .Select(s => s.WhenAnyValue(x => x.OpenAi.ApiKeys))
             .Switch()
@@ -283,9 +291,20 @@ public class ConversationVm : ActivatableViewModel
         //    })
         //    .Subscribe();
 
+        //SaveCmd = ReactiveCommand.CreateFromTask(async () =>
+        //{
+        //    await using var ctx = Services.Container.Resolve<UserProfileDbContext>();
+
+        //    if (IsNew)
+        //    {
+        //        var convo = this.ToDbConversation();
+        //        await ctx.AddAsync<DbConversation>(convo);
+        //    }           
+        //});
+
         DebugCmd = ReactiveCommand.Create(() =>
         {
-            var _ = JsonConvert.SerializeObject(this.ToDbConversation(), Formatting.Indented);
+            //var _ = JsonConvert.SerializeObject(this.ToDbConversation(), Formatting.Indented);
         });
 
         Activator.Activated.Take(1)
@@ -304,6 +323,8 @@ public class ConversationVm : ActivatableViewModel
         {
             Debug.WriteLine($"Activated {GetType()} - {Name}");
             Disposable.Create(() => Debug.WriteLine($"Deactivated {GetType()} - {Name}")).DisposeWith(disposables);
+
+
         });
     }
 

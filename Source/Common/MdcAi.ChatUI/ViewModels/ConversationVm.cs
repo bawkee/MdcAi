@@ -4,16 +4,20 @@ using Windows.Storage;
 using Mdc.OpenAiApi;
 using Newtonsoft.Json;
 using MdcAi.ChatUI.LocalDal;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using System.Windows.Input;
 
 public class ConversationVm : ActivatableViewModel
 {
     public IOpenAIApi Api { get; }
     public SettingsVm GlobalSettings { get; }
     public string Id { get; set; }
-    public DateTime CreatedTs { get; set; }
+    [Reactive] public DateTime CreatedTs { get; set; }
     [Reactive] public string Name { get; set; }
+    [Reactive] public string Category { get; set; }
     [Reactive] public ChatMessageSelectorVm Head { get; set; }
-    [Reactive] public ChatMessageSelectorVm Tail { get; set; }
+    [Reactive] public ChatMessageSelectorVm Tail { get; private set; }
     [Reactive] public ChatMessageSelectorVm SelectedMessage { get; set; }
     [Reactive] public ChatMessageSelectorVm EditMessage { get; set; }
     [Reactive] public ChatSettingsVm Settings { get; set; } = new();
@@ -21,11 +25,10 @@ public class ConversationVm : ActivatableViewModel
     [Reactive] public bool IsOpenAIReady { get; private set; }
     [Reactive] public AiModel[] Models { get; private set; }
     [Reactive] public bool IsLoadingModels { get; private set; }
-    [Reactive] public bool IsNew { get; set; } = true;
     [Reactive] public bool IsDirty { get; private set; } = true;
     [Reactive] public bool IsTrash { get; set; }
-    [Reactive] public string Category { get; set; }
     [Reactive] public bool IsSendPromptEnabled { get; private set; }
+    [Reactive] public bool IsLoading { get; private set; }
 
     public ReactiveCommand<Unit, Unit> AddCmd { get; }
     public ReactiveCommand<Unit, Unit> EditSelectedCmd { get; }
@@ -37,7 +40,7 @@ public class ConversationVm : ActivatableViewModel
     public ReactiveCommand<string, Unit> SelectModelCmd { get; }
     public ReactiveCommand<Unit, Unit> SendPromptCmd { get; }
     public ReactiveCommand<Unit, Unit> DebugCmd { get; }
-    public ReactiveCommand<Unit, Unit> SaveCmd { get; }
+    public ReactiveCommand<ConversationSaveOptions, Unit> SaveCmd { get; }
     public ReactiveCommand<Unit, DbConversation> LoadCmd { get; }
 
     [Reactive] public ObservableCollection<ChatMessageVm> Messages { get; set; }
@@ -51,63 +54,21 @@ public class ConversationVm : ActivatableViewModel
         CreatedTs = DateTime.Now;
         Name = "My Conversation";
 
+        // When Head is set, automatically track the entire tree and all its forks to set the Tail. This structure is a tree but it 
+        // renders a simple linked list so it is crucial that we always have the current head and tail.
         this.WhenAnyValue(vm => vm.Head)
             .Select(i => i == null ? Observable.Return((ChatMessageSelectorVm)null) : TrackNext(i))
             .Switch()
             .Do(t => Tail = t)
             .Subscribe();
 
-        this.WhenAnyValue(vm => vm.Tail)
-            .Where(t => t?.Message.Role == ChatMessageRole.User)
-            .Select(t => new
-            {
-                Tail = t,
-                Completion = new ChatMessageVm(this, ChatMessageRole.System)
-                {
-                    Previous = t.Message,
-                    Settings = new(t.Message.Settings),
-                }
-            })
-            .Do(x => x.Tail.Message.Next = x.Completion)
-            .Select(x => x.Completion.CompleteCmd.Execute())
-            .Switch()
-            .Subscribe();
-
+        // Automatically build the linked list when Tail changes. This is a flat list of the current state that we can use for rendering.
         this.WhenAnyValue(vm => vm.Tail)
             .Select(t => t?.WhenAnyValue(x => x.Message) ?? Observable.Return((ChatMessageVm)null))
             .Switch()
             .ObserveOnMainThread()
             .Select(_ => Head?.Message.GetNextMessages() ?? Enumerable.Empty<ChatMessageVm>())
             .Do(m => Messages = new(m.ToArray()))
-            .Subscribe();
-
-        this.WhenAnyValue(vm => vm.Messages)
-            .WhereNotNull()
-            .Select(m =>
-            {
-                if (m.Count > 0 && m.Last().IsCompleting)
-                    return m.Last()
-                            .WhenAnyValue(vm => vm.HTMLContent)
-                            .Throttle(TimeSpan.FromMilliseconds(50))
-                            .Select(_ => m);
-                return Observable.Return(m);
-            })
-            .Switch()
-            .Select(m => m.CreateWebViewSetMessageRequest())
-            .ObserveOnMainThread()
-            .Do(r => LastMessagesRequest = r)
-            .Subscribe();
-
-        this.WhenAnyValue(vm => vm.Tail)
-            .Select(t => t.WhenAnyValue(x => x.Message))
-            .Switch()
-            .SelectMany(t => t.CompleteCmd.WhenExecuting())
-            .Select(_ => this.WhenAnyValue(vm => vm.Messages)
-                             .Skip(1)
-                             .Take(1)
-                             .Where(m => m.Count > 0 && m.Last().Role == ChatMessageRole.System))
-            .Switch()
-            .Do(m => SelectedMessage = m.Last().Selector)
             .Subscribe();
 
         AddCmd = ReactiveCommand.CreateFromObservable(
@@ -268,7 +229,66 @@ public class ConversationVm : ActivatableViewModel
                 Prompt = new();
             });
 
-        // load?
+        LoadCmd = ReactiveCommand.CreateFromTask(async () =>
+        {
+            await using var ctx = Services.Container.Resolve<UserProfileDbContext>();
+
+            var convo = await ctx.Conversations
+                                 .Include(c => c.Messages)
+                                 .FirstOrDefaultAsync(c => c.IdConversation == Id);
+
+            return convo;
+        });
+
+        LoadCmd.IsExecuting
+               .ObserveOnMainThread()
+               .Do(i => IsLoading = i)
+               .Subscribe();
+
+        LoadCmd.ObserveOnMainThread()
+               .Do(convo =>
+               {
+                   Name = convo.Name;
+                   CreatedTs = convo.CreatedTs;
+                   Category = convo.Category;
+                   IsTrash = convo.IsTrash;
+                   Head = convo.Messages.FromDbMessages(this);
+                   IsDirty = false;
+               })
+               .Subscribe();
+
+        SaveCmd = ReactiveCommand.CreateFromTask(
+            async (ConversationSaveOptions opt) =>
+            {
+                var ctx = opt.DbContext ?? Services.Container.Resolve<UserProfileDbContext>();
+                var ctxScope = opt.DbContext == null ? ctx : Disposable.Empty;
+
+                using (ctxScope)
+                {
+                    var dbconvo = this.ToDbConversation();
+
+                    var existingConvo = await ctx.Conversations.FirstOrDefaultAsync(c => c.IdConversation == Id);
+
+                    if (existingConvo == null)
+                        ctx.Conversations.Add(dbconvo);
+                    else
+                    {
+                        existingConvo.Name = dbconvo.Name;
+                        existingConvo.Category = dbconvo.Category;
+                        existingConvo.IsTrash = dbconvo.IsTrash;
+
+                        await Task.WhenAll(dbconvo.Messages.Select(msg => ctx.Messages.Upsert(msg).RunAsync()));
+                    }
+
+                    if (opt.DbContext == null)
+                        await ctx.SaveChangesAsync();
+                }
+            },
+            this.WhenAnyValue(vm => vm.IsDirty));
+
+        SaveCmd.ObserveOnMainThread()
+               .Do(_ => IsDirty = false)
+               .Subscribe();
 
         this.WhenAnyValue(vm => vm.GlobalSettings)
             .Select(s => s.WhenAnyValue(x => x.OpenAi.ApiKeys))
@@ -319,12 +339,91 @@ public class ConversationVm : ActivatableViewModel
             Debugging.AutoSendFirstMessage)
             Activator.Activated.Take(1).InvokeCommand(AddCmd);
 
+        //var changeTracker = TrackChanges(nameof(Name),
+        //                                 nameof(Category));
+
+        //changeTracker.Select(_ => changeTracker.IsDirty())
+        //             .Do(i => IsDirty = i)
+        //             .Subscribe();
+
         this.WhenActivated(disposables =>
         {
             Debug.WriteLine($"Activated {GetType()} - {Name}");
             Disposable.Create(() => Debug.WriteLine($"Deactivated {GetType()} - {Name}")).DisposeWith(disposables);
 
+            // Trigger completions when user posts a message
+            this.WhenAnyValue(vm => vm.Tail)
+                .Where(t => t?.Message.Role == ChatMessageRole.User)
+                .Select(t => new
+                {
+                    Tail = t,
+                    Completion = new ChatMessageVm(this, ChatMessageRole.System)
+                    {
+                        Previous = t.Message,
+                        Settings = new(t.Message.Settings),
+                    }
+                })
+                .Do(x => x.Tail.Message.Next = x.Completion)
+                .Select(x => x.Completion.CompleteCmd.Execute())
+                .Switch()
+                .Subscribe()
+                .DisposeWith(disposables);
 
+            // Build request data to communicate with WebView for rendering
+            this.WhenAnyValue(vm => vm.Messages)
+                .WhereNotNull()
+                .Select(m =>
+                {
+                    if (m.Count > 0)
+                        return m.Last()
+                                .WhenAnyValue(vm => vm.HTMLContent)
+                                .Throttle(TimeSpan.FromMilliseconds(50))
+                                .Select(_ => m);
+                    return Observable.Return(m);
+                })
+                .Switch()
+                .Select(m => m.CreateWebViewSetMessageRequest())
+                .ObserveOnMainThread()
+                .Do(r =>
+                {
+                    //Debug.WriteLine($"Last message: {((WebViewSetMessagesRequestDto)r.Data).Messages.LastOrDefault()?.Content}");
+                    LastMessagesRequest = r;
+                })
+                .Subscribe()
+                .DisposeWith(disposables);
+
+            // TODO: Auto select last when loading from db as well and scroll to bottom
+
+            // Auto select the message generated by the completion system            
+            this.WhenAnyValue(vm => vm.Tail)
+                .Select(t => t.WhenAnyValue(x => x.Message))
+                .Switch()
+                .SelectMany(t => t.CompleteCmd.WhenExecuting())
+                // We actually need to wait for the Messages list to be created first, because WebView renders from this
+                .Select(_ => this.WhenAnyValue(vm => vm.Messages)
+                                 .Skip(1)
+                                 .Take(1)
+                                 .Where(m => m.Count > 0 && m.Last().Role == ChatMessageRole.System))
+                .Switch()
+                .Do(m => SelectedMessage = m.Last().Selector)
+                .Subscribe()
+                .DisposeWith(disposables);
+
+            this.WhenAnyValue(vm => vm.IsDirty)
+                .Where(v => !v)
+                .Select(_ => Observable.CombineLatest(
+                                           this.WhenAnyValue(vm => vm.Messages)
+                                               .Select(i => HashCode.Combine(i.Select(j => j.Content.GetHashCode()))),
+                                           this.WhenAnyValue(vm => vm.Name).Select(i => i.GetHashCode()),
+                                           this.WhenAnyValue(vm => vm.Category).Select(i => i.GetHashCode()))
+                                       .Select(i => HashCode.Combine(i))
+                                       .Skip(1)
+                                       .DistinctUntilChanged()
+                                       .Take(1))
+                .Switch()
+                .Do(_ => IsDirty = true)
+                .Subscribe()
+                .DisposeWith(disposables);
         });
     }
 
@@ -348,6 +447,11 @@ public class ConversationVm : ActivatableViewModel
               .Select(c => TrackNext(c.Selector))
               .Switch()
         );
+}
+
+public class ConversationSaveOptions
+{
+    public UserProfileDbContext DbContext { get; set; }
 }
 
 public class PromptVm : ViewModel

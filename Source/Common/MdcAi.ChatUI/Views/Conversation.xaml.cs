@@ -39,8 +39,6 @@ public sealed partial class Conversation : ILogging
     {
         InitializeComponent();
 
-        Debug.WriteLine($"Created view {GetType()}");
-
         var initCoreInt = Observable.FromAsync(async () =>
                                  {
                                      await ChatWebView.EnsureCoreWebView2Async();
@@ -135,28 +133,6 @@ public sealed partial class Conversation : ILogging
 
         this.WhenActivated((disposables, viewModel) =>
         {
-            initCore.Select(core =>
-                                // Whenever system completes the message...
-                                viewModel
-                                    .WhenAnyValue(vm => vm.Messages)
-                                    .WhereNotNull()
-                                    .Select(m => m.LastOrDefault())
-                                    .Where(m => m?.Role == ChatMessageRole.System)
-                                    .Select(m => m.WhenAnyValue(x => x.IsCompleting))
-                                    .Switch()
-                                    .DistinctUntilChanged()
-                                    .Where(i => !i)
-                                    .Select(_ => core))
-                    .Switch()
-                    // Give it some grace time...
-                    .Throttle(TimeSpan.FromMilliseconds(500))
-                    .ObserveOnMainThread()
-                    // And hide the caret.
-                    .Do(_ => HideCaret())
-                    .LogErrors(this)
-                    .Subscribe()
-                    .DisposeWith(disposables);
-
             messages.Where(r => r.Name == "SetSelection")
                     .Do(r => viewModel.SelectedMessage = viewModel.Messages[Convert.ToInt32(r.Data)].Selector)
                     .LogErrors(this)
@@ -171,16 +147,7 @@ public sealed partial class Conversation : ILogging
                     .Subscribe()
                     .DisposeWith(disposables);
 
-            // TODO: Don't remember what is this supposed to serve?
-            webReady.Throttle(TimeSpan.FromMilliseconds(500))
-                    .ObserveOnMainThread()
-                    .Do(_ => HideCaret())
-                    .LogErrors(this)
-                    .Subscribe()
-                    .DisposeWith(disposables);
-
-            webReady.Select(_ => viewModel.WhenAnyValue(vm => vm.SelectedMessage)
-                                          .Skip(1))
+            webReady.Select(_ => viewModel.WhenAnyValue(vm => vm.SelectedMessage))
                     .Switch()
                     .Select(msg => msg?.Message == null ? -1 : viewModel.Messages.IndexOf(msg.Message))
                     .Do(i => SetSelectedMessage(i))
@@ -209,7 +176,7 @@ public sealed partial class Conversation : ILogging
                              {
                                  var prompt = new ContentDialog
                                  {
-                                     Content = "The fuck do I know? 🤷‍♂️",
+                                     Content = "Dunno 🤷‍♂️",
                                      XamlRoot = XamlRoot,
                                      Title = "Explanation",
                                      CloseButtonText = "OK",
@@ -260,12 +227,6 @@ public sealed partial class Conversation : ILogging
 
         return;
 
-        void HideCaret() => ChatWebView.CoreWebView2.PostWebMessageAsJson(
-            JsonConvert.SerializeObject(new WebViewRequestDto
-            {
-                Name = "HideCaret"
-            }));
-
         void SetSelectedMessage(int index) => ChatWebView.CoreWebView2.PostWebMessageAsJson(
             JsonConvert.SerializeObject(new WebViewRequestDto
             {
@@ -298,7 +259,6 @@ public sealed partial class Conversation : ILogging
             await using var entryStream = entry.Open();
             using var entryStreamRam = await UnloadStreamAsRandomAccess(entryStream);
             e.Response = core.Environment.CreateWebResourceResponse(entryStreamRam, 200, "OK", $"Content-Type: {contentType}");
-            Debug.WriteLine($"Loading file: {path}");
         }
 
         deferral.Complete();

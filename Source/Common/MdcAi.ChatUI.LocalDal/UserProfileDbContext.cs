@@ -33,6 +33,7 @@ public class UserProfileDbContext : DbContext
     {
         if (optionsBuilder.IsConfigured)
             return;
+
         var connString = DbPath == null ? null : $"Data Source={DbPath}";        
         optionsBuilder.UseSqlite(connString);
         optionsBuilder.LogTo(message =>
@@ -40,7 +41,14 @@ public class UserProfileDbContext : DbContext
             if (message.Contains("CommandExecuted"))
                 Debug.WriteLine(message);
         });
+    }
 
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<DbConversation>()
+            .HasMany(e => e.Messages)
+            .WithOne(e => e.Conversation)
+            .HasForeignKey(e => e.IdConversation);                      
     }
 }
 
@@ -51,12 +59,14 @@ public class DbConversation
     public string Category { get; set; }
     public bool IsTrash { get; set; }
     public DateTime CreatedTs { get; set; }
-    
-    public List<DbMessage> Messages { get; set; }
+
+    public List<DbMessage> Messages { get; set; } = new();
 }
 
 public class DbMessage
 {
+    // TODO: Remove redundant values
+    // TODO: Add IsTrashed
     [Key] public string IdMessage { get; set; }
     public string IdMessageParent { get; set; }
     public string IdConversation { get; set; }
@@ -66,5 +76,7 @@ public class DbMessage
     public DateTime CreatedTs { get; set; }
     public string Role { get; set; }
     public string Content { get; set; }
-    public string HTMLContent { get; set; } // Redundant?
+    public string HTMLContent { get; set; } // Redundant?    
+
+    public DbConversation Conversation { get; set; }
 }

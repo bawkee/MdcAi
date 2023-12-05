@@ -12,7 +12,7 @@ public class ConversationsVm : ViewModel
     [Reactive] public ObservableCollectionExtended<IConversationItem> Items { get; private set; }
 
     public ReactiveCommand<Unit, IConversationItem[]> LoadItems { get; }
-    public ReactiveCommand<IConversationItem[], Unit> SaveConversationsCmd { get; }
+    public ReactiveCommand<Unit, Unit> SaveConversationsCmd { get; }
 
     public ConversationsVm()
     {
@@ -92,76 +92,47 @@ public class ConversationsVm : ViewModel
             .Do(c => c.Category.Items.Insert(0, c.Category.CreateNewItemPlaceholder()))
             .Subscribe();
 
-        SaveConversationsCmd = ReactiveCommand.CreateFromTask(async (IConversationItem[] items) =>
-        {
-            // TODO: Add Categories table... also, after all, I think most of this logic should be in convo vm and batch called from here
-            // I only have dillema with SaveChangesAsync - call THAT here
+        // TODO: Add Categories table... also, after all, I think most of this logic should be in convo vm and batch called from here
 
-            await using var ctx = Services.Container.Resolve<UserProfileDbContext>();
+        SaveConversationsCmd = ReactiveCommand.CreateFromObservable(
+            () => Observable.Using(
+                () => Services.Container.Resolve<UserProfileDbContext>(),
+                ctx => Items.OfType<ConversationCategoryVm>()
+                            .GetConversations()
+                            .Select(c => c.Conversation)
+                            .Where(c => c?.IsDirty == true)
+                            .ToObservable()
+                            .SelectMany(c => c.SaveCmd.Execute(new() { }))
+                            .Concat(Observable.FromAsync(async () =>
+                                              {
+                                                  Debug.WriteLine($"Committing changes");
+                                                  return await ctx.SaveChangesAsync();
+                                              })
+                                              .Select(_ => Unit.Default))
+            ));
 
-            var convos = Items.OfType<ConversationCategoryVm>()
-                              .GetConversations()
-                              .Select(c => c.Conversation)
-                              .WhereNotNull()
-                              .ToArray();
+        //SaveConversationsCmd = ReactiveCommand.CreateFromTask(async (IConversationItem[] items) =>
+        //{
+        //    await using var ctx = Services.Container.Resolve<UserProfileDbContext>();
 
-            foreach (var convo in convos.Where(c => c.IsDirty))
-            {
-                var dbconvo = convo.ToDbConversation();
+        //    var convos = Items.OfType<ConversationCategoryVm>()
+        //                      .GetConversations()
+        //                      .Select(c => c.Conversation)
+        //                      .WhereNotNull()
+        //                      .ToArray();
 
-                if (await ctx.Conversations.AllAsync(c => c.IdConversation != dbconvo.IdConversation))
-                    ctx.Conversations.Add(dbconvo);
-                else
-                    ctx.Conversations.Update(dbconvo);
-            }
+        //    foreach (var convo in convos.Where(c => c.IsDirty))
+        //    {
+        //        var dbconvo = convo.ToDbConversation();
 
-            //foreach (var convo in dirtyConvos)
-            //    await ctx.Conversations
+        //        if (await ctx.Conversations.AllAsync(c => c.IdConversation != dbconvo.IdConversation))
+        //            ctx.Conversations.Add(dbconvo);
+        //        else
+        //            ctx.Conversations.Update(dbconvo);
+        //    }
 
-            //             .Upsert(convo)                         
-            //             .RunAsync();
-
-            await ctx.SaveChangesAsync();
-
-            //var existingConvos =
-            //    (await ctx.Conversations
-            //              .Select(c => c.IdConversation)
-            //              .ToArrayAsync())
-            //    .ToHashSet();
-
-            //var convos = Items.OfType<ConversationCategoryVm>()
-            //                  .GetConversations()
-            //                  .Select(c => c.Conversation.ToDbConversation())
-            //                  //.Select(c => new
-            //                  //{
-            //                  //    Item = c,
-            //                  //    IsNew = !existingConvos.Contains(c.IdConversation)
-            //                  //})
-            //                  .ToArray();
-
-            //var newConvos = convos.Where(c => c.IsNew)
-            //                      .Select(c => c.Item)
-            //                      .ToArray();
-
-            //var updateConvos = convos.Where(c => !c.IsNew)
-            //                         .Select(c => c.Item)
-            //                         .ToArray();
-
-            //var newConvos = new List<DbConversation>();
-
-            //foreach(var convo in convos)
-            //{
-            //    if (!existingConvos.Contains(convo.IdConversation))
-            //        newConvos.Add(convo);
-            //    else
-            //    {
-
-            //    }
-            //}
-
-            //if (newConvos.Any())
-            //    ctx.Conversations.AddRange(newConvos);
-        });
+        //    await ctx.SaveChangesAsync();
+        //});
     }
 }
 
@@ -194,17 +165,12 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationItem
 
     public ConversationPreviewVm()
     {
-        // If new, it should just instantiate an empty conversation and then wire it up so that convo updates this entry
-        // Otherwise, it should load rest of the data from the db and instantiate a convo from that and wire it up
-
-        // After a while, Conversation can be reset back to null if not used, and instantiated again when used (the loaded data
-        // remains tho)
-
-        // When system completion is initiated, clear the 'new item' flag
         Activator.Activated
                  .Take(1)
                  .Where(_ => Conversation == null && IsNewPlaceholder)
+                 // Create a new conversation
                  .Select(_ => Conversation = Services.GetRequired<ConversationVm>())
+                 // When system completion is initiated, clear the 'new item' flag
                  .Select(convo => convo.WhenAnyValue(vm => vm.Head.Message.Next)
                                        .WhereNotNull()
                                        .Select(h => h.WhenAnyValue(x => x.IsCompleting))
@@ -224,6 +190,25 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationItem
             .ObserveOnMainThread()
             .Do(_ => Name = $"Chat {Category.Items.Count}")
             .Subscribe();
+
+        Activator.Activated
+                 .Where(_ => Conversation == null && !IsNewPlaceholder)
+                 .Select(_ =>
+                 {
+                     var convo = Services.Container.Resolve<ConversationVm>();
+                     convo.Id = Id;
+                     return convo;
+                 })
+                 .Select(convo => convo.LoadCmd
+                                       .Execute()
+                                       .SelectMany(_ => convo.WhenAnyValue(vm => vm.Tail)
+                                                             .WhereNotNull()
+                                                             .Select(_ => convo))
+                                       .Take(1))
+                 .Switch()
+                 .ObserveOnMainThread()
+                 .Do(convo => Conversation = convo)
+                 .Subscribe();
 
         UpdateField(vm => vm.Category, (c, v) => c.Category = v?.Name).Subscribe();
         UpdateField(vm => vm.Name, (c, v) => c.Name = v).Subscribe();

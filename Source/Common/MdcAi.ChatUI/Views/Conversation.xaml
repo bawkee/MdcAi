@@ -21,6 +21,9 @@
   <c:DockPanel>
 
     <CommandBar c:DockPanel.Dock="Top" DefaultLabelPosition="Right">
+      <AppBarElementContainer>
+        <TextBlock Text="{x:Bind ViewModel.IsDirty, Mode=OneWay}" />
+      </AppBarElementContainer>
       <AppBarToggleButton Icon="Library" Label="Streamed"
                           IsChecked="{x:Bind ViewModel.Settings.Streaming, Mode=TwoWay}" />
       <AppBarButton Icon="Edit" Label="Edit" Command="{x:Bind ViewModel.EditSelectedCmd, Mode=OneWay}" />

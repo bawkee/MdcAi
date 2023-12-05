@@ -78,6 +78,9 @@ public class ChatMessageVm : ViewModel
                 if (Role == ChatMessageRole.User)
                     return string.IsNullOrEmpty(c) ? "" : ToUserHtml(c);
 
+                if (Next != null)
+                    return string.IsNullOrEmpty(c) ? "" : Markdown.ToHtml(c);
+
                 if (string.IsNullOrEmpty(c))
                     return caretHtml;
 
@@ -94,10 +97,16 @@ public class ChatMessageVm : ViewModel
             .Do(h => HTMLContent = h)
             .Subscribe();
 
+        this.WhenAnyValue(vm => vm.Content)
+            .Throttle(TimeSpan.FromMilliseconds(2000))
+            .ObserveOnMainThread()
+            .Do(_ => HTMLContent = HTMLContent.Replace(caretHtml, ""))
+            .Subscribe();
+
         StopCompletionCmd.ObserveOnMainThread()
                          .Do(_ =>
                          {
-                             var html = HTMLContent.Replace(caretHtml, "");
+                             var html = HTMLContent;//.Replace(caretHtml, "");
 
                              if (string.IsNullOrEmpty(html))
                                  HTMLContent = stopLabelHtml;

@@ -18,6 +18,7 @@ public static class DbExtensions
                 IdMessageParent = source.Previous?.Id,
                 IsCurrentVersion = m.Selector.Message == m,
                 Content = m.Content,
+                Role = m.Role,
                 CreatedTs = m.CreatedTs,
                 Version = v + 1,
                 Index = idx
@@ -43,11 +44,13 @@ public static class DbExtensions
             CreatedTs = source.CreatedTs,
             Messages = messages.ToList(),
             Category = source.Category,
+            IsTrash = source.IsTrash
         };
 
         return convo;
     }
 
+    // TODO: Remove?
     public static ConversationVm FromDbConversation(this DbConversation source)
     {
         var convo = Services.Container.Resolve<ConversationVm>();
@@ -56,7 +59,7 @@ public static class DbExtensions
 
         convo.Id = source.IdConversation;
         convo.Name = source.Name;
-        convo.CreatedTs = source.CreatedTs;
+        convo.CreatedTs = source.CreatedTs;        
 
         convo.Head = source.Messages.FromDbMessages(convo);
 
@@ -81,7 +84,7 @@ public static class DbExtensions
 
     public static ChatMessageSelectorVm FromDbMessages(this IEnumerable<DbMessage> messages, ConversationVm convo, string headId = null)
     {
-        var headDbMessages = messages.Where(m => m.IdMessage == headId)
+        var headDbMessages = messages.Where(m => m.IdMessageParent == headId)
                                      .OrderBy(m => m.Version)
                                      .ToArray();
 

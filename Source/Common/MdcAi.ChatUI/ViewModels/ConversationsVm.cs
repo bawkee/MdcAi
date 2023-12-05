@@ -155,6 +155,8 @@ public class ConversationCategoryVm : ViewModel, IConversationItem
         };
 }
 
+// TODO: When there are no convos then there are no categories and no way to add new convo
+
 public class ConversationPreviewVm : ActivatableViewModel, IConversationItem
 {
     public string Id { get; set; }

@@ -65,18 +65,15 @@ public class DbConversation
 
 public class DbMessage
 {
-    // TODO: Remove redundant values
-    // TODO: Add IsTrashed
     [Key] public string IdMessage { get; set; }
     public string IdMessageParent { get; set; }
     public string IdConversation { get; set; }
     public int Version { get; set; }
-    public bool IsCurrentVersion { get; set; }
-    public int Index { get; set; } // Redundant?
+    public bool IsCurrentVersion { get; set; }    
     public DateTime CreatedTs { get; set; }
     public string Role { get; set; }
     public string Content { get; set; }
-    public string HTMLContent { get; set; } // Redundant?    
+    public bool IsTrash { get; set; }
 
     public DbConversation Conversation { get; set; }
 }

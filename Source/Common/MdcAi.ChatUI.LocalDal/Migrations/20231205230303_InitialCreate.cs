@@ -17,6 +17,8 @@ namespace MdcAi.ChatUI.LocalDal.Migrations
                 {
                     IdConversation = table.Column<string>(type: "TEXT", nullable: false),
                     Name = table.Column<string>(type: "TEXT", nullable: true),
+                    Category = table.Column<string>(type: "TEXT", nullable: true),
+                    IsTrash = table.Column<bool>(type: "INTEGER", nullable: false),
                     CreatedTs = table.Column<DateTime>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
@@ -33,27 +35,25 @@ namespace MdcAi.ChatUI.LocalDal.Migrations
                     IdConversation = table.Column<string>(type: "TEXT", nullable: true),
                     Version = table.Column<int>(type: "INTEGER", nullable: false),
                     IsCurrentVersion = table.Column<bool>(type: "INTEGER", nullable: false),
-                    Index = table.Column<int>(type: "INTEGER", nullable: false),
                     CreatedTs = table.Column<DateTime>(type: "TEXT", nullable: false),
                     Role = table.Column<string>(type: "TEXT", nullable: true),
                     Content = table.Column<string>(type: "TEXT", nullable: true),
-                    HTMLContent = table.Column<string>(type: "TEXT", nullable: true),
-                    DbConversationIdConversation = table.Column<string>(type: "TEXT", nullable: true)
+                    IsTrash = table.Column<bool>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Messages", x => x.IdMessage);
                     table.ForeignKey(
-                        name: "FK_Messages_Conversations_DbConversationIdConversation",
-                        column: x => x.DbConversationIdConversation,
+                        name: "FK_Messages_Conversations_IdConversation",
+                        column: x => x.IdConversation,
                         principalTable: "Conversations",
                         principalColumn: "IdConversation");
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_Messages_DbConversationIdConversation",
+                name: "IX_Messages_IdConversation",
                 table: "Messages",
-                column: "DbConversationIdConversation");
+                column: "IdConversation");
         }
 
         /// <inheritdoc />

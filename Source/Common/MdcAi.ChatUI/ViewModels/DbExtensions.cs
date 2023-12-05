@@ -20,8 +20,7 @@ public static class DbExtensions
                 Content = m.Content,
                 Role = m.Role,
                 CreatedTs = m.CreatedTs,
-                Version = v + 1,
-                Index = idx
+                Version = v + 1
             };
 
             var children = m.Next?.ToDbMessages(idx + 1) ?? Enumerable.Empty<DbMessage>();

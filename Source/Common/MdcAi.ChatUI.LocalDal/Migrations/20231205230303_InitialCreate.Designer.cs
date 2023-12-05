@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace MdcAi.ChatUI.LocalDal.Migrations
 {
     [DbContext(typeof(UserProfileDbContext))]
-    [Migration("20231129110038_AddedCategory")]
-    partial class AddedCategory
+    [Migration("20231205230303_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -30,6 +30,9 @@ namespace MdcAi.ChatUI.LocalDal.Migrations
 
                     b.Property<DateTime>("CreatedTs")
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsTrash")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Name")
                         .HasColumnType("TEXT");
@@ -50,22 +53,16 @@ namespace MdcAi.ChatUI.LocalDal.Migrations
                     b.Property<DateTime>("CreatedTs")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("DbConversationIdConversation")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("HTMLContent")
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("IdConversation")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("IdMessageParent")
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("Index")
+                    b.Property<bool>("IsCurrentVersion")
                         .HasColumnType("INTEGER");
 
-                    b.Property<bool>("IsCurrentVersion")
+                    b.Property<bool>("IsTrash")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Role")
@@ -76,16 +73,18 @@ namespace MdcAi.ChatUI.LocalDal.Migrations
 
                     b.HasKey("IdMessage");
 
-                    b.HasIndex("DbConversationIdConversation");
+                    b.HasIndex("IdConversation");
 
                     b.ToTable("Messages");
                 });
 
             modelBuilder.Entity("MdcAi.ChatUI.LocalDal.DbMessage", b =>
                 {
-                    b.HasOne("MdcAi.ChatUI.LocalDal.DbConversation", null)
+                    b.HasOne("MdcAi.ChatUI.LocalDal.DbConversation", "Conversation")
                         .WithMany("Messages")
-                        .HasForeignKey("DbConversationIdConversation");
+                        .HasForeignKey("IdConversation");
+
+                    b.Navigation("Conversation");
                 });
 
             modelBuilder.Entity("MdcAi.ChatUI.LocalDal.DbConversation", b =>

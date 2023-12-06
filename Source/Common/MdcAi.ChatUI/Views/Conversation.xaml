@@ -21,9 +21,6 @@
   <c:DockPanel>
 
     <CommandBar c:DockPanel.Dock="Top" DefaultLabelPosition="Right">
-      <AppBarElementContainer>
-        <TextBlock Text="{x:Bind ViewModel.IsDirty, Mode=OneWay}" />
-      </AppBarElementContainer>
       <AppBarToggleButton Icon="Library" Label="Streamed"
                           IsChecked="{x:Bind ViewModel.Settings.Streaming, Mode=TwoWay}" />
       <AppBarButton Icon="Edit" Label="Edit" Command="{x:Bind ViewModel.EditSelectedCmd, Mode=OneWay}" />
@@ -32,8 +29,12 @@
       <AppBarSeparator />
       <AppBarButton Icon="Previous" Label="Prev" Command="{x:Bind ViewModel.SelectedMessage.PrevCmd, Mode=OneWay}" />
       <AppBarButton Icon="Next" Label="Next" Command="{x:Bind ViewModel.SelectedMessage.NextCmd, Mode=OneWay}" />
-      <AppBarSeparator />
-      <AppBarButton Icon="Add" Label="Add" Command="{x:Bind ViewModel.AddCmd, Mode=OneWay}" />
+
+      <AppBarSeparator Visibility="{x:Bind chatUi:Debugging.Enabled, Converter={StaticResource BoolToVisibilityConverter}}" />
+      <AppBarButton Icon="Add" 
+                    Label="Add" 
+                    Command="{x:Bind ViewModel.GeneratePromptCmd, Mode=OneWay}" 
+                    Visibility="{x:Bind chatUi:Debugging.Enabled, Converter={StaticResource BoolToVisibilityConverter}}"/>
 
       <AppBarButton Icon="Favorite"
                     Label="Test"
@@ -78,6 +79,7 @@
                    Text="{x:Bind ViewModel.Prompt.Contents, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
         </StackPanel>
       </c:DockPanel>
+
       <Grid>
         <WebView2 x:Name="ChatWebView" DefaultBackgroundColor="Transparent" Visibility="Visible" />
 

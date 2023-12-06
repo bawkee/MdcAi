@@ -3,6 +3,7 @@
 using LocalDal;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
+using System.Windows.Input;
 using System.Windows.Navigation;
 
 public class ConversationsVm : ViewModel
@@ -22,12 +23,13 @@ public class ConversationsVm : ViewModel
 
             var data = await ctx.Conversations
                                 .Where(c => !c.IsTrash)
+                                .OrderByDescending(c => c.CreatedTs)
                                 .Select(c => new
                                 {
                                     c.Name,
                                     c.Category,
                                     c.IdConversation
-                                })
+                                })                                
                                 .ToArrayAsync();
 
             var categories = data.GroupBy(d => d.Category)
@@ -98,9 +100,10 @@ public class ConversationsVm : ViewModel
             () => Observable.Using(
                 () => Services.Container.Resolve<UserProfileDbContext>(),
                 ctx => Items.OfType<ConversationCategoryVm>()
-                            .GetConversations()
+                            .GetConversations()                            
                             .Select(c => c.Conversation)
-                            .Where(c => c?.IsDirty == true)
+                            .WhereNotNull()
+                            .Where(c => ((ICommand)c.SaveCmd).CanExecute(null))
                             .ToObservable()
                             .SelectMany(c => c.SaveCmd.Execute(new() { }))
                             .Concat(Observable.FromAsync(async () =>

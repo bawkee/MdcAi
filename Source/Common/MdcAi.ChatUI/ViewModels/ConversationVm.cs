@@ -30,7 +30,7 @@ public class ConversationVm : ActivatableViewModel
     [Reactive] public bool IsSendPromptEnabled { get; private set; }
     [Reactive] public bool IsLoading { get; private set; }
 
-    public ReactiveCommand<Unit, Unit> AddCmd { get; }
+    public ReactiveCommand<Unit, Unit> GeneratePromptCmd { get; }
     public ReactiveCommand<Unit, Unit> EditSelectedCmd { get; }
     public ReactiveCommand<Unit, Unit> CancelEditCmd { get; }
     public ReactiveCommand<Unit, Unit> DeleteSelectedCmd { get; }
@@ -71,7 +71,7 @@ public class ConversationVm : ActivatableViewModel
             .Do(m => Messages = new(m.ToArray()))
             .Subscribe();
 
-        AddCmd = ReactiveCommand.CreateFromObservable(
+        GeneratePromptCmd = ReactiveCommand.CreateFromObservable(
             () => Observable
                   .FromAsync(async () =>
                   {
@@ -284,7 +284,8 @@ public class ConversationVm : ActivatableViewModel
                         await ctx.SaveChangesAsync();
                 }
             },
-            this.WhenAnyValue(vm => vm.IsDirty));
+            this.WhenAnyValue(vm => vm.IsDirty, vm => vm.Messages.Count)
+                .Select(_ => IsDirty && Messages.Count > 0));
 
         SaveCmd.ObserveOnMainThread()
                .Do(_ => IsDirty = false)
@@ -302,26 +303,6 @@ public class ConversationVm : ActivatableViewModel
             .Select(_ => Unit.Default)
             .InvokeCommand(CancelEditCmd);
 
-        //this.WhenAnyValue(vm => vm.Messages)
-        //    .Skip(1)
-        //    .Select(_ => ToDbConversation())
-        //    .Do(convo =>
-        //    {
-        //        var json = JsonConvert.SerializeObject(convo, Formatting.Indented);
-        //    })
-        //    .Subscribe();
-
-        //SaveCmd = ReactiveCommand.CreateFromTask(async () =>
-        //{
-        //    await using var ctx = Services.Container.Resolve<UserProfileDbContext>();
-
-        //    if (IsNew)
-        //    {
-        //        var convo = this.ToDbConversation();
-        //        await ctx.AddAsync<DbConversation>(convo);
-        //    }           
-        //});
-
         DebugCmd = ReactiveCommand.Create(() =>
         {
             //var _ = JsonConvert.SerializeObject(this.ToDbConversation(), Formatting.Indented);
@@ -337,14 +318,7 @@ public class ConversationVm : ActivatableViewModel
         if (Debugging.Enabled &&
             Debugging.MockMessages &&
             Debugging.AutoSendFirstMessage)
-            Activator.Activated.Take(1).InvokeCommand(AddCmd);
-
-        //var changeTracker = TrackChanges(nameof(Name),
-        //                                 nameof(Category));
-
-        //changeTracker.Select(_ => changeTracker.IsDirty())
-        //             .Do(i => IsDirty = i)
-        //             .Subscribe();
+            Activator.Activated.Take(1).InvokeCommand(GeneratePromptCmd);
 
         this.WhenActivated(disposables =>
         {

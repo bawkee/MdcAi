@@ -82,7 +82,7 @@ public partial class App : ILogging
                       await using var db = Services.Container.Resolve<UserProfileDbContext>();
                       await db.Database.MigrateAsync();
                   })
-                  .Subscribe();
+                  .SubscribeSafe();
 
         //Debug.WriteLine(db.Conversations.Count());
 
@@ -108,19 +108,42 @@ public partial class App : ILogging
         Environment.SetEnvironmentVariable("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
                                            string.Join(' ', options.Select(t => $"--{t.name}={t.value}")));
 
+    private bool _errorDialogOpen;
+
     private async Task HandleException(Exception ex)
-    {
-        // TODO: Must handle scenario where mutliple errors happen, they have to stack and be shown in the one single content dialog
+    {        
         this.LogError(ex);
-        var dialog = new ContentDialog
+
+        try
         {
-            // TODO: A proper exception dialog with link to the log file
-            Content = $"{ex.Message}\r\nPid: {Process.GetCurrentProcess().Id}",
-            XamlRoot = Window.Content.XamlRoot,
-            Title = "Something Broke 😳",
-            CloseButtonText = "OK",
-        };
-        await dialog.ShowAsync();
+            if (_errorDialogOpen)
+                return;
+            _errorDialogOpen = true;
+
+            var message = $"{ex.Message}\r\nPid: {Process.GetCurrentProcess().Id}";
+
+            var dialog = new ContentDialog
+            {
+                // TODO: A proper exception dialog with link to the log file
+                Content = message,
+                XamlRoot = Window.Content.XamlRoot,
+                Title = "Something Broke 😳",
+                CloseButtonText = "OK",
+            };
+
+            try
+            {
+                await dialog.ShowAsync();
+            }
+            catch // Unfortunately WinUI is extremely fragile and this can happen surprisingly often
+            {                
+                System.Windows.MessageBox.Show(message, "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            }
+        }
+        finally
+        {
+            _errorDialogOpen = false;
+        }
     }
 
     private void ConfigureNLog()
@@ -171,7 +194,7 @@ public partial class App : ILogging
                               vm => vm.OpenAi.OrganisationName)
                 .Where(_ => !string.IsNullOrEmpty(settings.OpenAi.CurrentApiKey))
                 .Do(_ => api.SetCredentials(settings.OpenAi.CurrentApiKey, settings.OpenAi.OrganisationName))
-                .Subscribe();
+                .SubscribeSafe();
     }
 
     /// <summary>

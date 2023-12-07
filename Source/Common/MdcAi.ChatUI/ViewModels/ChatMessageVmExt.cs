@@ -4,7 +4,7 @@ public static class ChatMessageVmExt
 {
     public static IEnumerable<ChatMessageVm> GetNextMessages(this ChatMessageVm head)
     {
-        var message = head.Selector.Message;
+        var message = head;
         while (message != null)
         {
             yield return message;

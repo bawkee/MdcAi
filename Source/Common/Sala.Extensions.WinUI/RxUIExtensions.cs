@@ -7,6 +7,7 @@ using System.Windows.Input;
 using ReactiveUI;
 using MdcAi.Extensions;
 using System.Diagnostics;
+using System;
 
 public static class RxUIExtensions
 {
@@ -21,7 +22,7 @@ public static class RxUIExtensions
     /// treated as handled. This operator allows you to propagate them further downstream as unhandled.
     /// </summary>
     public static IDisposable PropagateExceptions(this IObservable<Exception> source) =>
-        source.Subscribe(ex => RxApp.DefaultExceptionHandler.OnNext(ex));
+        source.SubscribeSafe(ex => RxApp.DefaultExceptionHandler.OnNext(ex));
 
     /// <summary>
     /// Registers a synchronous interaction handler that produces no output. Commonly used to display pop ups and windows.
@@ -88,9 +89,21 @@ public static class RxUIExtensions
                 .Where(vm => vm != null)
                 .ObserveOn(RxApp.MainThreadScheduler)
                 .Do(x => block(x.Disposables, x.Vm))
-                .Subscribe()
+                .SubscribeSafe()
                 .DisposeWith(disposables);
 
             Disposable.Create(() => Debug.WriteLine($"Deactivated view for real this time")).DisposeWith(disposables);
         });
+
+    // SubscribeSafe automatically propagates exceptions to RxUI. WinUI is incapable of catching even its own main thread exceptions, let alone
+    // from other threads and what not.
+
+    public static IDisposable SubscribeSafe<T>(this IObservable<T> source) =>
+        source.SubscribeSafe(_ => { });
+
+    public static IDisposable SubscribeSafe<T>(this IObservable<T> source, Action<T> onNext) =>
+        source.SubscribeSafe(onNext, () => { });
+
+    public static IDisposable SubscribeSafe<T>(this IObservable<T> source, Action<T> onNext, Action onCompleted) =>
+        source.Subscribe(onNext, ex => RxApp.DefaultExceptionHandler.OnNext(ex), onCompleted);
 }

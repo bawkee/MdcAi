@@ -42,44 +42,12 @@ public static class DbExtensions
             Name = source.Name,
             CreatedTs = source.CreatedTs,
             Messages = messages.ToList(),
-            Category = source.Category,
+            IdCategory = source.IdCategory,
             IsTrash = source.IsTrash
         };
 
         return convo;
     }
-
-    // TODO: Remove?
-    public static ConversationVm FromDbConversation(this DbConversation source)
-    {
-        var convo = Services.Container.Resolve<ConversationVm>();
-
-        using var _ = convo.SuppressChangeNotifications();
-
-        convo.Id = source.IdConversation;
-        convo.Name = source.Name;
-        convo.CreatedTs = source.CreatedTs;        
-
-        convo.Head = source.Messages.FromDbMessages(convo);
-
-        return convo;
-    }
-
-    /*
-     * public class DbMessage
-       {
-       [Key] public string IdMessage { get; set; }
-       public string IdMessageParent { get; set; }
-       public string IdConversation { get; set; }
-       public int Version { get; set; }
-       public bool IsCurrentVersion { get; set; }
-       public int Index { get; set; }
-       public DateTime CreatedTs { get; set; }
-       public string Role { get; set; }
-       public string Content { get; set; }
-       public string HTMLContent { get; set; }
-       }
-     */
 
     public static ChatMessageSelectorVm FromDbMessages(this IEnumerable<DbMessage> messages, ConversationVm convo, string headId = null)
     {

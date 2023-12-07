@@ -12,18 +12,30 @@
   mc:Ignorable="d"
   Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
+  <Page.Resources>
+    <!-- WARNING: Placing convereters anywhere else than here will result in 'unspecified error' being thrown at runtime -->
+    <winUi:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
+    <winUi:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+  </Page.Resources>
+
   <Grid>
     <Grid.Resources>
       <DataTemplate x:Key="NavigationViewCategoryTemplate" x:DataType="viewModels:ConversationCategoryVm">
         <NavigationViewItem Content="{x:Bind Name, Mode=OneWay}"
-                            MenuItemsSource="{x:Bind Items, Mode=OneWay}"
+                            MenuItemsSource="{x:Bind ItemsView, Mode=OneWay}"
                             Icon="Message" 
                             Loaded="CategoryItem_OnLoaded"
                             Tag="{x:Bind}"/>
       </DataTemplate>
 
       <DataTemplate x:Key="NavigationViewItemTemplate" x:DataType="viewModels:ConversationPreviewVm">
-        <NavigationViewItem Content="{x:Bind Name, Mode=OneWay}" />
+        <NavigationViewItem Content="{x:Bind Name, Mode=OneWay}">
+          <NavigationViewItem.ContextFlyout>
+            <MenuFlyout>
+              <MenuFlyoutItem Text="Delete" Command="{x:Bind DeleteCmd, Mode=OneWay}" />
+            </MenuFlyout>
+          </NavigationViewItem.ContextFlyout>
+        </NavigationViewItem>
       </DataTemplate>
 
       <local:NavigationViewDataTemplateSelector
@@ -110,8 +122,17 @@
       </NavigationView.AutoSuggestBox>
 
       <NavigationView.PaneHeader>
-        <Button Command="{x:Bind ViewModel.Conversations.SaveConversationsCmd}" Content="Save" />
+
       </NavigationView.PaneHeader>
+
+      <NavigationView.PaneFooter>
+        <StackPanel>
+          <NavigationViewItem Icon="Undo" 
+                              Content="Undo Delete" 
+                              PointerPressed="UndoDeleteBtn_OnPointerPressed" 
+                              Visibility="{x:Bind ViewModel.Conversations.ShowUndoDelete, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"/>
+        </StackPanel>
+      </NavigationView.PaneFooter>
 
       <Pivot x:Name="NaviPivot" Padding="0">
         <Pivot.Resources>
@@ -120,7 +141,10 @@
           </Style>
         </Pivot.Resources>
         <PivotItem x:Name="ConversationPivotItem">
-          <winUi:ViewHost ViewModel="{x:Bind ViewModel.Conversations.SelectedConversation, Mode=OneWay}" CacheType="ByType" />
+          <!-- Using x:Bind for Visibility here results in runtime exception that just says 'unspecified error' -->
+          <winUi:ViewHost ViewModel="{x:Bind ViewModel.Conversations.SelectedConversation, Mode=OneWay}" 
+                          CacheType="ByType" 
+                          Visibility="{x:Bind Path=ViewModel.Conversations.SelectedConversation, Converter={StaticResource NullToVisibilityConverter}, FallbackValue='Collapsed', Mode=OneWay}"/>
         </PivotItem>
         <PivotItem x:Name="SettingsPivotItem">
           <winUi:ViewHost ViewModel="{x:Bind ViewModel.Settings}" />

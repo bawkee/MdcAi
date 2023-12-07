@@ -12,18 +12,37 @@ namespace MdcAi.ChatUI.LocalDal.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
+                name: "Categories",
+                columns: table => new
+                {
+                    IdCategory = table.Column<string>(type: "TEXT", nullable: false),
+                    Name = table.Column<string>(type: "TEXT", nullable: true),
+                    SystemMessage = table.Column<string>(type: "TEXT", nullable: true),
+                    Description = table.Column<string>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Categories", x => x.IdCategory);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Conversations",
                 columns: table => new
                 {
                     IdConversation = table.Column<string>(type: "TEXT", nullable: false),
+                    IdCategory = table.Column<string>(type: "TEXT", nullable: true),
                     Name = table.Column<string>(type: "TEXT", nullable: true),
-                    Category = table.Column<string>(type: "TEXT", nullable: true),
                     IsTrash = table.Column<bool>(type: "INTEGER", nullable: false),
                     CreatedTs = table.Column<DateTime>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Conversations", x => x.IdConversation);
+                    table.ForeignKey(
+                        name: "FK_Conversations_Categories_IdCategory",
+                        column: x => x.IdCategory,
+                        principalTable: "Categories",
+                        principalColumn: "IdCategory");
                 });
 
             migrationBuilder.CreateTable(
@@ -50,6 +69,16 @@ namespace MdcAi.ChatUI.LocalDal.Migrations
                         principalColumn: "IdConversation");
                 });
 
+            migrationBuilder.InsertData(
+                table: "Categories",
+                columns: new[] { "IdCategory", "Description", "Name", "SystemMessage" },
+                values: new object[] { "default", "General Purpose AI Assistant", "General", "You are a helpful but cynical and humorous assistant (but not over the top). You give short answers, straight, to the point answers. Use md syntax and be sure to specify language for code blocks." });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Conversations_IdCategory",
+                table: "Conversations",
+                column: "IdCategory");
+
             migrationBuilder.CreateIndex(
                 name: "IX_Messages_IdConversation",
                 table: "Messages",
@@ -64,6 +93,9 @@ namespace MdcAi.ChatUI.LocalDal.Migrations
 
             migrationBuilder.DropTable(
                 name: "Conversations");
+
+            migrationBuilder.DropTable(
+                name: "Categories");
         }
     }
 }

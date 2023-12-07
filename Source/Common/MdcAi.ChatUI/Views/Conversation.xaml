@@ -26,15 +26,17 @@
       <AppBarButton Icon="Edit" Label="Edit" Command="{x:Bind ViewModel.EditSelectedCmd, Mode=OneWay}" />
       <AppBarButton Icon="Refresh" Label="Regenerate" Command="{x:Bind ViewModel.RegenerateSelectedCmd, Mode=OneWay}" />
       <AppBarButton Icon="Delete" Label="Delete" Command="{x:Bind ViewModel.DeleteSelectedCmd, Mode=OneWay}" />
-      <AppBarSeparator />
-      <AppBarButton Icon="Previous" Label="Prev" Command="{x:Bind ViewModel.SelectedMessage.PrevCmd, Mode=OneWay}" />
-      <AppBarButton Icon="Next" Label="Next" Command="{x:Bind ViewModel.SelectedMessage.NextCmd, Mode=OneWay}" />
 
-      <AppBarSeparator Visibility="{x:Bind chatUi:Debugging.Enabled, Converter={StaticResource BoolToVisibilityConverter}}" />
-      <AppBarButton Icon="Add" 
-                    Label="Add" 
-                    Command="{x:Bind ViewModel.GeneratePromptCmd, Mode=OneWay}" 
-                    Visibility="{x:Bind chatUi:Debugging.Enabled, Converter={StaticResource BoolToVisibilityConverter}}"/>
+      <AppBarSeparator />
+      <AppBarButton Icon="Previous" Command="{x:Bind ViewModel.PrevVersionCmd, Mode=OneWay}" />
+      <AppBarButton Icon="Next" Command="{x:Bind ViewModel.NextVersionCmd, Mode=OneWay}" />
+
+      <AppBarSeparator
+        Visibility="{x:Bind chatUi:Debugging.Enabled, Converter={StaticResource BoolToVisibilityConverter}}" />
+      <AppBarButton Icon="Add"
+                    Label="Add"
+                    Command="{x:Bind ViewModel.GeneratePromptCmd, Mode=OneWay}"
+                    Visibility="{x:Bind chatUi:Debugging.Enabled, Converter={StaticResource BoolToVisibilityConverter}}" />
 
       <AppBarButton Icon="Favorite"
                     Label="Test"
@@ -64,7 +66,7 @@
                        Foreground="{ThemeResource SystemAccentColorLight1}">
               <Run Text="Editing message sent on" />
               <Run Text="{x:Bind ViewModel.EditMessage.Message.CreatedTs, Mode=OneWay}" />
-              <Hyperlink winUi1:HyperlinkExtensions.Command="{x:Bind ViewModel.CancelEditCmd}">
+              <Hyperlink winUi1:HyperlinkExtensions.Command="{x:Bind ViewModel.CancelEditCmd, Mode=OneWay}">
                 <Run Text="(Cancel Edit)" />
               </Hyperlink>
             </TextBlock>
@@ -87,6 +89,7 @@
               HorizontalAlignment="Right"
               Margin="0,0,30,20"
               Visibility="{x:Bind ViewModel.Tail.Message.IsCompleting, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, FallbackValue=Collapsed}">
+          <!-- TODO: This button is really annoying, gets in the way -->
           <Button Content="Stop Generating"
                   Padding="10,5,10,8"
                   Command="{x:Bind ViewModel.Tail.Message.StopCompletionCmd, Mode=OneWay}">

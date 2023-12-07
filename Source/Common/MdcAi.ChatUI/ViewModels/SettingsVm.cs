@@ -30,13 +30,13 @@ public class OpenAiSettingsVm : ActivatableViewModel
             .Skip(1)
             .ObserveOnMainThread()
             .Do(v => AppCredsManager.SetValue("ApiKeys", v))
-            .Subscribe();
+            .SubscribeSafe();
 
         this.WhenAnyValue(vm => vm.OrganisationName)
             .Skip(1)
             .ObserveOnMainThread()
             .Do(v => AppCredsManager.SetValue("OrganisationName", v))
-            .Subscribe();
+            .SubscribeSafe();
 
         this.WhenAnyValue(vm => vm.ApiKeys)
             .Do(keys =>
@@ -47,6 +47,6 @@ public class OpenAiSettingsVm : ActivatableViewModel
                     CurrentApiKey = keys.Split("\r\n")
                                         .FirstOrDefault();
             })
-            .Subscribe();
+            .SubscribeSafe();
     }
 }

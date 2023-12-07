@@ -72,9 +72,6 @@ public sealed partial class RootPage
 
     private void NavigationView_OnSelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
     {
-        //if (selectedItem == ChatNaviItem)
-        //    NaviPivot.SelectedItem = ConversationPivotItem;
-
         if (args.IsSettingsSelected)
             NaviPivot.SelectedItem = SettingsPivotItem;
         else
@@ -104,7 +101,13 @@ public sealed partial class RootPage
         if (ViewModel.Conversations.Items.First() == cat)
             RxApp.MainThreadScheduler.Schedule(
                 // Hopefully this doesn't crash the delicate WinUI when there are hundreds of items... hopefully.
-                () =>  item.IsExpanded = true);
+                () => item.IsExpanded = true);
+    }
+
+    private void UndoDeleteBtn_OnPointerPressed(object sender, PointerRoutedEventArgs e)
+    {
+        Observable.Return(Unit.Default)
+                  .InvokeCommand(ViewModel.Conversations.UndoDeleteCmd);
     }
 }
 
@@ -112,11 +115,6 @@ public class NavigationViewDataTemplateSelector : DataTemplateSelector
 {
     public DataTemplate CategoryTemplate { get; set; }
     public DataTemplate ItemTemplate { get; set; }
-
-    public NavigationViewDataTemplateSelector()
-    {
-        // Get x:DataType from the DataTemplate
-    }
 
     protected override DataTemplate SelectTemplateCore(object item) =>
         item switch

@@ -15,7 +15,8 @@ public class ConversationVm : ActivatableViewModel
     public string Id { get; set; }
     [Reactive] public DateTime CreatedTs { get; set; }
     [Reactive] public string Name { get; set; }
-    [Reactive] public string Category { get; set; }
+    [Reactive] public string IdCategory { get; set; }
+    [Reactive] public string CategoryName { get; set; }
     [Reactive] public ChatMessageSelectorVm Head { get; set; }
     [Reactive] public ChatMessageSelectorVm Tail { get; private set; }
     [Reactive] public ChatMessageSelectorVm SelectedMessage { get; set; }
@@ -35,6 +36,8 @@ public class ConversationVm : ActivatableViewModel
     public ReactiveCommand<Unit, Unit> CancelEditCmd { get; }
     public ReactiveCommand<Unit, Unit> DeleteSelectedCmd { get; }
     public ReactiveCommand<Unit, Unit> RegenerateSelectedCmd { get; }
+    public ReactiveCommand<Unit, Unit> PrevVersionCmd { get; }
+    public ReactiveCommand<Unit, Unit> NextVersionCmd { get; }
     public ReactiveCommand<string, Unit> SelectCmd { get; }
     public ReactiveCommand<Unit, AiModel[]> LoadModelsCmd { get; }
     public ReactiveCommand<string, Unit> SelectModelCmd { get; }
@@ -45,6 +48,7 @@ public class ConversationVm : ActivatableViewModel
 
     [Reactive] public ObservableCollection<ChatMessageVm> Messages { get; set; }
     [Reactive] public WebViewRequestDto LastMessagesRequest { get; set; }
+    public HashSet<string> MessageTrashBin { get; } = new();
 
     public ConversationVm(IOpenAIApi api, SettingsVm globalSettings)
     {
@@ -60,7 +64,7 @@ public class ConversationVm : ActivatableViewModel
             .Select(i => i == null ? Observable.Return((ChatMessageSelectorVm)null) : TrackNext(i))
             .Switch()
             .Do(t => Tail = t)
-            .Subscribe();
+            .SubscribeSafe();
 
         // Automatically build the linked list when Tail changes. This is a flat list of the current state that we can use for rendering.
         this.WhenAnyValue(vm => vm.Tail)
@@ -69,7 +73,7 @@ public class ConversationVm : ActivatableViewModel
             .ObserveOnMainThread()
             .Select(_ => Head?.Message.GetNextMessages() ?? Enumerable.Empty<ChatMessageVm>())
             .Do(m => Messages = new(m.ToArray()))
-            .Subscribe();
+            .SubscribeSafe();
 
         GeneratePromptCmd = ReactiveCommand.CreateFromObservable(
             () => Observable
@@ -117,18 +121,25 @@ public class ConversationVm : ActivatableViewModel
                 .Select(m => m?.Message.Role == ChatMessageRole.User));
 
         DeleteSelectedCmd = ReactiveCommand.CreateFromObservable(
-            () => SelectedMessage?.Message.Role == ChatMessageRole.User ?
-                SelectedMessage.DeleteCmd.Execute()
-                               .Do(_ =>
-                               {
-                                   if (SelectedMessage.Versions.Count == 0)
-                                   {
-                                       if (SelectedMessage == Head)
-                                           Head = null;
-                                       SelectedMessage = null;
-                                   }
-                               }) :
-                Observable.Return(Unit.Default),
+            () =>
+            {
+                if (SelectedMessage?.Message.Role != ChatMessageRole.User)
+                    return Observable.Return(Unit.Default);
+
+                foreach (var trashMsg in SelectedMessage.Message.GetNextMessages().Select(m => m.Id))
+                    MessageTrashBin.Add(trashMsg);
+
+                return SelectedMessage.DeleteCmd.Execute()
+                                      .Do(_ =>
+                                      {
+                                          if (SelectedMessage.Versions.Count == 0)
+                                          {
+                                              if (SelectedMessage == Head)
+                                                  Head = null;
+                                              SelectedMessage = null;
+                                          }
+                                      });
+            },
             this.WhenAnyValue(vm => vm.SelectedMessage)
                 .Select(m => m?.Message.Role == ChatMessageRole.User));
 
@@ -173,12 +184,12 @@ public class ConversationVm : ActivatableViewModel
             this.WhenAnyValue(vm => vm.IsSendPromptEnabled));
 
         SendPromptCmd.Do(_ => Prompt = new())
-                     .Subscribe();
+                     .SubscribeSafe();
 
         this.WhenAnyValue(vm => vm.IsLoadingModels, vm => vm.Prompt.Contents)
             .Do(x => IsSendPromptEnabled = !x.Item1 &&
                                            !string.IsNullOrEmpty(x.Item2))
-            .Subscribe();
+            .SubscribeSafe();
 
         SelectCmd = ReactiveCommand.Create((string m) =>
         {
@@ -186,6 +197,17 @@ public class ConversationVm : ActivatableViewModel
             if (msg != null)
                 SelectedMessage = msg.Selector;
         });
+
+
+        NextVersionCmd = ReactiveCommand.CreateFromObservable(
+            () => SelectedMessage.NextCmd.Execute(),
+            this.WhenAnyValue(vm => vm.SelectedMessage)
+                .SelectMany(m => m == null ? Observable.Return(false) : m.NextCmd.CanExecute));
+
+        PrevVersionCmd = ReactiveCommand.CreateFromObservable(
+            () => SelectedMessage.PrevCmd.Execute(),
+            this.WhenAnyValue(vm => vm.SelectedMessage)
+                .SelectMany(m => m == null ? Observable.Return(false) : m.PrevCmd.CanExecute));
 
         LoadModelsCmd = ReactiveCommand.CreateFromTask(async () =>
         {
@@ -213,12 +235,12 @@ public class ConversationVm : ActivatableViewModel
                      .Do(models => Models = models.Where(m => m.ModelID
                                                                .StartsWith("gpt"))
                                                   .ToArray())
-                     .Subscribe();
+                     .SubscribeSafe();
 
         LoadModelsCmd.IsExecuting
                      .ObserveOnMainThread()
                      .Do(i => IsLoadingModels = i)
-                     .Subscribe();
+                     .SubscribeSafe();
 
         SelectModelCmd = ReactiveCommand.Create((string model) => { Settings.Model = model; });
 
@@ -243,19 +265,19 @@ public class ConversationVm : ActivatableViewModel
         LoadCmd.IsExecuting
                .ObserveOnMainThread()
                .Do(i => IsLoading = i)
-               .Subscribe();
+               .SubscribeSafe();
 
         LoadCmd.ObserveOnMainThread()
                .Do(convo =>
                {
                    Name = convo.Name;
                    CreatedTs = convo.CreatedTs;
-                   Category = convo.Category;
+                   IdCategory = convo.IdCategory;
                    IsTrash = convo.IsTrash;
                    Head = convo.Messages.FromDbMessages(this);
                    IsDirty = false;
                })
-               .Subscribe();
+               .SubscribeSafe();
 
         SaveCmd = ReactiveCommand.CreateFromTask(
             async (ConversationSaveOptions opt) =>
@@ -274,14 +296,14 @@ public class ConversationVm : ActivatableViewModel
                     else
                     {
                         existingConvo.Name = dbconvo.Name;
-                        existingConvo.Category = dbconvo.Category;
+                        existingConvo.IdCategory = dbconvo.IdCategory;
                         existingConvo.IsTrash = dbconvo.IsTrash;
 
+                        await ctx.Messages.Where(m => MessageTrashBin.Contains(m.IdMessage)).ExecuteDeleteAsync();
                         await Task.WhenAll(dbconvo.Messages.Select(msg => ctx.Messages.Upsert(msg).RunAsync()));
                     }
 
-                    if (opt.DbContext == null)
-                        await ctx.SaveChangesAsync();
+                    await ctx.SaveChangesAsync();
                 }
             },
             this.WhenAnyValue(vm => vm.IsDirty, vm => vm.Messages.Count)
@@ -289,7 +311,19 @@ public class ConversationVm : ActivatableViewModel
 
         SaveCmd.ObserveOnMainThread()
                .Do(_ => IsDirty = false)
-               .Subscribe();
+               .SubscribeSafe();
+
+        // Auto save whenever completion ends
+        Observable.Merge(
+                      this.WhenAnyValue(vm => vm.Tail)
+                          .Where(t => t?.Message?.Role == ChatMessageRole.System)
+                          .Select(t => t.Message.CompleteCmd
+                                        .Select(_ => Unit.Default))
+                          .Switch(),
+                      DeleteSelectedCmd)
+                  .Throttle(TimeSpan.FromMilliseconds(500))
+                  .Select(_ => new ConversationSaveOptions())
+                  .InvokeCommand(SaveCmd);
 
         this.WhenAnyValue(vm => vm.GlobalSettings)
             .Select(s => s.WhenAnyValue(x => x.OpenAi.ApiKeys))
@@ -297,7 +331,7 @@ public class ConversationVm : ActivatableViewModel
             .Select(s => s != null && !string.IsNullOrEmpty(s))
             .ObserveOnMainThread()
             .Do(i => IsOpenAIReady = i)
-            .Subscribe();
+            .SubscribeSafe();
 
         this.WhenAnyValue(vm => vm.SelectedMessage)
             .Select(_ => Unit.Default)
@@ -307,6 +341,17 @@ public class ConversationVm : ActivatableViewModel
         {
             //var _ = JsonConvert.SerializeObject(this.ToDbConversation(), Formatting.Indented);
         });
+
+        this.WhenAnyValue(vm => vm.IdCategory)
+            .WhereNotNull()
+            .SelectMany(id => Observable.FromAsync(async () =>
+            {
+                await using var ctx = Services.Container.Resolve<UserProfileDbContext>();
+                return await ctx.Categories.FirstOrDefaultAsync(c => c.IdCategory == id);
+            }))
+            .ObserveOnMainThread()
+            .Do(c => CategoryName = c.Name)
+            .SubscribeSafe();
 
         Activator.Activated.Take(1)
                  .Select(_ => this.WhenAnyValue(vm => vm.IsOpenAIReady)
@@ -340,7 +385,7 @@ public class ConversationVm : ActivatableViewModel
                 .Do(x => x.Tail.Message.Next = x.Completion)
                 .Select(x => x.Completion.CompleteCmd.Execute())
                 .Switch()
-                .Subscribe()
+                .SubscribeSafe()
                 .DisposeWith(disposables);
 
             // Build request data to communicate with WebView for rendering
@@ -363,7 +408,7 @@ public class ConversationVm : ActivatableViewModel
                     //Debug.WriteLine($"Last message: {((WebViewSetMessagesRequestDto)r.Data).Messages.LastOrDefault()?.Content}");
                     LastMessagesRequest = r;
                 })
-                .Subscribe()
+                .SubscribeSafe()
                 .DisposeWith(disposables);
 
             // TODO: Auto select last when loading from db as well and scroll to bottom
@@ -380,7 +425,7 @@ public class ConversationVm : ActivatableViewModel
                                  .Where(m => m.Count > 0 && m.Last().Role == ChatMessageRole.System))
                 .Switch()
                 .Do(m => SelectedMessage = m.Last().Selector)
-                .Subscribe()
+                .SubscribeSafe()
                 .DisposeWith(disposables);
 
             this.WhenAnyValue(vm => vm.IsDirty)
@@ -389,14 +434,14 @@ public class ConversationVm : ActivatableViewModel
                                            this.WhenAnyValue(vm => vm.Messages)
                                                .Select(i => HashCode.Combine(i.Select(j => j.Content.GetHashCode()))),
                                            this.WhenAnyValue(vm => vm.Name).Select(i => i.GetHashCode()),
-                                           this.WhenAnyValue(vm => vm.Category).Select(i => i.GetHashCode()))
+                                           this.WhenAnyValue(vm => vm.IdCategory).Select(i => i.GetHashCode()))
                                        .Select(i => HashCode.Combine(i))
                                        .Skip(1)
                                        .DistinctUntilChanged()
                                        .Take(1))
                 .Switch()
                 .Do(_ => IsDirty = true)
-                .Subscribe()
+                .SubscribeSafe()
                 .DisposeWith(disposables);
         });
     }

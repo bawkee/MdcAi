@@ -6,6 +6,7 @@ using Markdig;
 using System.Web;
 using LocalDal;
 using Mdc.OpenAiApi;
+using Windows.ApplicationModel.Background;
 
 /// <summary>
 /// This is a doubly linked list, plus each message can diverge and we keep all the versions.
@@ -57,16 +58,16 @@ public class ChatMessageVm : ViewModel
 
         CompleteCmd.ObserveOnMainThread()
                    .Do(c => Content = c)
-                   .Subscribe();
+                   .SubscribeSafe();
 
         StopCompletionCmd = ReactiveCommand.Create(() => { }, CompleteCmd.IsExecuting);
 
         CompleteCmd.IsExecuting
                    .ObserveOnMainThread()
                    .Do(i => IsCompleting = i)
-                   .Subscribe();
-
-        const string stopLabelHtml = "<span id=\"stop\"><b>Completion Stopped</b></stop>";
+                   .SubscribeSafe();
+       
+        const string stopMd = " *[Answer Cut Short by User]*";
         const string caretMd = "'%caret%'";
         const string caretHtml = "<span id=\"caret\"/>";
         
@@ -95,25 +96,25 @@ public class ChatMessageVm : ViewModel
                 return html;
             })
             .Do(h => HTMLContent = h)
-            .Subscribe();
+            .SubscribeSafe();
 
         this.WhenAnyValue(vm => vm.Content)
             .Throttle(TimeSpan.FromMilliseconds(2000))
             .ObserveOnMainThread()
-            .Do(_ => HTMLContent = HTMLContent.Replace(caretHtml, ""))
-            .Subscribe();
+            .Do(_ => HTMLContent = HTMLContent?.Replace(caretHtml, ""))
+            .SubscribeSafe();
 
         StopCompletionCmd.ObserveOnMainThread()
                          .Do(_ =>
                          {
-                             var html = HTMLContent;//.Replace(caretHtml, "");
+                             var c = Content;
 
-                             if (string.IsNullOrEmpty(html))
-                                 HTMLContent = stopLabelHtml;
+                             if (string.IsNullOrEmpty(c))
+                                 Content = stopMd;
                              else
-                                 HTMLContent = html + "<br />" + stopLabelHtml;
+                                 Content = Content + "\r\n" + stopMd;
                          })
-                         .Subscribe();
+                         .SubscribeSafe();
 
         // Remove caret from the html altogether when done
         CompleteCmd.IsExecuting
@@ -123,7 +124,7 @@ public class ChatMessageVm : ViewModel
                    .Throttle(TimeSpan.FromMilliseconds(1000))
                    .ObserveOnMainThread()
                    .Do(_ => HTMLContent = HTMLContent.Replace(caretHtml, ""))
-                   .Subscribe();
+                   .SubscribeSafe();
     }
 
     private static string ToUserHtml(string content) =>

@@ -64,7 +64,7 @@ public sealed partial class Conversation : ILogging
                     return Unit.Default;
                 })
                 .LogErrors(this)
-                .Subscribe();
+                .SubscribeSafe();
 
         initCore.Do(core =>
                 {
@@ -79,7 +79,7 @@ public sealed partial class Conversation : ILogging
                         ChatWebView.Source = new(@"http://localhost:3431/index.html");
                 })
                 .LogErrors(this)
-                .Subscribe();
+                .SubscribeSafe();
 
         var messages = initCore
                        .Select(core => core.Events()
@@ -102,7 +102,7 @@ public sealed partial class Conversation : ILogging
         messages.Where(m => m.Name == "IsScrollToBottom")
                 .ObserveOnMainThread()
                 .Do(m => isScrolledDown = (bool)m.Data)
-                .Subscribe();
+                .SubscribeSafe();
 
         Subject<Unit> scrollToBottom = new();
 
@@ -111,7 +111,7 @@ public sealed partial class Conversation : ILogging
                       .Throttle(TimeSpan.FromMilliseconds(500))
                       .ObserveOnMainThread()
                       .SelectMany(_ => Observable.FromAsync(async () => await ChatWebView.ScrollToBottom()))
-                      .Subscribe();
+                      .SubscribeSafe();
 
         // Since this field is on autosize it will jump up and down and this will in turn cause webview to scroll up (for reasons unknown)
         // so to work around that we try to pick up these cues and schedule scrolling back down.
@@ -119,7 +119,7 @@ public sealed partial class Conversation : ILogging
                    .BeforeTextChanging
                    .Where(e => e.args.NewText.Contains("\r") || e.args.NewText.Contains("\n"))
                    .Do(_ => scrollToBottom.OnNext(Unit.Default))
-                   .Subscribe();
+                   .SubscribeSafe();
 
         webReady.Connect();
 
@@ -136,7 +136,7 @@ public sealed partial class Conversation : ILogging
             messages.Where(r => r.Name == "SetSelection")
                     .Do(r => viewModel.SelectedMessage = viewModel.Messages[Convert.ToInt32(r.Data)].Selector)
                     .LogErrors(this)
-                    .Subscribe()
+                    .SubscribeSafe()
                     .DisposeWith(disposables);
 
             webReady.Select(_ => viewModel.WhenAnyValue(vm => vm.LastMessagesRequest)                                          
@@ -144,14 +144,14 @@ public sealed partial class Conversation : ILogging
                     .Switch()
                     .Do(r => ChatWebView.CoreWebView2.PostWebMessageAsJson(JsonConvert.SerializeObject(r)))
                     .LogErrors(this)
-                    .Subscribe()
+                    .SubscribeSafe()
                     .DisposeWith(disposables);
 
             webReady.Select(_ => viewModel.WhenAnyValue(vm => vm.SelectedMessage))
                     .Switch()
                     .Select(msg => msg?.Message == null ? -1 : viewModel.Messages.IndexOf(msg.Message))
                     .Do(i => SetSelectedMessage(i))
-                    .Subscribe()
+                    .SubscribeSafe()
                     .DisposeWith(disposables);
 
             viewModel.WhenAnyValue(vm => vm.Models)
@@ -185,7 +185,7 @@ public sealed partial class Conversation : ILogging
                              })
                          });
                      })
-                     .Subscribe()
+                     .SubscribeSafe()
                      .DisposeWith(disposables);
 
             PromptField.Events()
@@ -206,7 +206,7 @@ public sealed partial class Conversation : ILogging
                            return Observable.Return(Unit.Default);
                        })
                        .Switch()
-                       .Subscribe()
+                       .SubscribeSafe()
                        .DisposeWith(disposables);
 
             viewModel.EditSelectedCmd
@@ -215,7 +215,7 @@ public sealed partial class Conversation : ILogging
                          PromptField.Focus(FocusState.Keyboard);
                          PromptField.SelectionStart = PromptField.Text.Length;
                      })
-                     .Subscribe()
+                     .SubscribeSafe()
                      .DisposeWith(disposables);
 
             PromptField.Events()

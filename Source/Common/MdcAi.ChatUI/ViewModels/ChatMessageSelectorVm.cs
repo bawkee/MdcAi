@@ -27,7 +27,7 @@ public class ChatMessageSelectorVm : ViewModel
 
         _changed.ObserveOnMainThread()
                 .Do(_ => Version = GetCurrentIndex() + 1)
-                .Subscribe();
+                .SubscribeSafe();
 
         PrevCmd = ReactiveCommand.Create(() => TraverseVersions(-1), CanTranverseLive(-1));
         NextCmd = ReactiveCommand.Create(() => TraverseVersions(1), CanTranverseLive(1));
@@ -47,7 +47,7 @@ public class ChatMessageSelectorVm : ViewModel
                 if (pair.Item1 != null && pair.Item2 == null)
                     pair.Item1.Previous = null; // Dereference
             })
-            .Subscribe();
+            .SubscribeSafe();
 
         DeleteCmd = ReactiveCommand.Create(() =>
         {

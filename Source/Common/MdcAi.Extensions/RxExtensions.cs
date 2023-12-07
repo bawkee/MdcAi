@@ -127,8 +127,7 @@ public static class RxExtensions
     /// Applies the `as` operator onto each element based on the given type.
     /// </summary>
     public static IObservable<TOut> As<TOut>(this IObservable<object> source) where TOut : class =>
-        source.Select(x => x as TOut)
-              .Where(x => x != null);
+        source.Select(x => x as TOut);
 
     /// <summary>
     /// Retries the observable only if the accumulated number of exceptions does not exceed the specified count over

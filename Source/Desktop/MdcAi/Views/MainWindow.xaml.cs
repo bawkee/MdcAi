@@ -31,7 +31,7 @@ namespace MdcAi.Views
                 .Activated
                 .Take(1)
                 .Do(_ => ViewModel.Activator.Activate())
-                .Subscribe();
+                .SubscribeSafe();
         }        
 
         //private async void btn1_Click(object sender, RoutedEventArgs e)
@@ -70,7 +70,7 @@ namespace MdcAi.Views
         //                 })
         //                 .ToObservable();
 
-        //    res.Subscribe(x => { Debug.Write(x.Choices.Last().Delta.Content); }, () => Debug.WriteLine("\r\nCompleted"));
+        //    res.SubscribeSafe(x => { Debug.Write(x.Choices.Last().Delta.Content); }, () => Debug.WriteLine("\r\nCompleted"));
 
         //    Debug.WriteLine("Response:");
 

@@ -29,45 +29,27 @@ using ReactiveMarbles.ObservableEvents;
 /// </summary>
 public sealed partial class RootPage
 {
-    public MainVm ViewModel { get; }
-
     public RootPage()
     {
         ViewModel = Services.GetRequired<MainVm>();
 
         InitializeComponent();
 
-        //CreateNavigationViewItems();
+        Loaded += (s, e) => ((App)Application.Current).Window.SetTitleBar(AppTitleBar);
 
-        Loaded += (s, e) =>
+        this.WhenActivated((disposables, viewModel) =>
         {
-            var wnd = ((App)Application.Current).Window;
-            wnd.SetTitleBar(AppTitleBar);
-        };
-    }
-
-    private void CreateNavigationViewItems()
-    {
-        var parentItem = new NavigationViewItem
-        {
-            Icon = new SymbolIcon(Symbol.Message),
-            Content = "General",
-            Name = "ParentItem"
-        };
-
-        for (var i = 0; i < 100; i++)
-        {
-            var item1 = new NavigationViewItem
-            {
-                Icon = new SymbolIcon(Symbol.Message),
-                Content = $"Item {i}",
-                Tag = parentItem // Keeping inline with your XAML, although binding would make more sense
-            };
-
-            parentItem.MenuItems.Add(item1);
-        }
-
-        NavigationViewControl.MenuItems.Add(parentItem);
+            viewModel.Conversations.RenameIntr.RegisterHandler(
+                         async r =>
+                         {
+                             var dialogResult = await this.ShowTextInputDialog(
+                                 "Rename conversation:",
+                                 r.Input.Name,
+                                 config => config.Validation = t => !string.IsNullOrEmpty(t));
+                             r.SetOutput(dialogResult);
+                         })
+                     .DisposeWith(disposables);
+        });
     }
 
     private void NavigationView_OnSelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
@@ -124,3 +106,6 @@ public class NavigationViewDataTemplateSelector : DataTemplateSelector
             _ => base.SelectTemplateCore(item)
         };
 }
+
+[DoNotRegister]
+public class RootPageBase : ReactivePage<MainVm> { }

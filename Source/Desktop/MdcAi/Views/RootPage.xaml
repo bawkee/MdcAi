@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<Page
+<local:RootPageBase
   x:Class="MdcAi.Views.RootPage"
   xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -9,13 +9,21 @@
   xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
   xmlns:winUi="using:Sala.Extensions.WinUI"
   xmlns:viewModels="using:MdcAi.ChatUI.ViewModels"
+  xmlns:triggers="using:CommunityToolkit.WinUI.UI.Triggers"
+  xmlns:converters="using:CommunityToolkit.WinUI.UI.Converters"
   mc:Ignorable="d"
   Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
   <Page.Resources>
     <!-- WARNING: Placing convereters anywhere else than here will result in 'unspecified error' being thrown at runtime -->
     <winUi:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
-    <winUi:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+    <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+
+    <winUi:BoolConverter x:Key="BoolToHighlightedConverter">
+      <winUi:BoolConverter.True>
+        <SolidColorBrush Color="{ThemeResource SystemAccentColorLight1}" />
+      </winUi:BoolConverter.True>
+    </winUi:BoolConverter>
   </Page.Resources>
 
   <Grid>
@@ -29,10 +37,15 @@
       </DataTemplate>
 
       <DataTemplate x:Key="NavigationViewItemTemplate" x:DataType="viewModels:ConversationPreviewVm">
-        <NavigationViewItem Content="{x:Bind Name, Mode=OneWay}">
+
+        <NavigationViewItem DataContext="{x:Bind}">
+          <TextBlock Text="{Binding Path=Name, Mode=OneWay}" 
+                     Foreground="{Binding Path=IsNewPlaceholder, Mode=OneWay, Converter={StaticResource BoolToHighlightedConverter}}" />
+
           <NavigationViewItem.ContextFlyout>
             <MenuFlyout>
               <MenuFlyoutItem Text="Delete" Command="{x:Bind DeleteCmd, Mode=OneWay}" />
+              <MenuFlyoutItem Text="Rename" Command="{x:Bind RenameCmd, Mode=OneWay}" />
             </MenuFlyout>
           </NavigationViewItem.ContextFlyout>
         </NavigationViewItem>
@@ -153,4 +166,4 @@
     </NavigationView>
   </Grid>
 
-</Page>
+</local:RootPageBase>

@@ -6,9 +6,11 @@ using System.Linq.Expressions;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Navigation;
-using ReactiveMarbles.ObservableEvents;
 using System.ComponentModel;
 using CommunityToolkit.WinUI.UI;
+using Mdc.OpenAiApi;
+
+// TODO: Check if changing gpt model works correctly when editing a message
 
 public class ConversationsVm : ViewModel
 {
@@ -16,12 +18,11 @@ public class ConversationsVm : ViewModel
     [Reactive] public object SelectedConversationPreview { get; set; }
     [Reactive] public ObservableCollectionExtended<IConversationItem> Items { get; private set; }
     public ObservableCollection<ConversationPreviewVm> TrashBin { get; } = new();
-
     public ReactiveCommand<Unit, IConversationItem[]> LoadItems { get; }
     public ReactiveCommand<Unit, Unit> SaveConversationsCmd { get; }
-
     [Reactive] public bool ShowUndoDelete { get; private set; }
     public ReactiveCommand<Unit, ConversationPreviewVm> UndoDeleteCmd { get; }
+    public Interaction<ConversationPreviewVm, string> RenameIntr { get; } = new();
 
     public ConversationsVm()
     {
@@ -51,7 +52,8 @@ public class ConversationsVm : ViewModel
                                {
                                    Id = i.IdConversation,
                                    Name = i.Name,
-                                   Category = cat
+                                   Category = cat,
+                                   CreatedTs = i.CreatedTs
                                })
                                .Prepend(cat.CreateNewItemPlaceholder()));
 
@@ -87,18 +89,6 @@ public class ConversationsVm : ViewModel
             .Switch()
             .ObserveOnMainThread()
             .Do(p => SelectedConversation = p)
-            .SubscribeSafe();
-
-        // When new item stops being new, insert a new 'new placeholder'
-        selectedConvoPreview
-            .WhereNotNull()
-            .Where(c => c.IsNewPlaceholder)
-            .Select(c => c.WhenAnyValue(x => x.IsNewPlaceholder)
-                          .Where(i => !i)
-                          .Select(_ => c))
-            .Switch()
-            .ObserveOnMainThread()
-            .Do(c => c.Category.Items.Insert(0, c.Category.CreateNewItemPlaceholder()))
             .SubscribeSafe();
 
         SaveConversationsCmd = ReactiveCommand.CreateFromObservable(
@@ -168,6 +158,10 @@ public class ConversationCategoryVm : ViewModel, IConversationItem
         {
             Filter = item => !((ConversationPreviewVm)item).IsTrash
         };
+
+        ItemsView.SortDescriptions.Add(new(nameof(ConversationPreviewVm.IsNewPlaceholder), SortDirection.Descending));
+        ItemsView.SortDescriptions.Add(new(nameof(ConversationPreviewVm.CreatedTs), SortDirection.Descending));
+
         ItemsView.ObserveFilterProperty(nameof(ConversationPreviewVm.IsTrash));
     }
 
@@ -176,13 +170,15 @@ public class ConversationCategoryVm : ViewModel, IConversationItem
         {
             Name = "New Conversation",
             IsNewPlaceholder = true,
-            Category = this
+            Category = this,
+            CreatedTs = DateTime.Now
         };
 }
 
 public class ConversationPreviewVm : ActivatableViewModel, IConversationItem
 {
-    public string Id { get; set; }
+    public string Id { get; init; }
+    public DateTime CreatedTs { get; init; }
     [Reactive] public string Name { get; set; }
     [Reactive] public bool IsNewPlaceholder { get; set; }
     [Reactive] public bool IsTrash { get; set; }
@@ -190,6 +186,7 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationItem
     [Reactive] public ConversationVm Conversation { get; private set; }
 
     public ReactiveCommand<Unit, Unit> DeleteCmd { get; }
+    public ReactiveCommand<Unit, string> RenameCmd { get; }
 
     public ConversationPreviewVm()
     {
@@ -211,14 +208,49 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationItem
                  .Do(_ => IsNewPlaceholder = false)
                  .SubscribeSafe();
 
+        var newConvoCreated = this.WhenAnyValue(vm => vm.IsNewPlaceholder)
+                                  .Skip(1)
+                                  .Where(i => !i);
+
         // Create some kind of name for the new item (that's not new anymore)
-        this.WhenAnyValue(vm => vm.IsNewPlaceholder)
-            .Skip(1)
-            .Where(i => !i)
+        newConvoCreated
             .ObserveOnMainThread()
+            // Generic name
             .Do(_ => Name = $"Chat {Category.Items.Count}")
+            // Auto suggest name
+            .SelectMany(_ => Observable.FromAsync(async () =>
+            {
+                var result = await Conversation.Api.CreateChatCompletions(new()
+                {
+                    Messages = new List<ChatMessage>(
+                        new[]
+                        {
+                            new ChatMessage(
+                                ChatMessageRole.System,
+                                "You suggest names for the given content. Anything sent by the user is considered content. For any given content you should produce a summary of the content in no more than 20 characters which is used as a name for that content. Your suggestion may contain a touch of humor where applicable."
+                                ),
+                            new ChatMessage(
+                                ChatMessageRole.User,
+                                Conversation.Head.Message.Content)
+                        }),
+                    Model = AiModel.GPT35Turbo
+                });
+
+                var suggestion = result.Choices.Last().Message.Content.Trim('\"');
+
+                return suggestion;
+            }))
+            .ObserveOnMainThread()
+            .Do(name => Name = name)
             .SubscribeSafe();
 
+        // When new item stops being new, insert a new 'new placeholder'
+        newConvoCreated
+            .ObserveOnMainThread()
+            .Do(c => Category.Items.Insert(0, Category.CreateNewItemPlaceholder()))
+            .SubscribeSafe();
+
+        // Load conversation from the list
         Activator.Activated
                  .Where(_ => Conversation == null && !IsNewPlaceholder)
                  .Select(_ =>
@@ -259,6 +291,27 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationItem
                      IsTrash = true;
                      Category.Conversations.TrashBin.Add(this);
                  })
+                 .SubscribeSafe();
+
+        RenameCmd = ReactiveCommand.CreateFromTask(
+            async () =>
+            {
+                var name = await Category.Conversations.RenameIntr.Handle(this);
+
+                if (!string.IsNullOrEmpty(name))
+                {
+                    await using var ctx = Services.Container.Resolve<UserProfileDbContext>();
+                    await ctx.Conversations
+                             .Where(c => c.IdConversation == Id)
+                             .ExecuteUpdateAsync(c => c.SetProperty(p => p.Name, name));
+                }
+
+                return name;
+            });
+
+        RenameCmd.ObserveOnMainThread()
+                 .WhereNotNull()
+                 .Do(n => Name = n)
                  .SubscribeSafe();
 
         return;

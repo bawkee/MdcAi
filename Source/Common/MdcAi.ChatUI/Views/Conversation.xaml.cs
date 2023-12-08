@@ -223,6 +223,8 @@ public sealed partial class Conversation : ILogging
                        .Where(e => e.Key == VirtualKey.Escape)
                        .Select(_ => Unit.Default)
                        .InvokeCommand(viewModel.CancelEditCmd);
+
+            PromptField.Focus(FocusState.Programmatic);
         });
 
         return;

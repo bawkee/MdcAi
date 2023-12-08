@@ -34,7 +34,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="Views\ChatPage.xaml" />
     <None Remove="Views\RootPage.xaml" />
   </ItemGroup>
 
@@ -134,12 +133,6 @@
 
   <ItemGroup>
     <Page Update="Views\RootPage.xaml">
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Page Update="Views\ChatPage.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
   </ItemGroup>

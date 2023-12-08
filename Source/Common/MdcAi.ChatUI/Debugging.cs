@@ -10,7 +10,7 @@ public static class Debugging
 {    
     public static bool Enabled = true; // Turns everything off (no debugging)
     
-    public static bool MockMessages = true; // Mocks system messages (doesn't use api)
+    public static bool MockMessages = false; // Mocks system messages (doesn't use api)
     public static bool NumberedMessages = true; // If MockMessages true then mocked messages are simple generic numbered messages rather than some md
     public static bool AutoSendFirstMessage = false; // If MockMessages true then automatically send the first user message 
 

@@ -11,10 +11,11 @@
   xmlns:winUi="using:Sala.Extensions.WinUI"
   xmlns:winUi1="using:CommunityToolkit.WinUI"
   xmlns:chatUi="using:MdcAi.ChatUI"
+  xmlns:converters="using:CommunityToolkit.WinUI.UI.Converters"
   mc:Ignorable="d">
 
   <UserControl.Resources>
-    <winUi:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+    <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
     <winUi:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
   </UserControl.Resources>
 
@@ -75,6 +76,7 @@
                    Margin="10"
                    MaxHeight="400"
                    AcceptsReturn="True"
+                   FontSize="15"
                    PlaceholderText="Write your prompt here"
                    ScrollViewer.VerticalScrollBarVisibility="Auto"
                    TextWrapping="Wrap"

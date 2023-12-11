@@ -1,6 +1,6 @@
 ﻿namespace Mdc.OpenAiApi;
 
-public partial class OpenAIApi
+public partial class OpenAiApi
 {
     internal const string ChatCompletionsUrl = "chat/completions";
 

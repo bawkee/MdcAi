@@ -186,9 +186,9 @@ public partial class App : ILogging
     private void RegisterApi()
     {
         var settings = Services.GetRequired<SettingsVm>();
-        var api = new OpenAIApi();
+        var api = new OpenAiApi();
 
-        Services.RegisterSingleton<IOpenAIApi>(api);
+        Services.RegisterSingleton<IOpenAiApi>(api);
 
         settings.WhenAnyValue(vm => vm.OpenAi.CurrentApiKey,
                               vm => vm.OpenAi.OrganisationName)

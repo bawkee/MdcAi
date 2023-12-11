@@ -5,4 +5,4 @@ public class MapAttribute : Attribute
     public string ToField { get; set; }
 }
 
-public class DontMapAttribute : Attribute { }
+public class DoNotMapAttribute : Attribute { }

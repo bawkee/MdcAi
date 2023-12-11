@@ -8,6 +8,7 @@ using ReactiveUI;
 using MdcAi.Extensions;
 using System.Diagnostics;
 using System;
+using RxExt;
 
 public static class RxUIExtensions
 {

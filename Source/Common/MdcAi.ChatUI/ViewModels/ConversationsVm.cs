@@ -8,7 +8,9 @@ using System.Windows.Input;
 using System.Windows.Navigation;
 using System.ComponentModel;
 using CommunityToolkit.WinUI.UI;
+using LinqMini;
 using Mdc.OpenAiApi;
+using RxExt;
 
 // MPV TODO
 // TODO: Settings for chat (temperature, starting prompt, blabla)

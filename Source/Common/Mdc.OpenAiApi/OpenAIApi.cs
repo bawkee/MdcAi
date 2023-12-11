@@ -1,6 +1,6 @@
 ﻿namespace Mdc.OpenAiApi;
 
-public interface IOpenAIApi
+public interface IOpenAiApi
 {
     string ApiKey { get; }
     string Organisation { get; }
@@ -10,14 +10,14 @@ public interface IOpenAIApi
     IAsyncEnumerable<ChatResult> CreateChatCompletionsStream(ChatRequest request);
 }
 
-public partial class OpenAIApi : IOpenAIApi, IDisposable
+public partial class OpenAiApi : IOpenAiApi, IDisposable
 {
     public string ApiKey { get; private set; }
     public string Organisation { get; private set; }
     public string ApiVersion { get; }
     public HttpClient Client { get; }
 
-    public OpenAIApi(string apiKey = null,
+    public OpenAiApi(string apiKey = null,
                      string organisation = null,
                      string apiVersion = "v1",
                      HttpClient client = null)

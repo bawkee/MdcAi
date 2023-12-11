@@ -7,7 +7,7 @@ public class TypeMapInfo
     public TypeMapInfo(IReflect type)
     {
         Properties = type.GetProperties(BindingFlags.Instance | BindingFlags.Public)
-                         .Where(p => p.GetCustomAttribute<DontMapAttribute>() == null &&
+                         .Where(p => p.GetCustomAttribute<DoNotMapAttribute>() == null &&
                                      p.GetIndexParameters().Length == 0)
                          .Select(p => new MappingProperty(p))
                          .ToArray();

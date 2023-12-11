@@ -10,7 +10,7 @@ using System.Windows.Input;
 
 public class ConversationVm : ActivatableViewModel
 {
-    public IOpenAIApi Api { get; }
+    public IOpenAiApi Api { get; }
     public SettingsVm GlobalSettings { get; }
     public string Id { get; set; }
     [Reactive] public DateTime CreatedTs { get; set; }
@@ -50,7 +50,7 @@ public class ConversationVm : ActivatableViewModel
     [Reactive] public WebViewRequestDto LastMessagesRequest { get; set; }
     public HashSet<string> MessageTrashBin { get; } = new();
 
-    public ConversationVm(IOpenAIApi api, SettingsVm globalSettings)
+    public ConversationVm(IOpenAiApi api, SettingsVm globalSettings)
     {
         Api = api;
         GlobalSettings = globalSettings;

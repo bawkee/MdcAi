@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="Mdc.OpenAiApi.csproj.DotSettings" />
+    <None Remove="MdcAi.OpenAiApi.csproj.DotSettings" />
   </ItemGroup>
 
   <ItemGroup>

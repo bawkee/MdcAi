@@ -22,7 +22,7 @@ using Newtonsoft.Json;
 using Markdig;
 using System.Reactive.Disposables;
 using DynamicData.Binding;
-using Mdc.OpenAiApi;
+using MdcAi.OpenAiApi;
 
 public class ConversationVm : ActivatableViewModel
 {

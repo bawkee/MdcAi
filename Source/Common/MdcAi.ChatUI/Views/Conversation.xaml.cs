@@ -20,7 +20,7 @@ using Windows.Foundation.Collections;
 using Microsoft.Web.WebView2.Core;
 using ViewModels;
 using Newtonsoft.Json;
-using Mdc.OpenAiApi;
+using MdcAi.OpenAiApi;
 using Newtonsoft.Json.Linq;
 using System.IO.Compression;
 using Windows.Storage.Streams;

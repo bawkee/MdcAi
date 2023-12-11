@@ -2,9 +2,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
@@ -62,24 +59,38 @@ public static class LoggingExtensions
         return logger;
     }
 
-    public static ILogger GetLogger<T>() => GetLogger(typeof(T));
+    public static ILogger GetLogger<T>() =>
+        GetLogger(typeof(T));
 
-    public static void LogTrace(this ILogging obj, string message) => GetLogger(obj.GetType())?.LogTrace(message);
-    public static void LogTrace(this ILogging obj, Exception ex, string message) => GetLogger(obj.GetType())?.LogTrace(ex, message);
-    public static void LogTrace(this ILogging obj, string message, params object[] args) => GetLogger(obj.GetType())?.LogTrace(message, args);
+    public static void LogTrace(this ILogging obj, string message) =>
+        GetLogger(obj.GetType())?.LogTrace(message);
+
+    public static void LogTrace(this ILogging obj, Exception ex, string message) =>
+        GetLogger(obj.GetType())?.LogTrace(ex, message);
+
+    public static void LogTrace(this ILogging obj, string message, params object[] args) =>
+        GetLogger(obj.GetType())?.LogTrace(message, args);
 
     public static void LogTrace(this ILogging obj, Exception ex, string message, params object[] args) =>
         GetLogger(obj.GetType())?.LogTrace(ex, message, args);
 
-    public static void LogDebug(this ILogging obj, string message) => GetLogger(obj.GetType())?.LogDebug(message);
-    public static void LogDebug(this ILogging obj, Exception ex, string message) => GetLogger(obj.GetType())?.LogDebug(ex, message);
-    public static void LogDebug(this ILogging obj, string message, params object[] args) => GetLogger(obj.GetType())?.LogDebug(message, args);
+    public static void LogDebug(this ILogging obj, string message) =>
+        GetLogger(obj.GetType())?.LogDebug(message);
+
+    public static void LogDebug(this ILogging obj, Exception ex, string message) =>
+        GetLogger(obj.GetType())?.LogDebug(ex, message);
+
+    public static void LogDebug(this ILogging obj, string message, params object[] args) =>
+        GetLogger(obj.GetType())?.LogDebug(message, args);
 
     public static void LogDebug(this ILogging obj, Exception ex, string message, params object[] args) =>
         GetLogger(obj.GetType())?.LogDebug(ex, message, args);
 
-    public static void LogInformation(this ILogging obj, string message) => GetLogger(obj.GetType())?.LogInformation(message);
-    public static void LogInformation(this ILogging obj, Exception ex, string message) => GetLogger(obj.GetType())?.LogInformation(ex, message);
+    public static void LogInformation(this ILogging obj, string message) =>
+        GetLogger(obj.GetType())?.LogInformation(message);
+
+    public static void LogInformation(this ILogging obj, Exception ex, string message) =>
+        GetLogger(obj.GetType())?.LogInformation(ex, message);
 
     public static void LogInformation(this ILogging obj, string message, params object[] args) =>
         GetLogger(obj.GetType())?.LogInformation(message, args);
@@ -87,23 +98,38 @@ public static class LoggingExtensions
     public static void LogInformation(this ILogging obj, Exception ex, string message, params object[] args) =>
         GetLogger(obj.GetType())?.LogInformation(ex, message, args);
 
-    public static void LogWarning(this ILogging obj, string message) => GetLogger(obj.GetType())?.LogWarning(message);
-    public static void LogWarning(this ILogging obj, Exception ex, string message) => GetLogger(obj.GetType())?.LogWarning(ex, message);
-    public static void LogWarning(this ILogging obj, string message, params object[] args) => GetLogger(obj.GetType())?.LogWarning(message, args);
+    public static void LogWarning(this ILogging obj, string message) =>
+        GetLogger(obj.GetType())?.LogWarning(message);
+
+    public static void LogWarning(this ILogging obj, Exception ex, string message) =>
+        GetLogger(obj.GetType())?.LogWarning(ex, message);
+
+    public static void LogWarning(this ILogging obj, string message, params object[] args) =>
+        GetLogger(obj.GetType())?.LogWarning(message, args);
 
     public static void LogWarning(this ILogging obj, Exception ex, string message, params object[] args) =>
         GetLogger(obj.GetType())?.LogWarning(ex, message, args);
 
-    public static void LogError(this ILogging obj, Exception ex) => GetLogger(obj.GetType())?.LogError(ex, null);
-    public static void LogError(this ILogging obj, string message) => GetLogger(obj.GetType())?.LogError(message);
-    public static void LogError(this ILogging obj, Exception ex, string message) => GetLogger(obj.GetType())?.LogError(ex, message);
-    public static void LogError(this ILogging obj, string message, params object[] args) => GetLogger(obj.GetType())?.LogError(message, args);
+    public static void LogError(this ILogging obj, Exception ex) =>
+        GetLogger(obj.GetType())?.LogError(ex, null);
+
+    public static void LogError(this ILogging obj, string message) =>
+        GetLogger(obj.GetType())?.LogError(message);
+
+    public static void LogError(this ILogging obj, Exception ex, string message) =>
+        GetLogger(obj.GetType())?.LogError(ex, message);
+
+    public static void LogError(this ILogging obj, string message, params object[] args) =>
+        GetLogger(obj.GetType())?.LogError(message, args);
 
     public static void LogError(this ILogging obj, Exception ex, string message, params object[] args) =>
         GetLogger(obj.GetType())?.LogError(ex, message, args);
 
-    public static void LogCritical(this ILogging obj, string message) => GetLogger(obj.GetType())?.LogCritical(message);
-    public static void LogCritical(this ILogging obj, Exception ex, string message) => GetLogger(obj.GetType())?.LogCritical(ex, message);
+    public static void LogCritical(this ILogging obj, string message) =>
+        GetLogger(obj.GetType())?.LogCritical(message);
+
+    public static void LogCritical(this ILogging obj, Exception ex, string message) =>
+        GetLogger(obj.GetType())?.LogCritical(ex, message);
 
     public static void LogCritical(this ILogging obj, string message, params object[] args) =>
         GetLogger(obj.GetType())?.LogCritical(message, args);

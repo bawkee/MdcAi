@@ -1,4 +1,4 @@
-﻿namespace Mdc.OpenAiApi;
+﻿namespace MdcAi.OpenAiApi;
 
 public class ChatResult : ApiResult
 {

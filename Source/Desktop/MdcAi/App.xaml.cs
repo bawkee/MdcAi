@@ -24,7 +24,7 @@ using NLog.Config;
 using NLog.Extensions.Logging;
 using NLog.Targets;
 using Views;
-using Mdc.OpenAiApi;
+using MdcAi.OpenAiApi;
 using LogLevel = NLog.LogLevel;
 using NLog.Common;
 using MdcAi.ChatUI.LocalDal;
@@ -68,9 +68,9 @@ public partial class App : ILogging
 #endif
         });
 
-        ServiceViewLocator.Register();        
+        ServiceViewLocator.Register();
 
-        // Registery Entity Framework database for user profile management (chat lists etc)
+        // Register Entity Framework database for user profile management (chat lists etc)
         Services.Container.Register(
             Component.For<UserProfileDbContext>()
                      .UsingFactoryMethod(
@@ -111,7 +111,7 @@ public partial class App : ILogging
     private bool _errorDialogOpen;
 
     private async Task HandleException(Exception ex)
-    {        
+    {
         this.LogError(ex);
 
         try
@@ -136,7 +136,7 @@ public partial class App : ILogging
                 await dialog.ShowAsync();
             }
             catch // Unfortunately WinUI is extremely fragile and this can happen surprisingly often
-            {                
+            {
                 System.Windows.MessageBox.Show(message, "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
             }
         }
@@ -180,15 +180,18 @@ public partial class App : ILogging
 
         var factory = new LoggerFactory(new[] { new NLogLoggerProvider() });
         LoggingExtensions.LoggerFactory = factory;
-        Services.RegisterLoggerFactory();
+
+        Services.Container.Register(Component.For<ILoggerFactory>()
+                                             .Instance(LoggingExtensions.LoggerFactory)
+                                             .LifeStyle.Singleton);
     }
 
     private void RegisterApi()
     {
-        var settings = Services.GetRequired<SettingsVm>();
-        var api = new OpenAiApi();
+        var settings = Services.Container.Resolve<SettingsVm>();
+        var api = new OpenAiClient();
 
-        Services.RegisterSingleton<IOpenAiApi>(api);
+        Services.Container.Register(Component.For< IOpenAiApi>().Instance(api));
 
         settings.WhenAnyValue(vm => vm.OpenAi.CurrentApiKey,
                               vm => vm.OpenAi.OrganisationName)

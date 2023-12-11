@@ -56,7 +56,7 @@
     <ProjectReference Include="..\..\Common\MdcAi.Extensions\MdcAi.Extensions.csproj" />
     <ProjectReference Include="..\..\Common\Sala.Extensions.Orm\Sala.Extensions.Orm.csproj" />
     <ProjectReference Include="..\..\Common\Sala.Extensions.WinUI\Sala.Extensions.WinUI.csproj" />
-    <ProjectReference Include="..\..\Common\Mdc.OpenAiApi\Mdc.OpenAiApi.csproj" />
+    <ProjectReference Include="..\..\Common\MdcAi.OpenAiApi\MdcAi.OpenAiApi.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Content Update="Assets\sample1.md">

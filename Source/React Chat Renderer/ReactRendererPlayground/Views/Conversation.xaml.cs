@@ -31,7 +31,7 @@ using Newtonsoft.Json.Linq;
 using System.IO.Compression;
 using System.Threading.Tasks;
 using Windows.Storage.Streams;
-using Mdc.OpenAiApi;
+using MdcAi.OpenAiApi;
 
 public sealed partial class Conversation : ConversationBase
 {

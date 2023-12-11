@@ -21,7 +21,7 @@ namespace MdcAi.Views
 
         public MainWindow()
         {            
-            ViewModel = Services.GetRequired<MainVm>();
+            ViewModel = Services.Container.Resolve<MainVm>();
 
             InitializeComponent();
 
@@ -36,7 +36,7 @@ namespace MdcAi.Views
 
         //private async void btn1_Click(object sender, RoutedEventArgs e)
         //{
-        //    var api = new OpenAiApi("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");
+        //    var api = new OpenAiClient("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");
 
         //    var models = await api.GetModels();
 
@@ -57,7 +57,7 @@ namespace MdcAi.Views
 
         //private void btn2_Click(object sender, RoutedEventArgs e)
         //{
-        //    var api = new OpenAiApi("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");
+        //    var api = new OpenAiClient("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");
 
         //    var res = api.CreateChatCompletionsStream(new()
         //                 {

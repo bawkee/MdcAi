@@ -5,7 +5,7 @@ using Windows.Storage;
 using Markdig;
 using System.Web;
 using LocalDal;
-using Mdc.OpenAiApi;
+using MdcAi.OpenAiApi;
 using Windows.ApplicationModel.Background;
 
 /// <summary>

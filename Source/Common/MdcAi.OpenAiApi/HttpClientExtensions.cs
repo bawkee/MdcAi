@@ -1,8 +1,11 @@
-﻿namespace Mdc.OpenAiApi;
+﻿namespace MdcAi.OpenAiApi;
 
 using Microsoft.Extensions.Logging;
 
-public static class HttpClientExt
+/// <summary>
+/// Http client wrapper specially made for OpenAi REST endpoints, their headers, return codes, errors, etc.
+/// </summary>
+public static class HttpClientExtensions
 {
     private static void ParseHeaders(HttpResponseHeaders headers, ApiResult result)
     {
@@ -17,7 +20,7 @@ public static class HttpClientExt
         }
         catch (Exception ex)
         {
-            LoggingExtensions.GetLogger(typeof(HttpClientExt))?.LogError(ex, "Parsing metadata of OpenAi Response");
+            LoggingExtensions.GetLogger(typeof(HttpClientExtensions))?.LogError(ex, "Parsing metadata of OpenAi Response");
         }
     }
 

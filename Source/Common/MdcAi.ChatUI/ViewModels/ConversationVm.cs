@@ -1,7 +1,7 @@
 ﻿namespace MdcAi.ChatUI.ViewModels;
 
 using Windows.Storage;
-using Mdc.OpenAiApi;
+using MdcAi.OpenAiApi;
 using Newtonsoft.Json;
 using MdcAi.ChatUI.LocalDal;
 using Microsoft.EntityFrameworkCore;

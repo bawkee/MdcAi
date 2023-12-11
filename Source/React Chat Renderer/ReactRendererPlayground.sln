@@ -11,7 +11,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sala.Extensions.WinUI", "..
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sala.Extensions.Orm", "..\Common\Sala.Extensions.Orm\Sala.Extensions.Orm.csproj", "{4AA48979-3350-4ADD-B455-2691081F089C}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Mdc.OpenAiApi", "..\Common\Mdc.OpenAiApi\Mdc.OpenAiApi.csproj", "{9558A080-D0FD-449F-9130-7FA86B32770D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MdcAi.OpenAiApi", "..\Common\MdcAi.OpenAiApi\MdcAi.OpenAiApi.csproj", "{9558A080-D0FD-449F-9130-7FA86B32770D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

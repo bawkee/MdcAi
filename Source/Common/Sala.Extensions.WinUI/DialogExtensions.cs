@@ -13,6 +13,9 @@ using System.Reactive.Disposables;
 
 public static class DialogExtensions
 {
+    /// <summary>
+    /// Provides a simple input box, similar to the one we had in VB6 days. Some things never change?
+    /// </summary>
     public static async Task<string> ShowTextInputDialog(
         this UIElement parent,
         string prompt,
@@ -25,7 +28,7 @@ public static class DialogExtensions
             Height = 32,
             Text = defaultValue
         };
-        
+
         inputTextBox.SelectAll();
 
         var dialog = new ContentDialog

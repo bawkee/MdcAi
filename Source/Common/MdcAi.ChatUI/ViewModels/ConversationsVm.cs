@@ -9,7 +9,7 @@ using System.Windows.Navigation;
 using System.ComponentModel;
 using CommunityToolkit.WinUI.UI;
 using LinqMini;
-using Mdc.OpenAiApi;
+using MdcAi.OpenAiApi;
 using RxExt;
 
 // MPV TODO
@@ -203,7 +203,7 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationItem
                  .Take(1)
                  .Where(_ => Conversation == null && IsNewPlaceholder)
                  // Create a new conversation
-                 .Select(_ => Conversation = Services.GetRequired<ConversationVm>())
+                 .Select(_ => Conversation = Services.Container.Resolve<ConversationVm>())
                  // When system completion is initiated, clear the 'new item' flag
                  .Select(convo => convo.WhenAnyValue(vm => vm.Head.Message.Next)
                                        .WhereNotNull()
@@ -236,7 +236,7 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationItem
                         {
                             new ChatMessage(
                                 ChatMessageRole.System,
-                                "You suggest names for the given content. Anything sent by the user is considered content. For any given content you should produce a summary of the content in no more than 20 characters which is used as a name for that content. Your suggestion may contain a touch of humor where applicable."
+                                "Given the content provided by the user, you are to create witty yet concise names, with a maximum of 20 characters, excluding any form of punctuation or line breaks. The names should be complete words or phrases, avoiding any cutoffs. A sprinkle of humor is welcome, as long as it adheres to the character limit."
                                 ),
                             new ChatMessage(
                                 ChatMessageRole.User,
@@ -245,7 +245,7 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationItem
                     Model = AiModel.GPT35Turbo
                 });
 
-                var suggestion = result.Choices.Last().Message.Content.Trim('\"');
+                var suggestion = result.Choices.Last().Message.Content.CompactWhitespaces().Trim('\"');
 
                 return suggestion;
             }))

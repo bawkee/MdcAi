@@ -45,15 +45,6 @@ public static class Services
         Container.Install();
     }
 
-    public static void RegisterViewModels(params Assembly[] assemblies)
-    {
-        foreach (var asm in assemblies)
-            RegisterViewModels(asm);
-    }
-
-    public static void RegisterViewModels(Assembly asm) =>
-        RegisterViewModels(Types.FromAssembly(asm));
-
     public static void RegisterViewModels(FromAssemblyDescriptor assemblyDescriptor) =>
         Container.Register(assemblyDescriptor
                            .BasedOn<ViewModel>()
@@ -71,43 +62,12 @@ public static class Services
                                    c.LifestyleTransient();
                            }));
 
-    public static void RegisterViewModel<TVm>() where TVm : class =>
-        RegisterTransient<TVm>();
-
-    public static void RegisterViewModel<T, TVm>() where T : class
-                                                   where TVm : T =>
-        RegisterTransient<T, TVm>(true);
-
-    public static void RegisterViews(params Assembly[] assemblies)
-    {
-        foreach (var asm in assemblies)
-            RegisterViews(asm);
-    }
-
-    public static void RegisterViews(Assembly asm) =>
-        RegisterViews(Types.FromAssembly(asm));
-
     public static void RegisterViews(FromAssemblyDescriptor assemblyDescriptor) =>
         Container.Register(assemblyDescriptor
                            .BasedOn(typeof(IViewFor<>))
                            .Unless(t => t.GetCustomAttributes(typeof(DoNotRegisterAttribute), false).Any())
                            .WithService.FromInterface()
                            .LifestyleTransient());
-
-    public static void RegisterViewModelsAndViews(params Assembly[] assemblies)
-    {
-        foreach (var asm in assemblies)
-            RegisterViewModelsAndViews(asm);
-    }
-
-    public static void RegisterViewModelsAndViews(params string[] asmNames)
-    {
-        foreach (var asm in asmNames)
-            RegisterViewModelsAndViews(asm);
-    }
-
-    public static void RegisterViewModelsAndViews(Assembly asm) =>
-        RegisterViewModelsAndViews(Types.FromAssembly(asm));
 
     public static void RegisterViewModelsAndViews(string asmName) =>
         RegisterViewModelsAndViews(Types.FromAssemblyNamed(asmName));
@@ -116,117 +76,6 @@ public static class Services
     {
         RegisterViewModels(assemblyDescriptor);
         RegisterViews(assemblyDescriptor);
-    }
-
-    public static void RegisterLoggerFactory() =>
-        Container.Register(Component.For<ILoggerFactory>()
-                                    .Instance(LoggingExtensions.LoggerFactory)
-                                    .LifeStyle.Singleton);
-
-    public static void RegisterHttpClient(HttpClient client) => RegisterSingleton(client);
-
-    public static void RegisterMainWinow<T>() where T : Window => RegisterSingleton<T>();
-
-    public static void RegisterSingleton<T>(T instance = default) where T : class
-    {
-        if (instance == null)
-            Container.Register(Component.For<T>().LifeStyle.Singleton);
-        else
-            Container.Register(Component.For<T>().Instance(instance).LifeStyle.Singleton);
-    }
-
-    public static void RegisterSingleton<T, TImpl>(bool implToo = false) where T : class
-                                                                         where TImpl : T =>
-        Container.Register(GetComponentWithImpl<T, TImpl>(implToo).LifeStyle.Singleton);
-
-    public static void RegisterSingleton<T1, T2, TImpl>() where T1 : class
-                                                          where T2 : class
-                                                          where TImpl : T1, T2 =>
-        Container.Register(Component.For<T1, T2>()
-                                    .ImplementedBy<TImpl>()
-                                    .LifeStyle.Singleton);
-
-    public static void RegisterTransient<T>() where T : class =>
-        Container.Register(Component.For<T>().LifeStyle.Transient);
-
-    public static void RegisterTransient<T, TImpl>(bool implToo = false) where T : class
-                                                                         where TImpl : T =>
-        Container.Register(GetComponentWithImpl<T, TImpl>(implToo).LifeStyle.Transient);
-
-    public static void RegisterTransient<T1, T2, TImpl>() where T1 : class
-                                                          where T2 : class
-                                                          where TImpl : T1, T2 =>
-        Container.Register(Component.For<T1, T2>()
-                                    .ImplementedBy<TImpl>()
-                                    .LifeStyle.Transient);
-
-    private static ComponentRegistration<T> GetComponentWithImpl<T, TImpl>(bool implToo) where T : class
-                                                                                         where TImpl : T =>
-        implToo ?
-            Component.For<T, TImpl>()
-                     .ImplementedBy<TImpl>() :
-            Component.For<T>()
-                     .ImplementedBy<TImpl>();
-
-    public static T Get<T>(T def = default)
-    {
-        try
-        {
-            if (Container?.Kernel.HasComponent(typeof(T)) ?? false)
-                return Container.Resolve<T>();
-            return def;
-        }
-        catch (Exception ex)
-        {
-            throw new DependencyResolveException(ex);
-        }
-    }
-
-    public static T Get<T>(IDictionary<string, object> arguments, T def = default)
-    {
-        try
-        {
-            if (Container?.Kernel.HasComponent(typeof(T)) ?? false)
-                return Container.Resolve<T>(arguments);
-            return def;
-        }
-        catch (Exception ex)
-        {
-            throw new DependencyResolveException(ex);
-        }
-    }
-
-    public static bool HasComponent(Type type) => Container?.Kernel.HasComponent(type) ?? false;
-
-    public static bool HasComponent<T>() => HasComponent(typeof(T));
-
-    public static object GetRequired(Type type, string key = null)
-    {
-        try
-        {
-            return key == null ? Container.Resolve(type) : Container.Resolve(key, type);
-        }
-        catch (Exception ex)
-        {
-            throw new DependencyResolveException(ex);
-        }
-    }
-
-    public static T GetRequired<T>(string typeName = null) => (T)GetRequired(typeof(T), typeName);
-
-    public static T GetRequired<T>((string name, object value)[] arguments) =>
-        GetRequired<T>(arguments.ToDictionary(k => k.name, v => v.value));
-
-    public static T GetRequired<T>(IDictionary<string, object> arguments)
-    {
-        try
-        {
-            return Container.Resolve<T>(arguments);
-        }
-        catch (Exception ex)
-        {
-            throw new DependencyResolveException(ex);
-        }
     }
 
     public static IViewFor GetView(Type viewModelType, string viewName = null, bool window = false)
@@ -259,7 +108,7 @@ public static class Services
         if (viewHandlers.First().Resolve(CreationContext.CreateEmpty()) is IViewFor view)
             return view;
 
-        throw new DependencyResolveException();
+        throw new ViewResolveException();
     }
 
     public static IViewFor GetView<T>(T viewModel, string viewName = null, bool window = false) =>
@@ -277,7 +126,7 @@ public static class Services
     private static UserControl GetUserControlViewInternal(object viewModel, Type viewModelType, string viewName = null, bool setVm = true)
     {
         if (GetView(viewModelType, viewName) is not (UserControl uc and IViewFor v))
-            throw new DependencyResolveException();
+            throw new ViewResolveException();
         if (setVm)
             v.ViewModel = viewModel;
         return uc;
@@ -285,20 +134,17 @@ public static class Services
 
     private static Type FixGenericVmTypeForViews<TVm>(TVm viewModel)
     {
-        // This 'fixes' a problem where VM is often an interface but we really want to resolve the
+        // This 'fixes' a problem where VM is often an interface, but we really want to resolve the
         // view for an actual VM type, not its interface.
         var t = typeof(TVm);
         return t.IsInterface ? viewModel.GetType() : t;
     }
 }
 
-public class DependencyResolveException : Exception
-{
-    public DependencyResolveException(Exception innerEx)
-        : base("Failed to resolve one or more dependencies.", innerEx) { }
-
-    public DependencyResolveException()
-        : base("Failed to resolve dependency.") { }
+public class ViewResolveException : Exception
+{    
+    public ViewResolveException()
+        : base("Failed to resolve view dependency.") { }
 }
 
 public class DoNotRegisterAttribute : Attribute { }

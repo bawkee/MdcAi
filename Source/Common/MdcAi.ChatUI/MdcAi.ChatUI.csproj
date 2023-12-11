@@ -25,13 +25,13 @@
     <PackageReference Include="ReactiveUI.Fody" Version="19.5.1" />
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.4.231008000" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.22621.756" />
+    <PackageReference Include="Mapster" Version="7.4.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\MdcAi.Extensions\MdcAi.Extensions.csproj" />
-    <ProjectReference Include="..\Sala.Extensions.Orm\Sala.Extensions.Orm.csproj" />
     <ProjectReference Include="..\Sala.Extensions.WinUI\Sala.Extensions.WinUI.csproj" />
-    <ProjectReference Include="..\Mdc.OpenAiApi\Mdc.OpenAiApi.csproj" />
+    <ProjectReference Include="..\MdcAi.OpenAiApi\MdcAi.OpenAiApi.csproj" />
     <ProjectReference Include="..\MdcAi.ChatUI.LocalDal\MdcAi.ChatUI.LocalDal.csproj" />
   </ItemGroup>
 
@@ -53,7 +53,6 @@
     <Using Include="System.Text" />
     <Using Include="Sala.Extensions.WinUI" />
     <Using Include="MdcAi.Extensions" />
-    <Using Include="Sala.Extensions.Orm" />
   </ItemGroup>
 
   <ItemGroup>

@@ -23,13 +23,11 @@
     <PackageReference Include="Markdig" Version="0.33.0" />
     <PackageReference Include="ReactiveMarbles.ObservableEvents.SourceGenerator" Version="1.3.1" />
     <PackageReference Include="ReactiveUI.Fody" Version="19.5.1" />
-    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.4.231115000" />
-    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.22621.2428" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Desktop\MdcAi.Extensions.WinUI\MdcAi.Extensions.WinUI.csproj" />
-    <ProjectReference Include="..\MdcAi.OpenAiApi\MdcAi.OpenAiApi.csproj" />
+    <ProjectReference Include="..\MdcAi.Extensions.WinUI\MdcAi.Extensions.WinUI.csproj" />
+    <ProjectReference Include="..\..\Common\MdcAi.OpenAiApi\MdcAi.OpenAiApi.csproj" />
     <ProjectReference Include="..\MdcAi.ChatUI.LocalDal\MdcAi.ChatUI.LocalDal.csproj" />
   </ItemGroup>    
 

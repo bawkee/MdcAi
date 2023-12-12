@@ -61,8 +61,8 @@
     <PackageReference Include="NLog" Version="5.2.5" />
     <PackageReference Include="NLog.Extensions.Logging" Version="5.3.5" />
     <PackageReference Include="ReactiveUI.Fody" Version="19.5.1" />
-    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.4.231115000" />
-    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.22621.2428" />
+    <!--<PackageReference Include="Microsoft.WindowsAppSDK" Version="1.4.231115000" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.22621.2428" />-->
     <Manifest Include="$(ApplicationManifest)" />
   </ItemGroup>
 
@@ -74,8 +74,9 @@
   <ItemGroup Condition="'$(DisableMsixProjectCapabilityAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
     <ProjectCapability Include="Msix" />
   </ItemGroup>
+
   <ItemGroup>
-    <ProjectReference Include="..\..\Common\MdcAi.ChatUI\MdcAi.ChatUI.csproj" />
+    <ProjectReference Include="..\MdcAi.ChatUI\MdcAi.ChatUI.csproj" />
   </ItemGroup>
 
   <!-- 

@@ -1,6 +1,7 @@
 ﻿namespace MdcAi.OpenAiApi;
 
 using Microsoft.Extensions.Logging;
+using SalaTools.Core;
 
 /// <summary>
 /// Http client wrapper specially made for OpenAi REST endpoints, their headers, return codes, errors, etc.
@@ -20,7 +21,7 @@ public static class HttpClientExtensions
         }
         catch (Exception ex)
         {
-            LoggingExtensions.GetLogger(typeof(HttpClientExtensions))?.LogError(ex, "Parsing metadata of OpenAi Response");
+            typeof(HttpClientExtensions).GetLogger()?.LogError(ex, "Parsing metadata of OpenAi Response");
         }
     }
 

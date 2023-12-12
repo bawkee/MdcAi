@@ -1,12 +1,9 @@
 ﻿namespace MdcAi.ChatUI.ViewModels;
 
 using Windows.Storage;
-using MdcAi.OpenAiApi;
-using Newtonsoft.Json;
-using MdcAi.ChatUI.LocalDal;
+using OpenAiApi;
+using LocalDal;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using System.Windows.Input;
 
 public class ConversationVm : ActivatableViewModel
 {
@@ -253,7 +250,7 @@ public class ConversationVm : ActivatableViewModel
 
         LoadCmd = ReactiveCommand.CreateFromTask(async () =>
         {
-            await using var ctx = Services.Container.Resolve<UserProfileDbContext>();
+            await using var ctx = AppServices.Container.Resolve<UserProfileDbContext>();
 
             var convo = await ctx.Conversations
                                  .Include(c => c.Messages)
@@ -282,7 +279,7 @@ public class ConversationVm : ActivatableViewModel
         SaveCmd = ReactiveCommand.CreateFromTask(
             async (ConversationSaveOptions opt) =>
             {
-                var ctx = opt.DbContext ?? Services.Container.Resolve<UserProfileDbContext>();
+                var ctx = opt.DbContext ?? AppServices.Container.Resolve<UserProfileDbContext>();
                 var ctxScope = opt.DbContext == null ? ctx : Disposable.Empty;
 
                 using (ctxScope)
@@ -346,7 +343,7 @@ public class ConversationVm : ActivatableViewModel
             .WhereNotNull()
             .SelectMany(id => Observable.FromAsync(async () =>
             {
-                await using var ctx = Services.Container.Resolve<UserProfileDbContext>();
+                await using var ctx = AppServices.Container.Resolve<UserProfileDbContext>();
                 return await ctx.Categories.FirstOrDefaultAsync(c => c.IdCategory == id);
             }))
             .ObserveOnMainThread()

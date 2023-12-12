@@ -33,11 +33,11 @@ public class ChatRequest
     [JsonIgnore]
     public string StopSequence
     {
-        get => MultipleStopSequences?.FirstOrDefault() ?? null;
+        get => MultipleStopSequences?.FirstOrDefault();
         set
         {
             if (value != null)
-                MultipleStopSequences = new string[] { value };
+                MultipleStopSequences = new[] { value };
         }
     }
 

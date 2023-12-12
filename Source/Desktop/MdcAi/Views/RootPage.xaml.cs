@@ -31,7 +31,7 @@ public sealed partial class RootPage
 {
     public RootPage()
     {
-        ViewModel = Services.Container.Resolve<MainVm>();
+        ViewModel = AppServices.Container.Resolve<MainVm>();
 
         InitializeComponent();
 

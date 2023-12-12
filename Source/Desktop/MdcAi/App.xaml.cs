@@ -6,17 +6,10 @@ namespace MdcAi;
 using Castle.MicroKernel.Registration;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Sala.Extensions.WinUI;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.InteropServices.WindowsRuntime;
-using Windows.ApplicationModel;
-using Windows.ApplicationModel.Activation;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
 using Windows.Storage;
 using Microsoft.Extensions.Logging;
 using NLog;
@@ -24,13 +17,13 @@ using NLog.Config;
 using NLog.Extensions.Logging;
 using NLog.Targets;
 using Views;
-using MdcAi.OpenAiApi;
+using OpenAiApi;
 using LogLevel = NLog.LogLevel;
 using NLog.Common;
-using MdcAi.ChatUI.LocalDal;
+using ChatUI.LocalDal;
 using MdcAi.ChatUI.ViewModels;
 using Microsoft.EntityFrameworkCore;
-using Windows.UI.Popups;
+using RxUIExt.Windsor;
 
 /// <summary>
 /// Provides application-specific behavior to supplement the default Application class.
@@ -46,7 +39,7 @@ public partial class App : ILogging
     public App()
     {
         // The DI container
-        Services.Install();
+        AppServices.Install();
 
         ConfigureNLog();
 
@@ -68,10 +61,10 @@ public partial class App : ILogging
 #endif
         });
 
-        ServiceViewLocator.Register();
+        CastleServiceViewLocator.Register(AppServices.Container, typeof(Window));
 
         // Register Entity Framework database for user profile management (chat lists etc)
-        Services.Container.Register(
+        AppServices.Container.Register(
             Component.For<UserProfileDbContext>()
                      .UsingFactoryMethod(
                          _ => new UserProfileDbContext(Path.Combine(ApplicationData.Current.LocalFolder.Path, "Chats.db")))
@@ -79,7 +72,7 @@ public partial class App : ILogging
 
         Observable.FromAsync(async () =>
                   {
-                      await using var db = Services.Container.Resolve<UserProfileDbContext>();
+                      await using var db = AppServices.Container.Resolve<UserProfileDbContext>();
                       await db.Database.MigrateAsync();
                   })
                   .SubscribeSafe();
@@ -96,8 +89,8 @@ public partial class App : ILogging
 
         //db.SaveChanges();
 
-        Services.RegisterViewModelsAndViews("MdcAi.ChatUI");
-        Services.RegisterViewModelsAndViews(Types.FromAssembly(Assembly.GetExecutingAssembly()));
+        AppServices.Container.RegisterViewModelsAndViews("MdcAi.ChatUI");
+        AppServices.Container.RegisterViewModelsAndViews(Types.FromAssembly(Assembly.GetExecutingAssembly()));
 
         RegisterApi();
 
@@ -181,17 +174,17 @@ public partial class App : ILogging
         var factory = new LoggerFactory(new[] { new NLogLoggerProvider() });
         LoggingExtensions.LoggerFactory = factory;
 
-        Services.Container.Register(Component.For<ILoggerFactory>()
-                                             .Instance(LoggingExtensions.LoggerFactory)
-                                             .LifeStyle.Singleton);
+        AppServices.Container.Register(Component.For<ILoggerFactory>()
+                                                .Instance(LoggingExtensions.LoggerFactory)
+                                                .LifeStyle.Singleton);
     }
 
     private void RegisterApi()
     {
-        var settings = Services.Container.Resolve<SettingsVm>();
+        var settings = AppServices.Container.Resolve<SettingsVm>();
         var api = new OpenAiClient();
 
-        Services.Container.Register(Component.For< IOpenAiApi>().Instance(api));
+        AppServices.Container.Register(Component.For<IOpenAiApi>().Instance(api));
 
         settings.WhenAnyValue(vm => vm.OpenAi.CurrentApiKey,
                               vm => vm.OpenAi.OrganisationName)
@@ -204,7 +197,7 @@ public partial class App : ILogging
     /// Invoked when the application is launched.
     /// </summary>
     /// <param name="args">Details about the launch request and process.</param>
-    protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
+    protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
         Window = new MainWindow();
         Window.Activate();

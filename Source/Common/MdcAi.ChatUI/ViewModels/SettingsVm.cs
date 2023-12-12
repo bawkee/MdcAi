@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.StartPanel;
+﻿namespace MdcAi.ChatUI.ViewModels;
 
-namespace MdcAi.ChatUI.ViewModels;
+using RxUIExt.Windsor;
 
 [Singleton]
 public class SettingsVm : ActivatableViewModel

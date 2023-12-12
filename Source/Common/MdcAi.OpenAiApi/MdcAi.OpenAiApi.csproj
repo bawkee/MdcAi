@@ -12,7 +12,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MdcAi.Extensions\MdcAi.Extensions.csproj" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="SalaTools.Core" Version="1.0.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -25,7 +26,6 @@
     <Using Include="System.Threading.Tasks" />
     <Using Include="System.Reactive" />
     <Using Include="System.Reactive.Linq" />
-    <Using Include="MdcAi.Extensions" />
     <Using Include="Newtonsoft.Json" />
     <Using Include="System.Net" />
     <Using Include="System.Net.Http.Headers" />

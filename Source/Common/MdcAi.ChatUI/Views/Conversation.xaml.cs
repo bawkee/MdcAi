@@ -5,33 +5,20 @@ namespace MdcAi.ChatUI.Views;
 
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Controls.Primitives;
-using Microsoft.UI.Xaml.Data;
-using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Navigation;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
 using Microsoft.Web.WebView2.Core;
 using ViewModels;
 using Newtonsoft.Json;
-using MdcAi.OpenAiApi;
-using Newtonsoft.Json.Linq;
 using System.IO.Compression;
 using Windows.Storage.Streams;
 using Windows.Storage;
-using System.Drawing.Text;
 using System.Windows.Input;
 using Windows.System;
 using DynamicData;
-using DynamicData.Kernel;
 using ReactiveMarbles.ObservableEvents;
 using System.Reactive.Disposables;
+using RxUIExt.Windsor;
 
 public sealed partial class Conversation : ILogging
 {

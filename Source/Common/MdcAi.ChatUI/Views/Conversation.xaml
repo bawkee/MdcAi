@@ -8,15 +8,15 @@
   xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
   xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
   xmlns:c="using:CommunityToolkit.WinUI.Controls"
-  xmlns:winUi="using:Sala.Extensions.WinUI"
-  xmlns:winUi1="using:CommunityToolkit.WinUI"
+  xmlns:winUi="using:CommunityToolkit.WinUI"
   xmlns:chatUi="using:MdcAi.ChatUI"
   xmlns:converters="using:CommunityToolkit.WinUI.UI.Converters"
+  xmlns:salaConverters="using:RxUIExt.WinUI.SalaConverters"
   mc:Ignorable="d">
 
   <UserControl.Resources>
     <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
-    <winUi:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
+    <salaConverters:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
   </UserControl.Resources>
 
   <c:DockPanel>
@@ -67,7 +67,7 @@
                        Foreground="{ThemeResource SystemAccentColorLight1}">
               <Run Text="Editing message sent on" />
               <Run Text="{x:Bind ViewModel.EditMessage.Message.CreatedTs, Mode=OneWay}" />
-              <Hyperlink winUi1:HyperlinkExtensions.Command="{x:Bind ViewModel.CancelEditCmd, Mode=OneWay}">
+              <Hyperlink winUi:HyperlinkExtensions.Command="{x:Bind ViewModel.CancelEditCmd, Mode=OneWay}">
                 <Run Text="(Cancel Edit)" />
               </Hyperlink>
             </TextBlock>

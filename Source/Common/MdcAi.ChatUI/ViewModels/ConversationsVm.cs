@@ -1,16 +1,11 @@
 ﻿namespace MdcAi.ChatUI.ViewModels;
 
 using LocalDal;
-using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
-using System.Windows.Data;
 using System.Windows.Input;
-using System.Windows.Navigation;
-using System.ComponentModel;
 using CommunityToolkit.WinUI.UI;
-using LinqMini;
-using MdcAi.OpenAiApi;
-using RxExt;
+using OpenAiApi;
+using Microsoft.EntityFrameworkCore;
 
 // MPV TODO
 // TODO: Settings for chat (temperature, starting prompt, blabla)
@@ -37,7 +32,7 @@ public class ConversationsVm : ViewModel
     {
         LoadItems = ReactiveCommand.CreateFromTask(async () =>
         {
-            await using var ctx = Services.Container.Resolve<UserProfileDbContext>();
+            await using var ctx = AppServices.Container.Resolve<UserProfileDbContext>();
 
             var convos = ctx.Conversations;
             var categories = await ctx.Categories
@@ -102,7 +97,7 @@ public class ConversationsVm : ViewModel
 
         SaveConversationsCmd = ReactiveCommand.CreateFromObservable(
             () => Observable.Using(
-                () => Services.Container.Resolve<UserProfileDbContext>(),
+                () => AppServices.Container.Resolve<UserProfileDbContext>(),
                 ctx => Items.OfType<ConversationCategoryVm>()
                             .GetConversations()
                             .Select(c => c.Conversation)
@@ -123,7 +118,7 @@ public class ConversationsVm : ViewModel
             {
                 if (TrashBin.LastOrDefault() is not { } last)
                     return null;
-                await using var ctx = Services.Container.Resolve<UserProfileDbContext>();
+                await using var ctx = AppServices.Container.Resolve<UserProfileDbContext>();
                 await ctx.Conversations
                          .Where(c => c.IdConversation == last.Id)
                          .ExecuteUpdateAsync(c => c.SetProperty(p => p.IsTrash, false));
@@ -203,7 +198,7 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationItem
                  .Take(1)
                  .Where(_ => Conversation == null && IsNewPlaceholder)
                  // Create a new conversation
-                 .Select(_ => Conversation = Services.Container.Resolve<ConversationVm>())
+                 .Select(_ => Conversation = AppServices.Container.Resolve<ConversationVm>())
                  // When system completion is initiated, clear the 'new item' flag
                  .Select(convo => convo.WhenAnyValue(vm => vm.Head.Message.Next)
                                        .WhereNotNull()
@@ -245,7 +240,7 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationItem
                     Model = AiModel.GPT35Turbo
                 });
 
-                var suggestion = result.Choices.Last().Message.Content.CompactWhitespaces().Trim('\"');
+                var suggestion = result.Choices.Last().Message.Content.CompactWhitespace().Trim('\"');
 
                 return suggestion;
             }))
@@ -264,7 +259,7 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationItem
                  .Where(_ => Conversation == null && !IsNewPlaceholder)
                  .Select(_ =>
                  {
-                     var convo = Services.Container.Resolve<ConversationVm>();
+                     var convo = AppServices.Container.Resolve<ConversationVm>();
                      convo.Id = Id;
                      return convo;
                  })
@@ -285,7 +280,7 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationItem
         DeleteCmd = ReactiveCommand.CreateFromTask(
             async () =>
             {
-                await using var ctx = Services.Container.Resolve<UserProfileDbContext>();
+                await using var ctx = AppServices.Container.Resolve<UserProfileDbContext>();
                 await ctx.Conversations
                          .Where(c => c.IdConversation == Id)
                          .ExecuteUpdateAsync(c => c.SetProperty(p => p.IsTrash, true));
@@ -309,7 +304,7 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationItem
 
                 if (!string.IsNullOrEmpty(name))
                 {
-                    await using var ctx = Services.Container.Resolve<UserProfileDbContext>();
+                    await using var ctx = AppServices.Container.Resolve<UserProfileDbContext>();
                     await ctx.Conversations
                              .Where(c => c.IdConversation == Id)
                              .ExecuteUpdateAsync(c => c.SetProperty(p => p.Name, name));

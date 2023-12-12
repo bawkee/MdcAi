@@ -1,5 +1,7 @@
 ﻿namespace MdcAi.OpenAiApi;
 
+using SalaTools.Core;
+
 public partial class OpenAiClient
 {
     internal const string ChatCompletionsUrl = "chat/completions";

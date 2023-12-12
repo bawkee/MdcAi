@@ -1,8 +1,5 @@
 ﻿namespace MdcAi.ChatUI.ViewModels;
 
-using System.Windows.Forms;
-using RxExt;
-
 public class ChatMessageSelectorVm : ViewModel
 {
     public ObservableCollection<ChatMessageVm> Versions { get; } = new();

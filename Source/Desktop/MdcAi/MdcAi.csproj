@@ -61,8 +61,8 @@
     <PackageReference Include="NLog" Version="5.2.5" />
     <PackageReference Include="NLog.Extensions.Logging" Version="5.3.5" />
     <PackageReference Include="ReactiveUI.Fody" Version="19.5.1" />
-    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.4.231008000" />
-    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.22621.756" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.4.231115000" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.22621.2428" />
     <Manifest Include="$(ApplicationManifest)" />
   </ItemGroup>
 
@@ -75,8 +75,6 @@
     <ProjectCapability Include="Msix" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\Common\MdcAi.Extensions\MdcAi.Extensions.csproj" />
-    <ProjectReference Include="..\..\Common\Sala.Extensions.WinUI\Sala.Extensions.WinUI.csproj" />
     <ProjectReference Include="..\..\Common\MdcAi.ChatUI\MdcAi.ChatUI.csproj" />
   </ItemGroup>
 
@@ -126,8 +124,13 @@
     <Using Include="ReactiveUI.Fody.Helpers" />
     <Using Include="DynamicData.Binding" />
     <Using Include="System.Text" />
-    <Using Include="Sala.Extensions.WinUI" />
-    <Using Include="MdcAi.Extensions" />
+    <Using Include="RxExt" />
+    <Using Include="RxUIExt" />
+    <Using Include="RxUIExt.Windsor" />
+    <Using Include="RxUIExt.WinUI" />
+    <Using Include="LinqMini" />
+    <Using Include="MdcAi.Extensions.WinUI" />
+    <Using Include="SalaTools.Core" />
   </ItemGroup>
 
   <ItemGroup>

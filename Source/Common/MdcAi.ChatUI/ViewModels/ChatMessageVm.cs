@@ -1,12 +1,9 @@
 ﻿namespace MdcAi.ChatUI.ViewModels;
 
 using Windows.Storage;
-
 using Markdig;
 using System.Web;
-using LocalDal;
-using MdcAi.OpenAiApi;
-using Windows.ApplicationModel.Background;
+using OpenAiApi;
 
 /// <summary>
 /// This is a doubly linked list, plus each message can diverge and we keep all the versions.

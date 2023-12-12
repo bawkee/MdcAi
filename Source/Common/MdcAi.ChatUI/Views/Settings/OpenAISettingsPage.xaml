@@ -8,13 +8,12 @@
   xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
   xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
   xmlns:controls="using:CommunityToolkit.WinUI.Controls"
-  xmlns:controls1="using:CommunityToolkit.WinUI.UI.Controls"
-  xmlns:winUi="using:Sala.Extensions.WinUI"
+  xmlns:salaConverters="using:RxUIExt.WinUI.SalaConverters"
   mc:Ignorable="d"
   Background="Transparent">
 
   <Page.Resources>
-    <winUi:NullToVisibilityConverter x:Key="NullToVisibilityConverterInv" />
+    <salaConverters:NullToVisibilityConverter x:Key="NullToVisibilityConverterInv" />
   </Page.Resources>
 
   <controls:SettingsExpander x:Name="apiExpander"

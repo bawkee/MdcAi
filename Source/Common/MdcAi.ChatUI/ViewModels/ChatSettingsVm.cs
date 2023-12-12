@@ -1,7 +1,7 @@
 ﻿namespace MdcAi.ChatUI.ViewModels;
 
 using Mapster;
-using MdcAi.OpenAiApi;
+using OpenAiApi;
 
 public class ChatSettingsVm : ViewModel
 {

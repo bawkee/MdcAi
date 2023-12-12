@@ -1,5 +1,7 @@
 ﻿namespace MdcAi.OpenAiApi;
 
+using SalaTools.Core;
+
 public interface IOpenAiApi
 {
     string ApiKey { get; }

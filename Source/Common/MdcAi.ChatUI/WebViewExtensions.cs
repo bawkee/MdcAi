@@ -1,6 +1,5 @@
 ﻿namespace MdcAi.ChatUI;
 
-using System.Threading;
 using Microsoft.UI.Xaml.Controls;
 
 public static class WebViewExtensions

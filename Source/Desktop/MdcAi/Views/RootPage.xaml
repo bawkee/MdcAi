@@ -7,23 +7,23 @@
   xmlns:local="using:MdcAi.Views"
   xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
   xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-  xmlns:winUi="using:Sala.Extensions.WinUI"
   xmlns:viewModels="using:MdcAi.ChatUI.ViewModels"
-  xmlns:triggers="using:CommunityToolkit.WinUI.UI.Triggers"
   xmlns:converters="using:CommunityToolkit.WinUI.UI.Converters"
+  xmlns:salaConverters="using:RxUIExt.WinUI.SalaConverters"
+  xmlns:winUi="using:RxUIExt.WinUI"
   mc:Ignorable="d"
   Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
   <Page.Resources>
     <!-- WARNING: Placing convereters anywhere else than here will result in 'unspecified error' being thrown at runtime -->
-    <winUi:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
+    <salaConverters:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
     <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
 
-    <winUi:BoolConverter x:Key="BoolToHighlightedConverter">
-      <winUi:BoolConverter.True>
+    <salaConverters:BoolConverter x:Key="BoolToHighlightedConverter">
+      <salaConverters:BoolConverter.True>
         <SolidColorBrush Color="{ThemeResource SystemAccentColorLight1}" />
-      </winUi:BoolConverter.True>
-    </winUi:BoolConverter>
+      </salaConverters:BoolConverter.True>
+    </salaConverters:BoolConverter>
   </Page.Resources>
 
   <Grid>
@@ -31,15 +31,15 @@
       <DataTemplate x:Key="NavigationViewCategoryTemplate" x:DataType="viewModels:ConversationCategoryVm">
         <NavigationViewItem Content="{x:Bind Name, Mode=OneWay}"
                             MenuItemsSource="{x:Bind ItemsView, Mode=OneWay}"
-                            Icon="Message" 
+                            Icon="Message"
                             Loaded="CategoryItem_OnLoaded"
-                            Tag="{x:Bind}"/>
+                            Tag="{x:Bind}" />
       </DataTemplate>
 
       <DataTemplate x:Key="NavigationViewItemTemplate" x:DataType="viewModels:ConversationPreviewVm">
 
         <NavigationViewItem DataContext="{x:Bind}">
-          <TextBlock Text="{Binding Path=Name, Mode=OneWay}" 
+          <TextBlock Text="{Binding Path=Name, Mode=OneWay}"
                      Foreground="{Binding Path=IsNewPlaceholder, Mode=OneWay, Converter={StaticResource BoolToHighlightedConverter}}" />
 
           <NavigationViewItem.ContextFlyout>
@@ -140,10 +140,10 @@
 
       <NavigationView.PaneFooter>
         <StackPanel>
-          <NavigationViewItem Icon="Undo" 
-                              Content="Undo Delete" 
-                              PointerPressed="UndoDeleteBtn_OnPointerPressed" 
-                              Visibility="{x:Bind ViewModel.Conversations.ShowUndoDelete, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"/>
+          <NavigationViewItem Icon="Undo"
+                              Content="Undo Delete"
+                              PointerPressed="UndoDeleteBtn_OnPointerPressed"
+                              Visibility="{x:Bind ViewModel.Conversations.ShowUndoDelete, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
         </StackPanel>
       </NavigationView.PaneFooter>
 
@@ -155,9 +155,9 @@
         </Pivot.Resources>
         <PivotItem x:Name="ConversationPivotItem">
           <!-- Using x:Bind for Visibility here results in runtime exception that just says 'unspecified error' -->
-          <winUi:ViewHost ViewModel="{x:Bind ViewModel.Conversations.SelectedConversation, Mode=OneWay}" 
-                          CacheType="ByType" 
-                          Visibility="{x:Bind Path=ViewModel.Conversations.SelectedConversation, Converter={StaticResource NullToVisibilityConverter}, FallbackValue='Collapsed', Mode=OneWay}"/>
+          <winUi:ViewHost ViewModel="{x:Bind ViewModel.Conversations.SelectedConversation, Mode=OneWay}"
+                          CacheType="ByType"
+                          Visibility="{x:Bind Path=ViewModel.Conversations.SelectedConversation, Converter={StaticResource NullToVisibilityConverter}, FallbackValue='Collapsed', Mode=OneWay}" />
         </PivotItem>
         <PivotItem x:Name="SettingsPivotItem">
           <winUi:ViewHost ViewModel="{x:Bind ViewModel.Settings}" />

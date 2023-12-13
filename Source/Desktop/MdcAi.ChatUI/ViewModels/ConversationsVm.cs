@@ -34,7 +34,7 @@ public class ConversationsVm : ViewModel
     {
         LoadItems = ReactiveCommand.CreateFromTask(async () =>
         {
-            await using var ctx = AppServices.Container.Resolve<UserProfileDbContext>();
+            await using var ctx = AppServices.GetUserProfileDb();
 
             var convos = ctx.Conversations;
             var categories = await ctx.Categories
@@ -99,7 +99,7 @@ public class ConversationsVm : ViewModel
 
         SaveConversationsCmd = ReactiveCommand.CreateFromObservable(
             () => Observable.Using(
-                () => AppServices.Container.Resolve<UserProfileDbContext>(),
+                () => AppServices.GetUserProfileDb(),
                 ctx => Items.OfType<ConversationCategoryVm>()
                             .GetConversations()
                             .Select(c => c.Conversation)
@@ -120,7 +120,7 @@ public class ConversationsVm : ViewModel
             {
                 if (TrashBin.LastOrDefault() is not { } last)
                     return null;
-                await using var ctx = AppServices.Container.Resolve<UserProfileDbContext>();
+                await using var ctx = AppServices.GetUserProfileDb();
                 await ctx.Conversations
                          .Where(c => c.IdConversation == last.Id)
                          .ExecuteUpdateAsync(c => c.SetProperty(p => p.IsTrash, false));
@@ -283,7 +283,7 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationItem
         DeleteCmd = ReactiveCommand.CreateFromTask(
             async () =>
             {
-                await using var ctx = AppServices.Container.Resolve<UserProfileDbContext>();
+                await using var ctx = AppServices.GetUserProfileDb();
                 await ctx.Conversations
                          .Where(c => c.IdConversation == Id)
                          .ExecuteUpdateAsync(c => c.SetProperty(p => p.IsTrash, true));
@@ -307,7 +307,7 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationItem
 
                 if (!string.IsNullOrEmpty(name))
                 {
-                    await using var ctx = AppServices.Container.Resolve<UserProfileDbContext>();
+                    await using var ctx = AppServices.GetUserProfileDb();
                     await ctx.Conversations
                              .Where(c => c.IdConversation == Id)
                              .ExecuteUpdateAsync(c => c.SetProperty(p => p.Name, name));

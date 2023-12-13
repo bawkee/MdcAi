@@ -249,7 +249,7 @@ public class ConversationVm : ActivatableViewModel
 
         LoadCmd = ReactiveCommand.CreateFromTask(async () =>
         {
-            await using var ctx = AppServices.Container.Resolve<UserProfileDbContext>();
+            await using var ctx = AppServices.GetUserProfileDb();
 
             var convo = await ctx.Conversations
                                  .Include(c => c.Messages)
@@ -278,7 +278,7 @@ public class ConversationVm : ActivatableViewModel
         SaveCmd = ReactiveCommand.CreateFromTask(
             async (ConversationSaveOptions opt) =>
             {
-                var ctx = opt.DbContext ?? AppServices.Container.Resolve<UserProfileDbContext>();
+                var ctx = opt.DbContext ?? AppServices.GetUserProfileDb();
                 var ctxScope = opt.DbContext == null ? ctx : Disposable.Empty;
 
                 using (ctxScope)
@@ -346,7 +346,7 @@ public class ConversationVm : ActivatableViewModel
             .WhereNotNull()
             .SelectMany(id => Observable.FromAsync(async () =>
             {
-                await using var ctx = AppServices.Container.Resolve<UserProfileDbContext>();
+                await using var ctx = AppServices.GetUserProfileDb();
                 return await ctx.Categories.FirstOrDefaultAsync(c => c.IdCategory == id);
             }))
             .ObserveOnMainThread()

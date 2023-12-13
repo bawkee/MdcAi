@@ -80,7 +80,7 @@ public partial class App : ILogging
 
         Observable.FromAsync(async () =>
                   {
-                      await using var db = AppServices.Container.Resolve<UserProfileDbContext>();
+                      await using var db = AppServices.GetUserProfileDb();
                       await db.Database.MigrateAsync();
                   })
                   .SubscribeSafe();

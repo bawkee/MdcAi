@@ -28,4 +28,8 @@
     <PackageReference Include="LinqMini" Version="1.0.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\MdcAi.ChatUI.LocalDal\MdcAi.ChatUI.LocalDal.csproj" />
+  </ItemGroup>
+
 </Project>

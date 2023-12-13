@@ -3,6 +3,7 @@
 using Castle.MicroKernel.ModelBuilder.Inspectors;
 using Castle.MicroKernel.Resolvers.SpecializedResolvers;
 using Castle.Windsor;
+using ChatUI.LocalDal;
 
 public static class AppServices
 {
@@ -29,4 +30,6 @@ public static class AppServices
 
         return Container;
     }    
+
+    public static UserProfileDbContext GetUserProfileDb() => Container.Resolve<UserProfileDbContext>();
 }

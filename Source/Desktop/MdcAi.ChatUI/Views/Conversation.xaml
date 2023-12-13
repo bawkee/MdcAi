@@ -24,11 +24,13 @@
     <CommandBar c:DockPanel.Dock="Top" DefaultLabelPosition="Right">
       <AppBarToggleButton Icon="Library" Label="Streamed"
                           IsChecked="{x:Bind ViewModel.Settings.Streaming, Mode=TwoWay}" />
-      <AppBarButton Icon="Edit" Label="Edit" Command="{x:Bind ViewModel.EditSelectedCmd, Mode=OneWay}" />
+
       <AppBarButton Icon="Refresh" Label="Regenerate" Command="{x:Bind ViewModel.RegenerateSelectedCmd, Mode=OneWay}" />
       <AppBarButton Icon="Delete" Label="Delete" Command="{x:Bind ViewModel.DeleteSelectedCmd, Mode=OneWay}" />
 
       <AppBarSeparator />
+
+      <AppBarButton Icon="Edit" Label="Edit" Command="{x:Bind ViewModel.EditSelectedCmd, Mode=OneWay}" />
       <AppBarButton Icon="Previous" Command="{x:Bind ViewModel.PrevVersionCmd, Mode=OneWay}" />
       <AppBarButton Icon="Next" Command="{x:Bind ViewModel.NextVersionCmd, Mode=OneWay}" />
 

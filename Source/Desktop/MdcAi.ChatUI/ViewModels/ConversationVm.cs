@@ -120,22 +120,21 @@ public class ConversationVm : ActivatableViewModel
         DeleteSelectedCmd = ReactiveCommand.CreateFromObservable(
             () =>
             {
-                if (SelectedMessage?.Message.Role != ChatMessageRole.User)
-                    return Observable.Return(Unit.Default);
-
                 foreach (var trashMsg in SelectedMessage.Message.GetNextMessages().Select(m => m.Id))
                     MessageTrashBin.Add(trashMsg);
 
-                return SelectedMessage.DeleteCmd.Execute()
-                                      .Do(_ =>
-                                      {
-                                          if (SelectedMessage.Versions.Count == 0)
-                                          {
-                                              if (SelectedMessage == Head)
-                                                  Head = null;
-                                              SelectedMessage = null;
-                                          }
-                                      });
+                return Tail.Message.StopCompletionCmd.Execute()
+                           .Select(_ => SelectedMessage.DeleteCmd.Execute())
+                           .Switch()
+                           .Do(_ =>
+                           {
+                               if (SelectedMessage.Versions.Count == 0)
+                               {
+                                   if (SelectedMessage == Head)
+                                       Head = null;
+                                   SelectedMessage = null;
+                               }
+                           });
             },
             this.WhenAnyValue(vm => vm.SelectedMessage)
                 .Select(m => m?.Message.Role == ChatMessageRole.User));
@@ -144,7 +143,7 @@ public class ConversationVm : ActivatableViewModel
             () => SelectedMessage.Message.CompleteCmd.Execute(Unit.Default)
                                  .Select(_ => Unit.Default),
             this.WhenAnyValue(vm => vm.SelectedMessage)
-                .Select(m => m?.Message.Role == ChatMessageRole.System));
+                .Select(m => m?.Message.Role == ChatMessageRole.System && m == Tail));
 
         SendPromptCmd = ReactiveCommand.CreateFromObservable(
             () => Observable
@@ -311,12 +310,16 @@ public class ConversationVm : ActivatableViewModel
                .SubscribeSafe();
 
         // Auto save whenever completion ends
+        // TODO: Regenerate? Also, what if delete happens in midst of generating an answer?
         Observable.Merge(
                       this.WhenAnyValue(vm => vm.Tail)
                           .Where(t => t?.Message?.Role == ChatMessageRole.System)
                           .Select(t => t.Message.CompleteCmd
-                                        .Select(_ => Unit.Default))
-                          .Switch(),
+                                        .Select(_ => t.Message.WhenAnyValue(m => m.IsCompleting)
+                                                      .Where(i => !i))
+                                        .Switch())
+                          .Switch()
+                          .Select(_ => Unit.Default),
                       DeleteSelectedCmd)
                   .Throttle(TimeSpan.FromMilliseconds(500))
                   .Select(_ => new ConversationSaveOptions())

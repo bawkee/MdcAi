@@ -117,7 +117,7 @@
     </Border>
 
     <NavigationView x:Name="NavigationViewControl"
-                    OpenPaneLength="250"
+                    OpenPaneLength="260"
                     ExpandedModeThresholdWidth="1100"
                     CompactModeThresholdWidth="800"
                     SelectionChanged="NavigationView_OnSelectionChanged"
@@ -134,9 +134,9 @@
         <AutoSuggestBox x:Name="NavViewSearchBox" QueryIcon="Find" />
       </NavigationView.AutoSuggestBox>
 
-      <NavigationView.PaneHeader>
+      <!--<NavigationView.PaneHeader>
 
-      </NavigationView.PaneHeader>
+      </NavigationView.PaneHeader>-->
 
       <NavigationView.PaneFooter>
         <StackPanel>

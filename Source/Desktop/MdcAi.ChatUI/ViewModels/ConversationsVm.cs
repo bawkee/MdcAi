@@ -16,6 +16,9 @@ using Microsoft.EntityFrameworkCore;
 // TODO: Make the back button work for convos
 // TODO: Check if changing gpt model works correctly when editing a message
 
+// BUGS
+// TODO: Saved convos are all cut-off (responses)
+
 public class ConversationsVm : ViewModel
 {
     [Reactive] public ConversationVm SelectedConversation { get; set; }
@@ -222,6 +225,7 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationItem
             // Generic name
             .Do(_ => Name = $"Chat {Category.Items.Count}")
             // Auto suggest name
+            .Where(_ => !Debugging.Enabled || Debugging.AutoSuggestNames)
             .SelectMany(_ => Observable.FromAsync(async () =>
             {
                 var result = await Conversation.Api.CreateChatCompletions(new()
@@ -231,7 +235,7 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationItem
                         {
                             new ChatMessage(
                                 ChatMessageRole.System,
-                                "Given the content provided by the user, you are to create witty yet concise names, with a maximum of 20 characters, excluding any form of punctuation or line breaks. The names should be complete words or phrases, avoiding any cutoffs. A sprinkle of humor is welcome, as long as it adheres to the character limit."
+                                "Given the content provided by the user, you are to create witty yet concise names, with a maximum of 20 characters, excluding any form of punctuation or line breaks. The names should be complete words or phrases, avoiding any cutoffs. A sprinkle of humor is welcome, as long as it adheres to the character limit. Maximum 20 characters!"
                                 ),
                             new ChatMessage(
                                 ChatMessageRole.User,

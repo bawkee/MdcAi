@@ -137,7 +137,7 @@ public class ChatMessageVm : ViewModel
             if (Debugging.NumberedMessages)
                 return $"Debug system {Debugging.SystemMessageCounter++}";
 
-            var file = await StorageFile.GetFileFromApplicationUriAsync(new Uri("ms-appx:///Assets/Dbg/Test3.md"));
+            var file = await StorageFile.GetFileFromApplicationUriAsync(new Uri("ms-appx:///Assets/Dbg/Test2.md"));
             var contents = await FileIO.ReadTextAsync(file);
             return contents;
         }

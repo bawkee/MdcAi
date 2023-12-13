@@ -16,8 +16,7 @@ using Microsoft.EntityFrameworkCore;
 // TODO: Make the back button work for convos
 // TODO: Check if changing gpt model works correctly when editing a message
 
-// BUGS
-// TODO: Saved convos are all cut-off (responses)
+// TODO: Localisation
 
 public class ConversationsVm : ViewModel
 {

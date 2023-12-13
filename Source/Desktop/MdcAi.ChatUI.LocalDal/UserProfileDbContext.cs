@@ -12,6 +12,7 @@ public class UserProfileDbContext : DbContext
     public DbSet<DbCategory> Categories { get; set; }
 
     public string DbPath { get; }
+    public Action<string> Log { get; set; }
 
     public UserProfileDbContext() { }
 
@@ -37,11 +38,8 @@ public class UserProfileDbContext : DbContext
 
         var connString = DbPath == null ? null : $"Data Source={DbPath}";
         optionsBuilder.UseSqlite(connString);
-        optionsBuilder.LogTo(message =>
-        {
-            if (message.Contains("CommandExecuted"))
-                Debug.WriteLine(message);
-        });
+        if (Log != null)
+            optionsBuilder.LogTo(Log);
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

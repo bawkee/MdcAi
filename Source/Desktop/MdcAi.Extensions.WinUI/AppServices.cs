@@ -28,5 +28,5 @@ public static class AppServices
         Container.Install();
 
         return Container;
-    }
+    }    
 }

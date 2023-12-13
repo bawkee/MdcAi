@@ -12,6 +12,7 @@
   xmlns:chatUi="using:MdcAi.ChatUI"
   xmlns:converters="using:CommunityToolkit.WinUI.UI.Converters"
   xmlns:salaConverters="using:RxUIExt.WinUI.SalaConverters"
+  xmlns:chatUi1="using:MdcAi.Extensions.WinUI"
   mc:Ignorable="d">
 
   <UserControl.Resources>
@@ -35,16 +36,16 @@
       <AppBarButton Icon="Next" Command="{x:Bind ViewModel.NextVersionCmd, Mode=OneWay}" />
 
       <AppBarSeparator
-        Visibility="{x:Bind chatUi:Debugging.Enabled, Converter={StaticResource BoolToVisibilityConverter}}" />
+        Visibility="{x:Bind chatUi1:Debugging.Enabled, Converter={StaticResource BoolToVisibilityConverter}}" />
       <AppBarButton Icon="Add"
                     Label="Add"
                     Command="{x:Bind ViewModel.GeneratePromptCmd, Mode=OneWay}"
-                    Visibility="{x:Bind chatUi:Debugging.Enabled, Converter={StaticResource BoolToVisibilityConverter}}" />
+                    Visibility="{x:Bind chatUi1:Debugging.Enabled, Converter={StaticResource BoolToVisibilityConverter}}" />
 
       <AppBarButton Icon="Favorite"
                     Label="Test"
                     Command="{x:Bind ViewModel.DebugCmd, Mode=OneWay}"
-                    Visibility="{x:Bind chatUi:Debugging.Enabled, Converter={StaticResource BoolToVisibilityConverter}}" />
+                    Visibility="{x:Bind chatUi1:Debugging.Enabled, Converter={StaticResource BoolToVisibilityConverter}}" />
     </CommandBar>
 
     <c:DockPanel>

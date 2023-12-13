@@ -129,7 +129,7 @@ public class ChatMessageVm : ViewModel
                    .Replace("\r", "<br />");
 
     private async Task<string> GenerateResponse()
-    {
+    {        
         if (Debugging.Enabled && Debugging.MockMessages)
         {
             await Task.Delay(1000);

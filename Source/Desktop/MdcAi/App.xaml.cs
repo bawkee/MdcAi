@@ -24,6 +24,7 @@ using ChatUI.LocalDal;
 using MdcAi.ChatUI.ViewModels;
 using Microsoft.EntityFrameworkCore;
 using RxUIExt.Windsor;
+using System.Diagnostics;
 
 /// <summary>
 /// Provides application-specific behavior to supplement the default Application class.
@@ -67,7 +68,14 @@ public partial class App : ILogging
         AppServices.Container.Register(
             Component.For<UserProfileDbContext>()
                      .UsingFactoryMethod(
-                         _ => new UserProfileDbContext(Path.Combine(ApplicationData.Current.LocalFolder.Path, "Chats.db")))
+                         _ => new UserProfileDbContext(Path.Combine(ApplicationData.Current.LocalFolder.Path, "Chats.db"))
+                         {
+                             Log = message =>
+                             {
+                                 if (Debugging.Enabled && Debugging.LogSql && message.Contains("CommandExecuted"))
+                                     Debug.WriteLine(message);
+                             }
+                         })
                      .LifestyleTransient());
 
         Observable.FromAsync(async () =>
@@ -77,25 +85,13 @@ public partial class App : ILogging
                   })
                   .SubscribeSafe();
 
-        //Debug.WriteLine(db.Conversations.Count());
-
-        //return;
-
-        //db.Conversations.Add(new DbConversation
-        //{
-        //    IdConversation = Guid.NewGuid().ToString(),
-        //    Name = "Test 1"
-        //});
-
-        //db.SaveChanges();
-
         AppServices.Container.RegisterViewModelsAndViews("MdcAi.ChatUI");
         AppServices.Container.RegisterViewModelsAndViews(Types.FromAssembly(Assembly.GetExecutingAssembly()));
 
-        RegisterApi();
+        RegisterApi();        
 
         InitializeComponent();
-    }
+    }    
 
     private void EnableAdditionalWebView2Optons((string name, string value)[] options) =>
         Environment.SetEnvironmentVariable("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
@@ -199,6 +195,8 @@ public partial class App : ILogging
     /// <param name="args">Details about the launch request and process.</param>
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
+        DebugSettings.IsBindingTracingEnabled = Debugging.IsBindingTracingEnabled;
+        
         Window = new MainWindow();
         Window.Activate();
     }

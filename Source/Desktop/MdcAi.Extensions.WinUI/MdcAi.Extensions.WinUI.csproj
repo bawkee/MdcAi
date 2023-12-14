@@ -12,6 +12,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Theme.xaml" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="CommunityToolkit.WinUI.Controls.Primitives" Version="8.0.230907" />
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.4.231115000" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.22621.2428" />
@@ -30,6 +34,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MdcAi.ChatUI.LocalDal\MdcAi.ChatUI.LocalDal.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Page Update="Theme.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
 
 </Project>

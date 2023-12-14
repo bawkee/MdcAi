@@ -29,4 +29,6 @@ public class AiModel
     public static AiModel GPT35Turbo0301 => new AiModel("gpt-3.5-turbo-0301") { OwnedBy = "openai" };
     public static AiModel GPT4Turbo => new AiModel("gpt-4-1106-preview") { OwnedBy = "openai" };
     public static AiModel GPT4 => new AiModel("gpt-4") { OwnedBy = "openai" };
+
+    public override string ToString() => ModelID;
 }

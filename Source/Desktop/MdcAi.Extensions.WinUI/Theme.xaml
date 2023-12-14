@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:ui="using:Windows.UI">
+
+  <ui:Color x:Key="ChatSettingOverriden">#ff6a6a</ui:Color>
+  <SolidColorBrush Color="{StaticResource ChatSettingOverriden}" x:Key="ChatSettingOverridenBrush" />
+
+  <ui:Color x:Key="ImportantTransButtonBackground">#96b83b32</ui:Color>
+  <ui:Color x:Key="ImportantTransButtonBackgroundPointerOver">#cbde574e</ui:Color>
+  <ui:Color x:Key="ImportantTransButtonBackgroundPressed">#96962a23</ui:Color>
+  <ui:Color x:Key="ImportantTransButtonBackgroundDisabled">#64b83b32</ui:Color>
+</ResourceDictionary>

@@ -19,6 +19,9 @@ using DynamicData;
 using ReactiveMarbles.ObservableEvents;
 using System.Reactive.Disposables;
 using RxUIExt.Windsor;
+using Microsoft.UI.Xaml.Data;
+using MdcAi.OpenAiApi;
+using Microsoft.UI.Xaml.Controls.Primitives;
 
 public sealed partial class Conversation : ILogging
 {
@@ -27,12 +30,12 @@ public sealed partial class Conversation : ILogging
         InitializeComponent();
 
         var initCoreInt = Observable.FromAsync(async () =>
-                                 {
-                                     await ChatWebView.EnsureCoreWebView2Async();
-                                     return ChatWebView.CoreWebView2;
-                                 })
-                                 .ObserveOnMainThread()                                 
-                                 .Publish();
+                                    {
+                                        await ChatWebView.EnsureCoreWebView2Async();
+                                        return ChatWebView.CoreWebView2;
+                                    })
+                                    .ObserveOnMainThread()
+                                    .Publish();
 
         initCoreInt.Connect();
 
@@ -112,24 +115,31 @@ public sealed partial class Conversation : ILogging
 
         initCore.Connect();
 
-        this.WhenActivated(disposables =>
-        {
-            Debug.WriteLine($"Activated view {GetType()} - {GetHashCode()}");
-            Disposable.Create(() => Debug.WriteLine($"Deactivated view {GetType()} - {GetHashCode()}")).DisposeWith(disposables);
-        });
+        //this.WhenActivated(disposables =>
+        //{
+        //    Debug.WriteLine($"Activated view {GetType()} - {GetHashCode()}");
+        //    Disposable.Create(() => Debug.WriteLine($"Deactivated view {GetType()} - {GetHashCode()}")).DisposeWith(disposables);
+        //});        
 
         this.WhenActivated((disposables, viewModel) =>
         {
+            viewModel.EditSettingsCmd = ReactiveCommand.CreateFromTask(
+                async () => await SettingsDialog.ShowAsync() == ContentDialogResult.Primary);
+
             messages.Where(r => r.Name == "SetSelection")
                     .Do(r => viewModel.SelectedMessage = viewModel.Messages[Convert.ToInt32(r.Data)].Selector)
                     .LogErrors(this)
                     .SubscribeSafe()
                     .DisposeWith(disposables);
 
-            webReady.Select(_ => viewModel.WhenAnyValue(vm => vm.LastMessagesRequest)                                          
+            webReady.Select(_ => viewModel.WhenAnyValue(vm => vm.LastMessagesRequest)
                                           .WhereNotNull())
                     .Switch()
-                    .Do(r => ChatWebView.CoreWebView2.PostWebMessageAsJson(JsonConvert.SerializeObject(r)))
+                    .Do(r =>
+                    {
+                        // TODO: There is a com exception here if completion gets interrupted by app closing
+                        ChatWebView.CoreWebView2.PostWebMessageAsJson(JsonConvert.SerializeObject(r));
+                    })
                     .LogErrors(this)
                     .SubscribeSafe()
                     .DisposeWith(disposables);
@@ -142,7 +152,6 @@ public sealed partial class Conversation : ILogging
                     .DisposeWith(disposables);
 
             viewModel.WhenAnyValue(vm => vm.Models)
-                     .Skip(1)
                      .WhereNotNull()
                      .ObserveOnMainThread()
                      .Do(models =>
@@ -212,6 +221,33 @@ public sealed partial class Conversation : ILogging
                        .InvokeCommand(viewModel.CancelEditCmd);
 
             PromptField.Focus(FocusState.Programmatic);
+
+            viewModel.WhenAnyValue(vm => vm.Models)
+                     .WhereNotNull()
+                     .Do(models =>
+                     {
+                         // Setting combobox bindings in xaml will often, if not always, result in it clearing up the value. Only way to prevent it
+                         // is to make sure its items are loaded before binding its SelectedValue to anything. Tickets are open for this since 2008.
+                         ChatSettingModelDropdown.ClearValue(Selector.SelectedValueProperty);
+                         ChatSettingModelDropdown.ItemsSource = models;
+                         ChatSettingModelDropdown.SelectedValuePath = nameof(AiModel.ModelID);
+                         BindingOperations.SetBinding(
+                             ChatSettingModelDropdown,
+                             Selector.SelectedValueProperty,
+                             new Binding
+                             {
+                                 Path = new("Settings.Model"),
+                                 Mode = BindingMode.TwoWay
+                             });
+                     })
+                     .SubscribeSafe()
+                     .DisposeWith(disposables);
+
+            ViewModel.EditSettingsCmd
+                     .ObserveOnMainThread()
+                     .Do(_ => PromptField.Focus(FocusState.Programmatic))
+                     .SubscribeSafe()
+                     .DisposeWith(disposables);
         });
 
         return;

@@ -149,17 +149,17 @@
 
       <Pivot x:Name="NaviPivot" Padding="0">
         <Pivot.Resources>
-          <Style TargetType="PivotItem">
+          <Style TargetType="PivotItem" x:Key="MarginFixedPivot">
             <Setter Property="Margin" Value="0,-50,0,0" />
           </Style>
         </Pivot.Resources>
-        <PivotItem x:Name="ConversationPivotItem">
+        <PivotItem x:Name="ConversationPivotItem" Style="{StaticResource MarginFixedPivot}">
           <!-- Using x:Bind for Visibility here results in runtime exception that just says 'unspecified error' -->
           <winUi:ViewHost ViewModel="{x:Bind ViewModel.Conversations.SelectedConversation, Mode=OneWay}"
                           CacheType="ByType"
                           Visibility="{x:Bind Path=ViewModel.Conversations.SelectedConversation, Converter={StaticResource NullToVisibilityConverter}, FallbackValue='Collapsed', Mode=OneWay}" />
         </PivotItem>
-        <PivotItem x:Name="SettingsPivotItem">
+        <PivotItem x:Name="SettingsPivotItem" Style="{StaticResource MarginFixedPivot}">
           <winUi:ViewHost ViewModel="{x:Bind ViewModel.Settings}" />
         </PivotItem>
       </Pivot>

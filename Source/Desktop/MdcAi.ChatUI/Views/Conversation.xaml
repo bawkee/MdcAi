@@ -12,12 +12,17 @@
   xmlns:chatUi="using:MdcAi.ChatUI"
   xmlns:converters="using:CommunityToolkit.WinUI.UI.Converters"
   xmlns:salaConverters="using:RxUIExt.WinUI.SalaConverters"
-  xmlns:chatUi1="using:MdcAi.Extensions.WinUI"
+  xmlns:extensions="using:MdcAi.Extensions.WinUI"
+  xmlns:componentModel="using:System.ComponentModel"
+  xmlns:viewModels="using:MdcAi.ChatUI.ViewModels"
   mc:Ignorable="d">
 
   <UserControl.Resources>
     <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
     <salaConverters:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
+    <extensions:BindingTypeConverter x:Key="TypeConverter" />
+    <extensions:BindingFormatConverter x:Key="StringFormatConverter" />
+    <extensions:RoundDecimalConverter x:Key="RoundDecimalConverter" />
   </UserControl.Resources>
 
   <c:DockPanel>
@@ -36,30 +41,55 @@
       <AppBarButton Icon="Next" Command="{x:Bind ViewModel.NextVersionCmd, Mode=OneWay}" />
 
       <AppBarSeparator
-        Visibility="{x:Bind chatUi1:Debugging.Enabled, Converter={StaticResource BoolToVisibilityConverter}}" />
+        Visibility="{x:Bind extensions:Debugging.Enabled, Converter={StaticResource BoolToVisibilityConverter}}" />
       <AppBarButton Icon="Add"
                     Label="Add"
-                    Command="{x:Bind ViewModel.GeneratePromptCmd, Mode=OneWay}"
-                    Visibility="{x:Bind chatUi1:Debugging.Enabled, Converter={StaticResource BoolToVisibilityConverter}}" />
+                    Command="{x:Bind ViewModel.DebugGeneratePromptCmd, Mode=OneWay}"
+                    Visibility="{x:Bind extensions:Debugging.Enabled, Converter={StaticResource BoolToVisibilityConverter}}" />
 
       <AppBarButton Icon="Favorite"
                     Label="Test"
                     Command="{x:Bind ViewModel.DebugCmd, Mode=OneWay}"
-                    Visibility="{x:Bind chatUi1:Debugging.Enabled, Converter={StaticResource BoolToVisibilityConverter}}" />
+                    Visibility="{x:Bind extensions:Debugging.Enabled, Converter={StaticResource BoolToVisibilityConverter}}" />
     </CommandBar>
 
     <c:DockPanel>
       <c:DockPanel c:DockPanel.Dock="Bottom">
-        <StackPanel c:DockPanel.Dock="Right" Margin="0,10,10,10" VerticalAlignment="Bottom">
-          <SplitButton Command="{x:Bind ViewModel.SendPromptCmd, Mode=OneWay}" Padding="10,5,10,5">
+        <StackPanel c:DockPanel.Dock="Right" Margin="0,10,10,10" VerticalAlignment="Bottom" Orientation="Horizontal">
+          <StackPanel.Resources>
+            <DataTemplate x:Key="OverrideSettingsBtnTemplate" x:DataType="viewModels:ConversationVm">
+              <Button Command="{Binding Path=EditSettingsCmd, Mode=OneWay}" Height="32" Padding="10,0" Margin="10,0,0,0">
+                <SymbolIcon Symbol="Setting" />
+              </Button>
+            </DataTemplate>
+          </StackPanel.Resources>
+          <SplitButton Command="{x:Bind ViewModel.SendPromptCmd, Mode=OneWay}" Height="32" Padding="10,0">
             <StackPanel Orientation="Horizontal">
-              <TextBlock Text="{x:Bind ViewModel.Settings.Model, Mode=OneWay}" />
-              <SymbolIcon Symbol="Send" VerticalAlignment="Center" Margin="10,1,10,0" />
+              <TextBlock Text="{x:Bind ViewModel.Settings.SelectedModel, Mode=OneWay}" />
+              <SymbolIcon Symbol="Send" VerticalAlignment="Center" Margin="10,0,0,0" />
             </StackPanel>
             <SplitButton.Flyout>
               <MenuFlyout x:Name="modelsMenu" />
             </SplitButton.Flyout>
           </SplitButton>
+
+          <ContentControl ContentTemplate="{StaticResource OverrideSettingsBtnTemplate}"
+                          Content="{x:Bind ViewModel, Mode=OneWay}"
+                          Visibility="{x:Bind ViewModel.SettingsOverriden, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+            <ContentControl.Resources>
+              <SolidColorBrush x:Key="ButtonBackground" Color="{StaticResource ImportantTransButtonBackground}" />
+              <SolidColorBrush x:Key="ButtonBackgroundPointerOver"
+                               Color="{StaticResource ImportantTransButtonBackgroundPointerOver}" />
+              <SolidColorBrush x:Key="ButtonBackgroundPressed"
+                               Color="{StaticResource ImportantTransButtonBackgroundPressed}" />
+              <SolidColorBrush x:Key="ButtonBackgroundDisabled"
+                               Color="{StaticResource ImportantTransButtonBackgroundDisabled}" />
+            </ContentControl.Resources>
+          </ContentControl>
+
+          <ContentControl ContentTemplate="{StaticResource OverrideSettingsBtnTemplate}"
+                          Content="{x:Bind ViewModel, Mode=OneWay}"
+                          Visibility="{x:Bind ViewModel.SettingsOverriden, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=True, Mode=OneWay}" />
         </StackPanel>
 
         <StackPanel>
@@ -100,13 +130,114 @@
                   Command="{x:Bind ViewModel.Tail.Message.StopCompletionCmd, Mode=OneWay}">
             <Button.Resources>
               <!-- Transparent backgrounds so the button is visible but translucent -->
-              <SolidColorBrush x:Key="ButtonBackground" Color="#96b83b32" />
-              <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#CBde574e" />
-              <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#96962a23" />
-              <SolidColorBrush x:Key="ButtonBackgroundDisabled" Color="#64b83b32" />
+              <SolidColorBrush x:Key="ButtonBackground" Color="{StaticResource ImportantTransButtonBackground}" />
+              <SolidColorBrush x:Key="ButtonBackgroundPointerOver"
+                               Color="{StaticResource ImportantTransButtonBackgroundPointerOver}" />
+              <SolidColorBrush x:Key="ButtonBackgroundPressed"
+                               Color="{StaticResource ImportantTransButtonBackgroundPressed}" />
+              <SolidColorBrush x:Key="ButtonBackgroundDisabled"
+                               Color="{StaticResource ImportantTransButtonBackgroundDisabled}" />
             </Button.Resources>
           </Button>
         </Grid>
+
+        <ContentDialog x:Name="SettingsDialog"
+                       PrimaryButtonText="Done"
+                       IsSecondaryButtonEnabled="{x:Bind ViewModel.SettingsOverriden, Mode=OneWay}"
+                       SecondaryButtonText="Reset"
+                       SecondaryButtonCommand="{x:Bind ViewModel.ResetSettingsCmd, Mode=OneWay}">
+          <ContentDialog.Resources>
+            <Thickness x:Key="ContentDialogPadding">10</Thickness>
+          </ContentDialog.Resources>
+
+          <Pivot Width="400" DataContext="{x:Bind ViewModel, Mode=OneWay}">
+            <PivotItem Header="Parameters">
+              <StackPanel Margin="0,10,0,0">
+
+                <c:UniformGrid Margin="0,5,0,0" Columns="2"
+                               ToolTipService.ToolTip="Crank up the temperature for creative chaos, turn it down for repetitive, predictable answers. An AI thermostat of sorts.">
+                  <TextBlock Margin="0,5">
+                    <Run Text="Temperature:" />
+                    <Run
+                      Text="{x:Bind ViewModel.Settings.Temperature, Mode=OneWay, Converter={StaticResource StringFormatConverter}, ConverterParameter='{}{0:N2}'}" />
+                  </TextBlock>
+
+                  <Slider
+                    Value="{x:Bind ViewModel.Settings.Temperature, Mode=TwoWay, Converter={StaticResource RoundDecimalConverter}}"
+                    Minimum="0"
+                    Maximum="2"
+                    SmallChange="0.05"
+                    StepFrequency="0.1" />
+                </c:UniformGrid>
+
+                <c:UniformGrid Margin="0,5,0,0" Columns="2">
+                  <TextBlock Margin="0,5"
+                             ToolTipService.ToolTip="Lower value is less nonsense, higher value means more factual answers. Lower it to see the weirdo, but more human, side of AI more often.">
+                    <Run Text="Top Probability:" />
+                    <Run
+                      Text="{x:Bind Path=ViewModel.Settings.TopP, Mode=OneWay, Converter={StaticResource StringFormatConverter}, ConverterParameter='{}{0:N2}'}" />
+                  </TextBlock>
+                  <Slider
+                    Value="{x:Bind ViewModel.Settings.TopP, Mode=TwoWay, Converter={StaticResource RoundDecimalConverter}}"
+                    Minimum="0"
+                    Maximum="1"
+                    SmallChange="0.05"
+                    StepFrequency="0.1" />
+                </c:UniformGrid>
+
+                <c:UniformGrid Margin="0,5,0,0" Columns="2"
+                               ToolTipService.ToolTip="Increase the value to prevent repetitive character that makes AI look like it's got early dementia. Lower it if you yourself don't have the best memory.">
+                  <TextBlock Margin="0,5">
+                    <Run Text="Frequency Penalty:" />
+                    <Run
+                      Text="{x:Bind ViewModel.Settings.FrequencyPenalty, Mode=OneWay, Converter={StaticResource StringFormatConverter}, ConverterParameter='{}{0:N2}'}" />
+                  </TextBlock>
+                  <Slider
+                    Value="{x:Bind ViewModel.Settings.FrequencyPenalty, Mode=TwoWay, Converter={StaticResource RoundDecimalConverter}}"
+                    Minimum="0"
+                    Maximum="2"
+                    SmallChange="0.05"
+                    StepFrequency="0.1" />
+                </c:UniformGrid>
+
+                <c:UniformGrid Margin="0,5,0,0" Columns="2"
+                               ToolTipService.ToolTip="Increase the value to prevent AI from re-using same words or phrases over and over again to the point of being annoying.">
+                  <TextBlock Margin="0,5">
+                    <Run Text="Presence Penalty:" />
+                    <Run
+                      Text="{x:Bind ViewModel.Settings.PresencePenalty, Mode=OneWay, Converter={StaticResource StringFormatConverter}, ConverterParameter='{}{0:N2}'}" />
+                  </TextBlock>
+                  <Slider
+                    Value="{x:Bind ViewModel.Settings.PresencePenalty, Mode=TwoWay, Converter={StaticResource RoundDecimalConverter}}"
+                    Minimum="0"
+                    Maximum="2"
+                    SmallChange="0.05"
+                    StepFrequency="0.1" />
+                </c:UniformGrid>
+
+                <c:UniformGrid Margin="0,5,0,0" Columns="2"
+                               ToolTipService.ToolTip="Turning this setting off will result in completions being delivered in all-at-once fashion, rather than word by word.">
+                  <TextBlock Text="Completion Streaming" Margin="0,5" />
+                  <ToggleSwitch IsOn="{x:Bind ViewModel.Settings.Streaming, Mode=TwoWay}" />
+                </c:UniformGrid>
+
+                <c:UniformGrid Columns="2">
+                  <TextBlock Text="Default Model" Margin="0,5" />
+                  <ComboBox x:Name="ChatSettingModelDropdown" HorizontalAlignment="Stretch" />
+                </c:UniformGrid>
+
+              </StackPanel>
+            </PivotItem>
+            <PivotItem Header="Premise">
+              <TextBox TextWrapping="Wrap"
+                       Text="{x:Bind ViewModel.Settings.Premise, Mode=TwoWay}"
+                       Margin="0,15,0,0"
+                       MaxHeight="200"
+                       AcceptsReturn="True"
+                       ScrollViewer.VerticalScrollBarVisibility="Auto" />
+            </PivotItem>
+          </Pivot>
+        </ContentDialog>
       </Grid>
     </c:DockPanel>
   </c:DockPanel>

@@ -1,6 +1,7 @@
 ﻿namespace MdcAi.ChatUI.ViewModels;
 
 using LocalDal;
+using Mapster;
 
 public static class DbExtensions
 {
@@ -36,14 +37,15 @@ public static class DbExtensions
 
         var messages = source.Head?.Message.ToDbMessages() ?? Enumerable.Empty<DbMessage>();
 
-        var convo = new DbConversation()
+        var convo = new DbConversation
         {
             IdConversation = source.Id,
             Name = source.Name,
             CreatedTs = source.CreatedTs,
             Messages = messages.ToList(),
             IdCategory = source.IdCategory,
-            IsTrash = source.IsTrash
+            IsTrash = source.IsTrash,
+            IdSettingsOverride = source.IdSettingsOverride
         };
 
         return convo;
@@ -92,11 +94,28 @@ public static class DbExtensions
         void SetNext(ChatMessageVm message)
         {
             var nextSelector = FromDbMessages(messages, convo, message.Id);
-            if (nextSelector == null) 
+            if (nextSelector == null)
                 return;
             message.Next = nextSelector.Message;
             foreach (var nextMessages in nextSelector.Versions)
                 nextMessages.Previous = message;
         }
     }
+
+    //public static ChatSettingsVm FromDbChatSettings(this DbChatSettings settings)
+    //{
+    //    return settings.Adapt(AppServices.Container.Resolve<ChatSettingsVm>());
+    //    //return new()
+    //    //{
+    //    //    Streaming = settings.Streaming,
+    //    //    Model = settings.Model,
+    //    //    Temperature = settings.Temperature,
+    //    //    FrequencyPenalty = settings.FrequencyPenalty,
+    //    //    Premise = settings.Premise,
+    //    //    PresencePenalty = settings.PresencePenalty,
+    //    //    TopP = settings.TopP
+    //    //};
+    //}
+
+    //public static DbChatSettings ToDbChatSettings(ChatSettingsVm settings) { return settings.Adapt(new DbChatSettings()); }
 }

@@ -13,7 +13,7 @@ public class ChatMessageVm : ViewModel
     public string Id { get; set; }
     public string Role { get; set; }
     public ChatMessageSelectorVm Selector { get; }
-    [Reactive] public ChatSettingsVm Settings { get; set; } = new();
+    [Reactive] public ChatSettingsVm Settings { get; set; }
     [Reactive] public string Content { get; set; }
     [Reactive] public string HTMLContent { get; set; }
     public DateTime CreatedTs { get; set; }
@@ -184,7 +184,7 @@ public class ChatMessageVm : ViewModel
         var req = new ChatRequest
         {
             Messages = messages,
-            Model = Settings.Model
+            Model = Settings.SelectedModel
         };
 
         return req;

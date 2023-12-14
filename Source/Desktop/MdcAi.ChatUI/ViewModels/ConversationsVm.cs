@@ -17,6 +17,7 @@ using Microsoft.EntityFrameworkCore;
 // TODO: Check if changing gpt model works correctly when editing a message
 
 // TODO: Localisation
+// TODO: Clean up names "Name" instead of "name"
 
 public class ConversationsVm : ViewModel
 {
@@ -108,7 +109,7 @@ public class ConversationsVm : ViewModel
                             .ToObservable()
                             .SelectMany(c => c.SaveCmd.Execute(new() { DbContext = ctx }))
                             // If anything else was left unsaved, save it now
-                            .Concat(Observable.FromAsync(async () => await ctx.SaveChangesAsync())
+                            .Concat(Observable.FromAsync(() => ctx.SaveChangesAsync())
                                               .Select(_ => Unit.Default))
             ));
 

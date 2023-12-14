@@ -10,6 +10,10 @@
       <ResourceDictionary.MergedDictionaries>
         <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
         <!-- Other merged dictionaries here -->
+        <ResourceDictionary Source="ms-appx:///MdcAi.Extensions.WinUI/Theme.xaml" />
+        <ResourceDictionary>
+          <x:Double x:Key="ContentDialogMaxWidth">9999</x:Double>
+        </ResourceDictionary>
       </ResourceDictionary.MergedDictionaries>
       <!-- Other app resources here -->
       <Thickness x:Key="NavigationViewContentMargin">0,48,0,0</Thickness>

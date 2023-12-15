@@ -29,17 +29,17 @@ public sealed partial class Conversation : ILogging
     {
         InitializeComponent();
 
-        var initCoreInt = Observable.FromAsync(async () =>
-                                    {
-                                        await ChatWebView.EnsureCoreWebView2Async();
-                                        return ChatWebView.CoreWebView2;
-                                    })
-                                    .ObserveOnMainThread()
-                                    .Publish();
+        var initCoreConn = Observable.FromAsync(async () =>
+                                     {
+                                         await ChatWebView.EnsureCoreWebView2Async();
+                                         return ChatWebView.CoreWebView2;
+                                     })
+                                     .ObserveOnMainThread()
+                                     .Publish();
 
-        initCoreInt.Connect();
+        initCoreConn.Connect();
 
-        var initCore = initCoreInt.Replay();
+        var initCore = initCoreConn.Replay();
 
         initCore.Connect();
 

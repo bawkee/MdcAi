@@ -101,21 +101,4 @@ public static class DbExtensions
                 nextMessages.Previous = message;
         }
     }
-
-    //public static ChatSettingsVm FromDbChatSettings(this DbChatSettings settings)
-    //{
-    //    return settings.Adapt(AppServices.Container.Resolve<ChatSettingsVm>());
-    //    //return new()
-    //    //{
-    //    //    Streaming = settings.Streaming,
-    //    //    Model = settings.Model,
-    //    //    Temperature = settings.Temperature,
-    //    //    FrequencyPenalty = settings.FrequencyPenalty,
-    //    //    Premise = settings.Premise,
-    //    //    PresencePenalty = settings.PresencePenalty,
-    //    //    TopP = settings.TopP
-    //    //};
-    //}
-
-    //public static DbChatSettings ToDbChatSettings(ChatSettingsVm settings) { return settings.Adapt(new DbChatSettings()); }
 }

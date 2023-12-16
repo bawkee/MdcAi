@@ -8,13 +8,10 @@ using OpenAiApi;
 using Microsoft.EntityFrameworkCore;
 
 // MPV TODO
-// TODO: Settings for chat (temperature, starting prompt, blabla)
 // TODO: Simple category editor
 // TODO: Suggestions and tips in new chat
-// TODO: State animation on Undo Delete button (forgot about that)
 // TODO: Hide the search box for now
 // TODO: Make the back button work for convos
-// TODO: Check if changing gpt model works correctly when editing a message
 
 // TODO: Localisation
 // TODO: Clean up names "Name" instead of "name"

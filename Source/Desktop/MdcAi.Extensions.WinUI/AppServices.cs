@@ -4,6 +4,8 @@ using Castle.MicroKernel.ModelBuilder.Inspectors;
 using Castle.MicroKernel.Resolvers.SpecializedResolvers;
 using Castle.Windsor;
 using ChatUI.LocalDal;
+using Microsoft.EntityFrameworkCore.Storage;
+using System.Reactive.Disposables;
 
 public static class AppServices
 {
@@ -29,7 +31,26 @@ public static class AppServices
         Container.Install();
 
         return Container;
-    }    
-
+    }
+   
     public static UserProfileDbContext GetUserProfileDb() => Container.Resolve<UserProfileDbContext>();
+
+    // TODO: Use it???
+    public static UserProfileDbContextWithTrans GetUserProfileDbTrans() => Container.Resolve<UserProfileDbContextWithTrans>();
+}
+
+public class UserProfileDbContextWithTrans : IDisposable
+{
+    private readonly CompositeDisposable _cd;
+    public IDbContextTransaction Trans { get; }
+    public UserProfileDbContext Ctx { get; }
+
+    public UserProfileDbContextWithTrans(UserProfileDbContext ctx)
+    {
+        Ctx = ctx;
+        Trans = Ctx.Database.BeginTransaction();
+        _cd = new(Trans, Ctx);
+    }
+
+    public void Dispose() => _cd.Dispose();
 }

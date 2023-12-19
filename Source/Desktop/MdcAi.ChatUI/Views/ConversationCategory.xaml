@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<local:ConversationCategoryBase
+  x:Class="MdcAi.ChatUI.Views.ConversationCategory"
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:local="using:MdcAi.ChatUI.Views"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  xmlns:controls="using:CommunityToolkit.WinUI.Controls"
+  xmlns:viewModels="using:MdcAi.ChatUI.ViewModels"
+  xmlns:winUi="using:MdcAi.Extensions.WinUI"
+  mc:Ignorable="d"
+  Background="Transparent">
+
+  <Page.Resources>
+    <x:Double x:Key="SettingsCardWrapThreshold">800</x:Double>
+    <x:Double x:Key="SettingsCardWrapNoIconThreshold">600</x:Double>
+
+    <winUi:BindingFormatConverter x:Key="StringFormatConverter" />
+    <winUi:RoundDecimalConverter x:Key="RoundDecimalConverter" />
+
+    <DataTemplate x:Key="IconTemplate" x:DataType="viewModels:IconVm">
+      <UserControl PointerPressed="IconTemplate_OnPointerPressed">
+        <Border x:Name="IconTemplateRoot"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                Padding="10,5"
+                Margin="3"
+                CornerRadius="4">
+          <VisualStateManager.VisualStateGroups>
+            <VisualStateGroup x:Name="SelectionState">
+              <VisualState x:Name="Default" />
+              <VisualState x:Name="Selected">
+                <VisualState.Setters>
+                  <Setter Target="IconTemplateRoot.Background" Value="{ThemeResource AccentFillColorDefaultBrush}" />
+                  <Setter Target="IconGlyph.Foreground" Value="{ThemeResource TextOnAccentFillColorPrimaryBrush}" />
+                  <Setter Target="IconName.Foreground" Value="{ThemeResource TextOnAccentFillColorPrimaryBrush}" />
+                </VisualState.Setters>
+              </VisualState>
+            </VisualStateGroup>
+          </VisualStateManager.VisualStateGroups>
+
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <FontIcon x:Name="IconGlyph" Glyph="{x:Bind Character}" />
+            <TextBlock x:Name="IconName" Text="{x:Bind Name}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
+                       Width="100" Margin="0,1,0,0" />
+          </StackPanel>
+        </Border>
+      </UserControl>
+    </DataTemplate>
+  </Page.Resources>
+
+  <controls:DockPanel DataContext="{x:Bind ViewModel, Mode=OneWay}">
+    <StackPanel Orientation="Horizontal" controls:DockPanel.Dock="Top" Margin="20">
+      <!--<Grid Margin="0,5,15,0">
+        <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE8BD;" />
+      </Grid>-->
+
+      <TextBlock Style="{StaticResource TitleTextBlockStyle}">
+        <Run Text="{x:Bind ViewModel.Name, Mode=OneWay}" />
+      </TextBlock>
+
+      <Button Margin="15,5,0,0">
+        <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE8AC;" />
+      </Button>
+    </StackPanel>
+
+    <ScrollViewer Padding="20,0,20,20">
+      <StackPanel Spacing="5">
+        <controls:SettingsExpander Header="Category Icon">
+          <controls:SettingsExpander.HeaderIcon>
+            <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE8BD;" />
+          </controls:SettingsExpander.HeaderIcon>
+          <controls:SettingsExpander.Items>
+
+            <controls:SettingsCard Padding="10,0,0,10">
+              <controls:SettingsCard.Description>
+                <StackPanel>
+                  <AutoSuggestBox Width="250"
+                                  Text="{x:Bind ViewModel.Icons.Filter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                  HorizontalAlignment="Right"
+                                  Margin="10"
+                                  QueryIcon="Find"
+                                  PlaceholderText="Search..." />
+
+                  <ScrollViewer Height="250">
+                    <ItemsRepeater x:Name="IconsRepeater"
+                                   ElementIndexChanged="IconsRepeater_OnElementIndexChanged"
+                                   ElementPrepared="IconsRepeater_OnElementPrepared"
+                                   ItemsSource="{x:Bind ViewModel.Icons.IconsView, Mode=OneWay}"
+                                   ItemTemplate="{StaticResource IconTemplate}">
+                      <ItemsRepeater.Layout>
+                        <UniformGridLayout Orientation="Horizontal" />
+                      </ItemsRepeater.Layout>
+                    </ItemsRepeater>
+                  </ScrollViewer>
+                </StackPanel>
+              </controls:SettingsCard.Description>
+
+            </controls:SettingsCard>
+          </controls:SettingsExpander.Items>
+        </controls:SettingsExpander>
+
+        <controls:SettingsExpander Header="AI Parameters"
+                                   Description="Fine-tune AI settings to get better, more precise and to-the-point completions.">
+          <controls:SettingsExpander.HeaderIcon>
+            <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE99A;" />
+          </controls:SettingsExpander.HeaderIcon>
+          <controls:SettingsExpander.Items>
+
+            <controls:SettingsCard Header="Temperature"
+                                   Description="Crank up the temperature for creative chaos, turn it down for repetitive, predictable answers. An AI thermostat of sorts.">
+              <StackPanel Orientation="Horizontal" Spacing="10">
+                <TextBlock
+                  Text="{x:Bind ViewModel.Settings.Temperature, Mode=OneWay, Converter={StaticResource StringFormatConverter}, ConverterParameter='{}{0:N2}'}"
+                  VerticalAlignment="Center" />
+                <Slider
+                  Value="{x:Bind ViewModel.Settings.Temperature, Mode=TwoWay, Converter={StaticResource RoundDecimalConverter}}"
+                  Minimum="0"
+                  Maximum="2"
+                  SmallChange="0.05"
+                  StepFrequency="0.1" />
+              </StackPanel>
+            </controls:SettingsCard>
+
+            <controls:SettingsCard Header="Top Probability"
+                                   Description="Lower value is less nonsense, higher value means more factual answers. Lower it to see the weirdo, but more human, side of AI more often.">
+              <StackPanel Orientation="Horizontal" Spacing="10">
+                <TextBlock
+                  Text="{x:Bind ViewModel.Settings.TopP, Mode=OneWay, Converter={StaticResource StringFormatConverter}, ConverterParameter='{}{0:N2}'}"
+                  VerticalAlignment="Center" />
+                <Slider
+                  Value="{x:Bind ViewModel.Settings.TopP, Mode=TwoWay, Converter={StaticResource RoundDecimalConverter}}"
+                  Minimum="0"
+                  Maximum="1"
+                  SmallChange="0.05"
+                  StepFrequency="0.1" />
+              </StackPanel>
+            </controls:SettingsCard>
+
+            <controls:SettingsCard Header="Frequency Penalty"
+                                   Description="Increase the value to prevent repetitive character that makes AI look like it's got early dementia. Lower it if you yourself don't have the best memory.">
+              <StackPanel Orientation="Horizontal" Spacing="10">
+                <TextBlock
+                  Text="{x:Bind ViewModel.Settings.FrequencyPenalty, Mode=OneWay, Converter={StaticResource StringFormatConverter}, ConverterParameter='{}{0:N2}'}"
+                  VerticalAlignment="Center" />
+                <Slider
+                  Value="{x:Bind ViewModel.Settings.FrequencyPenalty, Mode=TwoWay, Converter={StaticResource RoundDecimalConverter}}"
+                  Minimum="0"
+                  Maximum="2"
+                  SmallChange="0.05"
+                  StepFrequency="0.1" />
+              </StackPanel>
+            </controls:SettingsCard>
+
+            <controls:SettingsCard Header="Presence Penalty"
+                                   Description="Increase the value to prevent AI from re-using same words or phrases over and over again to the point of being annoying.">
+              <StackPanel Orientation="Horizontal" Spacing="10">
+                <TextBlock
+                  Text="{x:Bind ViewModel.Settings.PresencePenalty, Mode=OneWay, Converter={StaticResource StringFormatConverter}, ConverterParameter='{}{0:N2}'}"
+                  VerticalAlignment="Center" />
+                <Slider
+                  Value="{x:Bind ViewModel.Settings.PresencePenalty, Mode=TwoWay, Converter={StaticResource RoundDecimalConverter}}"
+                  Minimum="0"
+                  Maximum="2"
+                  SmallChange="0.05"
+                  StepFrequency="0.1" />
+              </StackPanel>
+            </controls:SettingsCard>
+
+            <controls:SettingsCard Header="Completion Streaming"
+                                   Description="Turning this setting off will result in completions being delivered in all-at-once fashion, rather than word by word.">
+              <ToggleSwitch IsOn="{x:Bind ViewModel.Settings.Streaming, Mode=TwoWay}" />
+            </controls:SettingsCard>
+
+            <controls:SettingsCard Header="Default Model"
+                                   Description="Defines which AI model to use, its version and extra features such as higher token limit.">
+              <ComboBox x:Name="ChatSettingModelDropdown" MinWidth="150" />
+            </controls:SettingsCard>
+          </controls:SettingsExpander.Items>
+        </controls:SettingsExpander>
+
+        <controls:SettingsExpander Header="Premise">
+          <controls:SettingsExpander.HeaderIcon>
+            <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE8BD;" />
+          </controls:SettingsExpander.HeaderIcon>
+          <controls:SettingsExpander.Items>
+
+            <controls:SettingsCard Padding="10,0,0,10">
+              <controls:SettingsCard.Description>
+                <TextBox TextWrapping="Wrap"
+                         Text="{x:Bind ViewModel.Settings.Premise, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         Margin="0,15,0,0"
+                         MaxHeight="200"
+                         AcceptsReturn="True"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto" />
+
+              </controls:SettingsCard.Description>
+            </controls:SettingsCard>
+          </controls:SettingsExpander.Items>
+        </controls:SettingsExpander>
+
+      </StackPanel>
+    </ScrollViewer>
+  </controls:DockPanel>
+</local:ConversationCategoryBase>

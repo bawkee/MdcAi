@@ -185,22 +185,7 @@ public class ConversationVm : ActivatableViewModel
         LoadModelsCmd = ReactiveCommand.CreateFromTask(async () =>
         {
             if (Debugging.Enabled && Debugging.MockModels)
-                return new[]
-                {
-                    new AiModel("gpt-3.5-turbo-16k-0613"),
-                    new AiModel("gpt-3.5-turbo-16k"),
-                    new AiModel("gpt-4-1106-preview"),
-                    new AiModel("gpt-3.5-turbo"),
-                    new AiModel("gpt-3.5-turbo-1106"),
-                    new AiModel("gpt-4-vision-preview"),
-                    new AiModel("gpt-4"),
-                    new AiModel("gpt-3.5-turbo-instruct-0914"),
-                    new AiModel("gpt-3.5-turbo-0613"),
-                    new AiModel("gpt-3.5-turbo-0301"),
-                    new AiModel("gpt-3.5-turbo-instruct"),
-                    new AiModel("gpt-4-0613"),
-                    new AiModel("gpt-4-0314")
-                };
+                return ChatSettingsVm.MockModels;
             return await api.GetModels();
         });
 
@@ -224,7 +209,7 @@ public class ConversationVm : ActivatableViewModel
             });
 
         LoadCmd = ReactiveCommand.CreateFromObservable(
-            () => Observable.FromAsync(async () =>
+            () => Observable.FromAsync(async ct =>
                             {
                                 await using var ctx = AppServices.GetUserProfileDb();
 
@@ -232,8 +217,9 @@ public class ConversationVm : ActivatableViewModel
                                                      .Include(c => c.Messages)
                                                      .FirstOrDefaultAsync(c => c.IdConversation == Id);
 
-                                return convo;
+                                return ct.IsCancellationRequested ? null : convo;
                             })
+                            .WhereNotNull()
                             .ObserveOnMainThread()
                             .Do(convo =>
                             {
@@ -397,7 +383,7 @@ public class ConversationVm : ActivatableViewModel
                   .Throttle(TimeSpan.FromMilliseconds(500))
                   .Select(_ => new ConversationSaveOptions())
                   .InvokeCommand(SaveCmd);
-       
+
         this.WhenAnyValue(vm => vm.GlobalSettings)
             .Select(s => s.WhenAnyValue(x => x.OpenAi.ApiKeys))
             .Switch()
@@ -408,7 +394,7 @@ public class ConversationVm : ActivatableViewModel
 
         this.WhenAnyValue(vm => vm.SelectedMessage)
             .Select(_ => Unit.Default)
-            .InvokeCommand(CancelEditCmd);        
+            .InvokeCommand(CancelEditCmd);
 
         this.WhenAnyValue(vm => vm.IdCategory)
             .WhereNotNull()

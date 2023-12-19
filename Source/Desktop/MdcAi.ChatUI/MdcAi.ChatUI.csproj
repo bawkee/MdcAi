@@ -10,8 +10,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Assets\Icons.json" />
     <None Remove="MdcAi.ChatUI.csproj.DotSettings" />
     <None Remove="Views\Conversation.xaml" />
+    <None Remove="Views\ConversationCategory.xaml" />
     <None Remove="Views\OpenAISettingsPage.xaml" />
     <None Remove="Views\Settings.xaml" />
   </ItemGroup>
@@ -67,6 +69,9 @@
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Chat.Designer.cs</LastGenOutput>
     </None>
+    <Page Update="Views\ConversationCategory.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Update="Views\OpenAISettingsPage.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>

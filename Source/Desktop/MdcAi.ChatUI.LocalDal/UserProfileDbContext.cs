@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 public class UserProfileDbContext : DbContext
 {
@@ -90,7 +91,7 @@ public class UserProfileDbContext : DbContext
                         IdSettings = "general",
                         Name = "General",
                         Description = "General Purpose AI Assistant"
-                    });
+                    });       
     }
 }
 
@@ -128,7 +129,7 @@ public class DbCategory
     [Key] public string IdCategory { get; set; }
     public string IdSettings { get; set; }
     public string Name { get; set; }
-    public string SystemMessage { get; set; }
+    public string SystemMessage { get; set; } // TODO: Obsolete?
     public string Description { get; set; }
 
     public DbChatSettings Settings { get; set; }

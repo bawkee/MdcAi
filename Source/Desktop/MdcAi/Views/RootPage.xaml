@@ -28,7 +28,7 @@
 
   <Grid>
     <Grid.Resources>
-      <DataTemplate x:Key="NavigationViewCategoryTemplate" x:DataType="viewModels:ConversationCategoryVm">
+      <DataTemplate x:Key="NavigationViewCategoryTemplate" x:DataType="viewModels:ConversationCategoryPreviewVm">
         <NavigationViewItem Content="{x:Bind Name, Mode=OneWay}"
                             MenuItemsSource="{x:Bind ItemsView, Mode=OneWay}"
                             Icon="Message"
@@ -128,7 +128,7 @@
                     Grid.Column="1"
                     MenuItemsSource="{x:Bind ViewModel.Conversations.Items, Mode=OneWay}"
                     MenuItemTemplateSelector="{StaticResource NavigationViewDataTemplateSelector}"
-                    SelectedItem="{x:Bind ViewModel.Conversations.SelectedConversationPreview, Mode=TwoWay}">
+                    SelectedItem="{x:Bind ViewModel.Conversations.SelectedItem, Mode=TwoWay}">
 
       <NavigationView.AutoSuggestBox>
         <AutoSuggestBox x:Name="NavViewSearchBox" QueryIcon="Find" />
@@ -153,12 +153,19 @@
             <Setter Property="Margin" Value="0,-50,0,0" />
           </Style>
         </Pivot.Resources>
+
+        <PivotItem x:Name="CategoryPivotItem" Style="{StaticResource MarginFixedPivot}">
+          <winUi:ViewHost ViewModel="{x:Bind ViewModel.Conversations.SelectedCategory, Mode=OneWay}"
+                          CacheType="ByType"
+                          Visibility="{x:Bind Path=ViewModel.Conversations.SelectedCategory, Converter={StaticResource NullToVisibilityConverter}, FallbackValue='Collapsed', Mode=OneWay}" />
+        </PivotItem>
+
         <PivotItem x:Name="ConversationPivotItem" Style="{StaticResource MarginFixedPivot}">
-          <!-- Using x:Bind for Visibility here results in runtime exception that just says 'unspecified error' -->
           <winUi:ViewHost ViewModel="{x:Bind ViewModel.Conversations.SelectedConversation, Mode=OneWay}"
                           CacheType="ByType"
                           Visibility="{x:Bind Path=ViewModel.Conversations.SelectedConversation, Converter={StaticResource NullToVisibilityConverter}, FallbackValue='Collapsed', Mode=OneWay}" />
         </PivotItem>
+
         <PivotItem x:Name="SettingsPivotItem" Style="{StaticResource MarginFixedPivot}">
           <winUi:ViewHost ViewModel="{x:Bind ViewModel.Settings}" />
         </PivotItem>

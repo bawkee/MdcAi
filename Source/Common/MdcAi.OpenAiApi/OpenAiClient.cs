@@ -19,11 +19,13 @@ public partial class OpenAiClient : IOpenAiApi, IDisposable
     public string ApiVersion { get; }
     public HttpClient Client { get; }
 
+    private readonly ArgumentBasedMemoize _mem = new();
+
     public OpenAiClient(string apiKey = null,
-                     string organisation = null,
-                     string apiVersion = "v1",
-                     HttpClient client = null)
-    {        
+                        string organisation = null,
+                        string apiVersion = "v1",
+                        HttpClient client = null)
+    {
         ApiVersion = apiVersion;
 
         Client = client ?? new SafeHttpClient
@@ -32,8 +34,8 @@ public partial class OpenAiClient : IOpenAiApi, IDisposable
         };
 
         SetCredentials(apiKey, organisation);
-        
-        Client.DefaultRequestHeaders.Add("User-Agent", "MdcAi");        
+
+        Client.DefaultRequestHeaders.Add("User-Agent", "MdcAi");
     }
 
     public void SetCredentials(string apiKey, string organisation)
@@ -46,13 +48,14 @@ public partial class OpenAiClient : IOpenAiApi, IDisposable
         Client.AddOrUpdateDefaultHeader("OpenAI-Organization", Organisation);
     }
 
-    public async Task<AiModel[]> GetModels()
-    {        
-        var response = await Client.RequestAsync(new RelativeUri("models"), HttpMethod.Get);
-        var responseStr = await response.Content.ReadAsStringAsync();
-        var res = JsonConvert.DeserializeObject<AiModels>(responseStr);
-        return res.Models;
-    }
+    public Task<AiModel[]> GetModels() =>
+        _mem.GetMemoized(async () =>
+        {
+            var response = await Client.RequestAsync(new RelativeUri("models"), HttpMethod.Get);
+            var responseStr = await response.Content.ReadAsStringAsync();
+            var res = JsonConvert.DeserializeObject<AiModels>(responseStr);
+            return res.Models;
+        });
 
     public void Dispose() { Client.Dispose(); }
 }

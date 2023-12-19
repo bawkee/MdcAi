@@ -6,6 +6,7 @@ using System.Windows.Input;
 using CommunityToolkit.WinUI.UI;
 using OpenAiApi;
 using Microsoft.EntityFrameworkCore;
+using MdcAi.ChatUI.Views;
 
 // MPV TODO
 // TODO: Simple category editor
@@ -19,7 +20,8 @@ using Microsoft.EntityFrameworkCore;
 public class ConversationsVm : ViewModel
 {
     [Reactive] public ConversationVm SelectedConversation { get; set; }
-    [Reactive] public object SelectedConversationPreview { get; set; }
+    [Reactive] public ConversationCategoryVm SelectedCategory { get; set; }
+    [Reactive] public object SelectedItem { get; set; }
     [Reactive] public ObservableCollectionExtended<IConversationItem> Items { get; private set; }
     public ObservableCollection<ConversationPreviewVm> TrashBin { get; } = new();
     public ReactiveCommand<Unit, IConversationItem[]> LoadItems { get; }
@@ -42,14 +44,14 @@ public class ConversationsVm : ViewModel
 
             var ret = categories.Select(async category =>
             {
-                var cat = new ConversationCategoryVm
+                var cat = new ConversationCategoryPreviewVm
                 {
                     Name = category.Name,
-                    IdCategory = category.IdCategory,
+                    Id = category.IdCategory,
                     Conversations = this
                 };
 
-                cat.Items.Load((await convos.Where(m => !m.IsTrash && m.IdCategory == cat.IdCategory)
+                cat.Items.Load((await convos.Where(m => !m.IsTrash && m.IdCategory == cat.Id)
                                             .OrderByDescending(c => c.CreatedTs)
                                             .ToArrayAsync())
                                .Select(i => new ConversationPreviewVm
@@ -72,11 +74,32 @@ public class ConversationsVm : ViewModel
                  .Do(i => Items = new(i))
                  .SubscribeSafe();
 
-        var selectedConvoPreview = this.WhenAnyValue(vm => vm.SelectedConversationPreview)
+        var selectedCatPreview = this.WhenAnyValue(vm => vm.SelectedItem)
+                                     .As<ConversationCategoryPreviewVm>();
+
+        // Activation logic for the category preview
+        selectedCatPreview
+            .PairWithPrevious()
+            .ObserveOnMainThread()
+            .Do(x =>
+            {
+                x.Item1?.Activator.Deactivate();
+                x.Item2?.Activator.Activate();
+            })
+            .SubscribeSafe();
+
+        // Forward the current category to the SelectedCategory property
+        selectedCatPreview
+            .Select(p => p == null ? Observable.Return((ConversationCategoryVm)null) : p.WhenAnyValue(vm => vm.Category))
+            .Switch()
+            .ObserveOnMainThread()
+            .Do(p => SelectedCategory = p)
+            .SubscribeSafe();
+
+        var selectedConvoPreview = this.WhenAnyValue(vm => vm.SelectedItem)
                                        .As<ConversationPreviewVm>();
 
-        // Activation logic for the conversation preview (selected one is deactivated,
-        // previous one deactivated)
+        // Activation logic for the conversation preview
         selectedConvoPreview
             .PairWithPrevious()
             .ObserveOnMainThread()
@@ -98,7 +121,7 @@ public class ConversationsVm : ViewModel
         SaveConversationsCmd = ReactiveCommand.CreateFromObservable(
             () => Observable.Using(
                 () => AppServices.GetUserProfileDb(),
-                ctx => Items.OfType<ConversationCategoryVm>()
+                ctx => Items.OfType<ConversationCategoryPreviewVm>()
                             .GetConversations()
                             .Select(c => c.Conversation)
                             .WhereNotNull()
@@ -148,15 +171,16 @@ public interface IConversationItem
     public string Name { get; set; }
 }
 
-public class ConversationCategoryVm : ViewModel, IConversationItem
+public class ConversationCategoryPreviewVm : ActivatableViewModel, IConversationItem
 {
-    public string Name { get; set; }
-    public string IdCategory { get; set; }
+    [Reactive] public string Name { get; set; }
+    public string Id { get; set; }
     public ConversationsVm Conversations { get; set; }
     public ObservableCollectionExtended<ConversationPreviewVm> Items { get; } = new();
     public AdvancedCollectionView ItemsView { get; }
+    [Reactive] public ConversationCategoryVm Category { get; private set; }
 
-    public ConversationCategoryVm()
+    public ConversationCategoryPreviewVm()
     {
         ItemsView = new(Items, true)
         {
@@ -167,6 +191,40 @@ public class ConversationCategoryVm : ViewModel, IConversationItem
         ItemsView.SortDescriptions.Add(new(nameof(ConversationPreviewVm.CreatedTs), SortDirection.Descending));
 
         ItemsView.ObserveFilterProperty(nameof(ConversationPreviewVm.IsTrash));
+
+        // Load category from the list
+        Activator.Activated
+                 .Where(_ => Category == null)
+                 .Select(_ =>
+                 {
+                     var cat = AppServices.Container.Resolve<ConversationCategoryVm>();
+                     cat.IdCategory = Id;
+                     cat.Name = Name;                     
+                     return cat;
+                 })
+                 //.Select(convo => convo.LoadCmd
+                 //                      .Execute()
+                 //                      .SelectMany(_ => convo.WhenAnyValue(vm => vm.Tail)
+                 //                                            .WhereNotNull()
+                 //                                            .Select(_ => convo))
+                 //                      .Take(1))
+                 //.Switch()
+                 .ObserveOnMainThread()
+                 .Do(cat => Category = cat)
+                 .SubscribeSafe();
+
+        UpdateField(vm => vm.Name, (c, v) => c.Name = v).SubscribeSafe();
+
+        // Lets you propagate this preview data to the actual item automatically
+        IObservable<Unit> UpdateField<T>(Expression<Func<ConversationCategoryPreviewVm, T>> prop,
+                                         Action<ConversationCategoryVm, T> action) =>
+            Observable.CombineLatest(this.WhenAnyValue(prop),
+                                     this.WhenAnyValue(vm => vm.Category),
+                                     (thing, convo) => (thing, convo))
+                      .Where(x => x is { convo: not null })
+                      .ObserveOnMainThread()
+                      .Do(x => action(x.convo, x.thing))
+                      .Select(_ => Unit.Default);
     }
 
     public ConversationPreviewVm CreateNewItemPlaceholder() =>
@@ -186,7 +244,7 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationItem
     [Reactive] public string Name { get; set; }
     [Reactive] public bool IsNewPlaceholder { get; set; }
     [Reactive] public bool IsTrash { get; set; }
-    [Reactive] public ConversationCategoryVm Category { get; set; }
+    [Reactive] public ConversationCategoryPreviewVm Category { get; set; }
     [Reactive] public ConversationVm Conversation { get; private set; }
 
     public ReactiveCommand<Unit, Unit> DeleteCmd { get; }
@@ -233,7 +291,7 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationItem
                             new ChatMessage(
                                 ChatMessageRole.System,
                                 "Given the content provided by the user, you are to create witty yet concise names, with a maximum of 20 characters, excluding any form of punctuation or line breaks. The names should be complete words or phrases, avoiding any cutoffs. A sprinkle of humor is welcome, as long as it adheres to the character limit. Maximum 20 characters!"
-                                ),
+                            ),
                             new ChatMessage(
                                 ChatMessageRole.User,
                                 Conversation.Head.Message.Content)
@@ -275,7 +333,7 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationItem
                  .Do(convo => Conversation = convo)
                  .SubscribeSafe();
 
-        UpdateField(vm => vm.Category, (c, v) => c.IdCategory = v?.IdCategory).SubscribeSafe();
+        UpdateField(vm => vm.Category, (c, v) => c.IdCategory = v?.Id).SubscribeSafe();
         UpdateField(vm => vm.Name, (c, v) => c.Name = v).SubscribeSafe();
 
         DeleteCmd = ReactiveCommand.CreateFromTask(
@@ -291,8 +349,8 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationItem
         DeleteCmd.ObserveOnMainThread()
                  .Do(_ =>
                  {
-                     if (Category.Conversations.SelectedConversationPreview == this)
-                         Category.Conversations.SelectedConversationPreview = null;
+                     if (Category.Conversations.SelectedItem == this)
+                         Category.Conversations.SelectedItem = null;
                      IsTrash = true;
                      Category.Conversations.TrashBin.Add(this);
                  })
@@ -341,6 +399,6 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationItem
 
 public static class IConversationItemExtensions
 {
-    public static IEnumerable<ConversationPreviewVm> GetConversations(this IEnumerable<ConversationCategoryVm> categories) =>
+    public static IEnumerable<ConversationPreviewVm> GetConversations(this IEnumerable<ConversationCategoryPreviewVm> categories) =>
         categories.SelectMany(c => c.Items);
 }

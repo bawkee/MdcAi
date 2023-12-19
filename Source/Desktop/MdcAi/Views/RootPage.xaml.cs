@@ -60,6 +60,8 @@ public sealed partial class RootPage
         {
             if (args.SelectedItem is ConversationPreviewVm)
                 NaviPivot.SelectedItem = ConversationPivotItem;
+            else if (args.SelectedItem is ConversationCategoryPreviewVm)
+                NaviPivot.SelectedItem = CategoryPivotItem;
         }
     }
 
@@ -77,7 +79,7 @@ public sealed partial class RootPage
 
     private void CategoryItem_OnLoaded(object sender, RoutedEventArgs e)
     {
-        if (sender is not NavigationViewItem { Tag: ConversationCategoryVm cat } item)
+        if (sender is not NavigationViewItem { Tag: ConversationCategoryPreviewVm cat } item)
             return;
 
         if (ViewModel.Conversations.Items.First() == cat)
@@ -101,7 +103,7 @@ public class NavigationViewDataTemplateSelector : DataTemplateSelector
     protected override DataTemplate SelectTemplateCore(object item) =>
         item switch
         {
-            ConversationCategoryVm => CategoryTemplate,
+            ConversationCategoryPreviewVm => CategoryTemplate,
             ConversationPreviewVm => ItemTemplate,
             _ => base.SelectTemplateCore(item)
         };

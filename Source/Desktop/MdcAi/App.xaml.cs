@@ -78,6 +78,8 @@ public partial class App : ILogging
                          })
                      .LifestyleTransient());
 
+        AppServices.Container.Register(Component.For<UserProfileDbContextWithTrans>().LifeStyle.Transient);
+
         Observable.FromAsync(async () =>
                   {
                       await using var db = AppServices.GetUserProfileDb();

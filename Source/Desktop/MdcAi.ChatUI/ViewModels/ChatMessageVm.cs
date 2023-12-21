@@ -132,7 +132,7 @@ public class ChatMessageVm : ViewModel
     {        
         if (Debugging.Enabled && Debugging.MockMessages)
         {
-            await Task.Delay(1000);
+            await Task.Delay(500);
 
             if (Debugging.NumberedMessages)
                 return $"Debug system {Debugging.SystemMessageCounter++}";

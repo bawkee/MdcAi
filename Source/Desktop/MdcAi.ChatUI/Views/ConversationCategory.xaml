@@ -60,7 +60,7 @@
         <Run Text="{x:Bind ViewModel.Name, Mode=OneWay}" />
       </TextBlock>
 
-      <Button Margin="15,5,0,0">
+      <Button Margin="15,5,0,0" Command="{x:Bind ViewModel.RenameCmd, Mode=OneWay}">
         <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE8AC;" />
       </Button>
     </StackPanel>
@@ -69,7 +69,8 @@
       <StackPanel Spacing="5">
         <controls:SettingsExpander Header="Category Icon">
           <controls:SettingsExpander.HeaderIcon>
-            <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE8BD;" />
+            <!--<FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE8BD;" />-->
+            <FontIcon Glyph="{x:Bind ViewModel.IconGlyph, Mode=OneWay, TargetNullValue='&#xE8BD;'}" />
           </controls:SettingsExpander.HeaderIcon>
           <controls:SettingsExpander.Items>
 
@@ -83,7 +84,7 @@
                                   QueryIcon="Find"
                                   PlaceholderText="Search..." />
 
-                  <ScrollViewer Height="250">
+                  <ScrollViewer Height="250" x:Name="IconsScrollViewer">
                     <ItemsRepeater x:Name="IconsRepeater"
                                    ElementIndexChanged="IconsRepeater_OnElementIndexChanged"
                                    ElementPrepared="IconsRepeater_OnElementPrepared"

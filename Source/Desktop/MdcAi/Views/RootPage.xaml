@@ -31,9 +31,12 @@
       <DataTemplate x:Key="NavigationViewCategoryTemplate" x:DataType="viewModels:ConversationCategoryPreviewVm">
         <NavigationViewItem Content="{x:Bind Name, Mode=OneWay}"
                             MenuItemsSource="{x:Bind ItemsView, Mode=OneWay}"
-                            Icon="Message"
                             Loaded="CategoryItem_OnLoaded"
-                            Tag="{x:Bind}" />
+                            Tag="{x:Bind}">
+          <NavigationViewItem.Icon>
+            <FontIcon Glyph="{x:Bind IconGlyph, Mode=OneWay, TargetNullValue='&#xE8BD;'}" />
+          </NavigationViewItem.Icon>
+        </NavigationViewItem>
       </DataTemplate>
 
       <DataTemplate x:Key="NavigationViewItemTemplate" x:DataType="viewModels:ConversationPreviewVm">

@@ -1,7 +1,7 @@
 ﻿namespace MdcAi.ChatUI.ViewModels;
 
 using Mapster;
-using MdcAi.ChatUI.LocalDal;
+using LocalDal;
 using Microsoft.EntityFrameworkCore;
 
 public class ConversationCategoryVm : ActivatableViewModel
@@ -10,11 +10,14 @@ public class ConversationCategoryVm : ActivatableViewModel
     public string IdCategory { get; set; }
     [Reactive] public string IdSettings { get; set; }
     [Reactive] public string Description { get; set; }
+    [Reactive] public string IconGlyph { get; set; }
     public IconsVm Icons { get; }
     public ChatSettingsVm Settings { get; }
 
     public ReactiveCommand<Unit, DbCategory> LoadCmd { get; }
-    
+    public ReactiveCommand<Unit, Unit> RenameCmd { get; }
+    public Interaction<string, string> RenameIntr { get; } = new(RxApp.MainThreadScheduler);
+
     public ConversationCategoryVm(IconsVm icons, ChatSettingsVm settings)
     {
         Icons = icons;
@@ -24,15 +27,24 @@ public class ConversationCategoryVm : ActivatableViewModel
             () => Observable.FromAsync(async () =>
                             {
                                 await using var ctx = AppServices.GetUserProfileDb();
-                                var cat = ctx.Categories.Include(c => c.Settings).First(c => c.IdCategory == IdCategory);
-                                return cat;
+                                return ctx.Categories.Include(c => c.Settings).First(c => c.IdCategory == IdCategory);
                             })
                             .ObserveOnMainThread()
                             .Do(cat => cat.Adapt(this)));
 
+        Icons.WhenAnyValue(vm => vm.SelectedItem)
+             .WhereNotNull()
+             .Do(s => IconGlyph = s.Character)
+             .Subscribe();
+
         Activator.Activated
                  .Take(1)
                  .InvokeCommand(Icons.LoadIcons);
+
+        Icons.LoadIcons
+             .Where(_ => !string.IsNullOrEmpty(IconGlyph))
+             .Do(_ => Icons.SelectedItem = Icons.Icons.FirstOrDefault(i => i.Character == IconGlyph))
+             .SubscribeSafe();
 
         Activator.Activated.Take(1).InvokeCommand(LoadCmd);
 
@@ -51,6 +63,38 @@ public class ConversationCategoryVm : ActivatableViewModel
                 .Throttle(TimeSpan.FromSeconds(1))
                 .Select(_ => Unit.Default)
                 .InvokeCommand(Settings.SaveCmd);
+
+        LoadCmd.Select(_ => this.WhenAnyValue(vm => vm.IconGlyph)
+                                .Skip(1))
+               .Switch()
+               .Throttle(TimeSpan.FromSeconds(1))
+               .SelectMany(icon => Observable.FromAsync(
+                               async () =>
+                               {
+                                   await using var ctx = AppServices.GetUserProfileDb();
+                                   await ctx.Categories
+                                            .Where(c => c.IdCategory == IdCategory)
+                                            .ExecuteUpdateAsync(c => c.SetProperty(p => p.IconGlyph, icon));
+                               }))
+               .SubscribeSafe();
+
+        RenameCmd = ReactiveCommand.CreateFromObservable(
+            () => RenameIntr
+                  .Handle(Name)
+                  .Where(name => name != null && name != Name)
+                  .Select(name => Observable
+                                  .FromAsync(
+                                      async () =>
+                                      {
+                                          await using var ctx = AppServices.GetUserProfileDb();
+                                          await ctx.Categories
+                                                   .Where(c => c.IdCategory == IdCategory)
+                                                   .ExecuteUpdateAsync(c => c.SetProperty(p => p.Name, name));
+                                      })
+                                  .ObserveOnMainThread()
+                                  .Do(_ => Name = name))
+                  .Switch());
+
 
         this.WhenActivated(disposables =>
         {

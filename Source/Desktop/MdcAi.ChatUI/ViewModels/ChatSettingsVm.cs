@@ -106,6 +106,7 @@ public class ChatSettingsVm : ViewModel
                      nameof(Premise),
                      nameof(Model));
 
+    // TODO: Interesting...
     public ChatSettingsVm Clone() => this.Adapt(AppServices.Container.Resolve<ChatSettingsVm>());
 
     public static AiModel[] MockModels =

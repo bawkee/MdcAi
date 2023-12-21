@@ -20,6 +20,8 @@ using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
 using OpenAiApi;
+using ReactiveMarbles.ObservableEvents;
+using RxUIExt.WinUI;
 
 /// <summary>
 /// An empty page that can be used on its own or navigated to within a Frame.
@@ -28,7 +30,7 @@ public sealed partial class ConversationCategory
 {
     public ConversationCategory()
     {
-        this.InitializeComponent();
+        InitializeComponent();
 
         this.WhenActivated((disposables, viewModel) =>
         {
@@ -49,6 +51,17 @@ public sealed partial class ConversationCategory
                              });
                      })
                      .SubscribeSafe()
+                     .DisposeWith(disposables);
+
+            viewModel.RenameIntr.RegisterHandler(
+                         async r =>
+                         {
+                             var dialogResult = await this.ShowTextInputDialog(
+                                 "Rename Category:",
+                                 r.Input,
+                                 config => config.Validation = t => !string.IsNullOrEmpty(t));
+                             r.SetOutput(dialogResult);
+                         })
                      .DisposeWith(disposables);
         });
     }

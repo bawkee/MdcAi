@@ -48,6 +48,7 @@ public class ConversationsVm : ViewModel
                 {
                     Name = category.Name,
                     Id = category.IdCategory,
+                    IconGlyph = category.IconGlyph,
                     Conversations = this
                 };
 
@@ -173,8 +174,9 @@ public interface IConversationItem
 
 public class ConversationCategoryPreviewVm : ActivatableViewModel, IConversationItem
 {
-    [Reactive] public string Name { get; set; }
     public string Id { get; set; }
+    [Reactive] public string Name { get; set; }
+    [Reactive] public string IconGlyph { get; set; }
     public ConversationsVm Conversations { get; set; }
     public ObservableCollectionExtended<ConversationPreviewVm> Items { get; } = new();
     public AdvancedCollectionView ItemsView { get; }
@@ -199,32 +201,28 @@ public class ConversationCategoryPreviewVm : ActivatableViewModel, IConversation
                  {
                      var cat = AppServices.Container.Resolve<ConversationCategoryVm>();
                      cat.IdCategory = Id;
-                     cat.Name = Name;                     
+                     cat.Name = Name;
                      return cat;
                  })
-                 //.Select(convo => convo.LoadCmd
-                 //                      .Execute()
-                 //                      .SelectMany(_ => convo.WhenAnyValue(vm => vm.Tail)
-                 //                                            .WhereNotNull()
-                 //                                            .Select(_ => convo))
-                 //                      .Take(1))
-                 //.Switch()
                  .ObserveOnMainThread()
                  .Do(cat => Category = cat)
                  .SubscribeSafe();
 
-        UpdateField(vm => vm.Name, (c, v) => c.Name = v).SubscribeSafe();
-
-        // Lets you propagate this preview data to the actual item automatically
-        IObservable<Unit> UpdateField<T>(Expression<Func<ConversationCategoryPreviewVm, T>> prop,
-                                         Action<ConversationCategoryVm, T> action) =>
-            Observable.CombineLatest(this.WhenAnyValue(prop),
-                                     this.WhenAnyValue(vm => vm.Category),
-                                     (thing, convo) => (thing, convo))
-                      .Where(x => x is { convo: not null })
-                      .ObserveOnMainThread()
-                      .Do(x => action(x.convo, x.thing))
-                      .Select(_ => Unit.Default);
+        this.WhenAnyValue(vm => vm.Category)
+            .WhereNotNull()
+            .Select(cat => Observable.Merge(
+                        this.WhenAnyValue(vm => vm.Name)
+                            .Do(v => cat.Name = v)
+                            .Select(_ => Unit.Default),
+                        cat.WhenAnyValue(vm => vm.Name)
+                           .Do(v => Name = v)
+                           .Select(_ => Unit.Default),
+                        cat.WhenAnyValue(vm => vm.IconGlyph)
+                           .Do(v => IconGlyph = v)
+                           .Select(_ => Unit.Default)
+                    ))
+            .Switch()
+            .SubscribeSafe();
     }
 
     public ConversationPreviewVm CreateNewItemPlaceholder() =>
@@ -248,7 +246,7 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationItem
     [Reactive] public ConversationVm Conversation { get; private set; }
 
     public ReactiveCommand<Unit, Unit> DeleteCmd { get; }
-    public ReactiveCommand<Unit, string> RenameCmd { get; }
+    public ReactiveCommand<Unit, Unit> RenameCmd { get; }
 
     public ConversationPreviewVm()
     {
@@ -333,8 +331,21 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationItem
                  .Do(convo => Conversation = convo)
                  .SubscribeSafe();
 
-        UpdateField(vm => vm.Category, (c, v) => c.IdCategory = v?.Id).SubscribeSafe();
-        UpdateField(vm => vm.Name, (c, v) => c.Name = v).SubscribeSafe();
+        this.WhenAnyValue(vm => vm.Conversation)
+            .WhereNotNull()
+            .Select(c => Observable.Merge(
+                        this.WhenAnyValue(vm => vm.Name)
+                            .Do(v => c.Name = v)
+                            .Select(_ => Unit.Default),
+                        c.WhenAnyValue(vm => vm.Name)
+                         .Do(v => Name = v)
+                         .Select(_ => Unit.Default),
+                        this.WhenAnyValue(vm => vm.Category)
+                            .Do(v => c.IdCategory = v?.Id)
+                            .Select(_ => Unit.Default)
+                    ))
+            .Switch()
+            .SubscribeSafe();
 
         DeleteCmd = ReactiveCommand.CreateFromTask(
             async () =>
@@ -356,44 +367,22 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationItem
                  })
                  .SubscribeSafe();
 
-        RenameCmd = ReactiveCommand.CreateFromTask(
-            async () =>
-            {
-                var name = await Category.Conversations.RenameIntr.Handle(this);
-
-                if (!string.IsNullOrEmpty(name))
-                {
-                    await using var ctx = AppServices.GetUserProfileDb();
-                    await ctx.Conversations
-                             .Where(c => c.IdConversation == Id)
-                             .ExecuteUpdateAsync(c => c.SetProperty(p => p.Name, name));
-                }
-
-                return name;
-            });
-
-        RenameCmd.ObserveOnMainThread()
-                 .WhereNotNull()
-                 .Do(n => Name = n)
-                 .SubscribeSafe();
-
-        return;
-
-        // Lets you propagate this preview data to the conversation automatically
-        IObservable<Unit> UpdateField<T>(Expression<Func<ConversationPreviewVm, T>> prop, Action<ConversationVm, T> action) =>
-            Observable.CombineLatest(this.WhenAnyValue(prop),
-                                     this.WhenAnyValue(vm => vm.Conversation),
-                                     (thing, convo) => (thing, convo))
-                      .Where(x => x is { convo: not null })
-                      .ObserveOnMainThread()
-                      .Do(x => action(x.convo, x.thing))
-                      .Select(_ => Unit.Default);
-
-        //this.WhenActivated(disposables =>
-        //{
-        //    Debug.WriteLine($"Activated {Name}");
-        //    Disposable.Create(() => Debug.WriteLine($"Deactivated {Name}")).DisposeWith(disposables);
-        //});
+        RenameCmd = ReactiveCommand.CreateFromObservable(
+            () => Category.Conversations.RenameIntr
+                          .Handle(this)
+                          .Where(name => name != null && name != Name)
+                          .Select(name => Observable
+                                          .FromAsync(
+                                              async () =>
+                                              {
+                                                  await using var ctx = AppServices.GetUserProfileDb();
+                                                  await ctx.Conversations
+                                                           .Where(c => c.IdConversation == Id)
+                                                           .ExecuteUpdateAsync(c => c.SetProperty(p => p.Name, name));
+                                              })
+                                          .ObserveOnMainThread()
+                                          .Do(_ => Name = name))
+                          .Switch());
     }
 }
 

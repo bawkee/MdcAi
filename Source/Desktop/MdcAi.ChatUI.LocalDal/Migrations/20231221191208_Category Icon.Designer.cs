@@ -3,6 +3,7 @@ using System;
 using MdcAi.ChatUI.LocalDal;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace MdcAi.ChatUI.LocalDal.Migrations
 {
     [DbContext(typeof(UserProfileDbContext))]
-    partial class UserProfileDbContextModelSnapshot : ModelSnapshot
+    [Migration("20231221191208_Category Icon")]
+    partial class CategoryIcon
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "7.0.14");
@@ -33,6 +36,9 @@ namespace MdcAi.ChatUI.LocalDal.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SystemMessage")
                         .HasColumnType("TEXT");
 
                     b.HasKey("IdCategory");

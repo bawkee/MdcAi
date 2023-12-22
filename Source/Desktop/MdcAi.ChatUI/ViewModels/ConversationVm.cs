@@ -131,13 +131,13 @@ public class ConversationVm : ActivatableViewModel
                           {
                               Content = Prompt.Contents,
                               Previous = Tail?.Message,
-                              Settings = Settings.Clone(),
+                              Settings = Settings,
                           } :
                           new ChatMessageVm(this, ChatMessageRole.User, EditMessage)
                           {
                               Content = Prompt.Contents,
                               Previous = EditMessage.Message.Previous,
-                              Settings = Settings.Clone(),
+                              Settings = Settings,
                           },
                       EditMessage
                   })
@@ -467,7 +467,7 @@ public class ConversationVm : ActivatableViewModel
                       {
                           Content = contents,
                           Previous = Tail?.Message,
-                          Settings = Settings.Clone(),
+                          Settings = Settings,
                       };
                   })
                   .ObserveOnMainThread()
@@ -497,7 +497,7 @@ public class ConversationVm : ActivatableViewModel
                     Completion = new ChatMessageVm(this, ChatMessageRole.System)
                     {
                         Previous = t.Message,
-                        Settings = t.Message.Settings.Clone(),
+                        Settings = t.Message.Settings,
                     }
                 })
                 .Do(x => x.Tail.Message.Next = x.Completion)

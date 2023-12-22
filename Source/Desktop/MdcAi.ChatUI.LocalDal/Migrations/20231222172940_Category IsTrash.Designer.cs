@@ -3,6 +3,7 @@ using System;
 using MdcAi.ChatUI.LocalDal;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace MdcAi.ChatUI.LocalDal.Migrations
 {
     [DbContext(typeof(UserProfileDbContext))]
-    partial class UserProfileDbContextModelSnapshot : ModelSnapshot
+    [Migration("20231222172940_Category IsTrash")]
+    partial class CategoryIsTrash
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "7.0.14");

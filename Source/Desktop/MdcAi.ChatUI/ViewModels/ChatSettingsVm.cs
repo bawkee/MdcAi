@@ -110,9 +110,17 @@ public class ChatSettingsVm : ViewModel
                      nameof(PresencePenalty),
                      nameof(Premise),
                      nameof(Model));
-
-    // TODO: Interesting...
-    public ChatSettingsVm Clone() => this.Adapt(AppServices.Container.Resolve<ChatSettingsVm>());
+    
+    public void CopyTo(ChatSettingsVm c)
+    {
+        c.TopP = TopP;
+        c.FrequencyPenalty = FrequencyPenalty;
+        c.PresencePenalty = PresencePenalty;
+        c.Streaming = Streaming;
+        c.Temperature = Temperature;
+        c.Model = Model;
+        c.Premise = Premise;
+    }
 
     public static AiModel[] MockModels =
     {

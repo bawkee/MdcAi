@@ -70,19 +70,7 @@ public class UserProfileDbContext : DbContext
                     .IsRequired();
 
         modelBuilder.Entity<DbChatSettings>()
-                    .HasData(new DbChatSettings
-                    {
-                        IdSettings = "general",
-                        Model = "gpt-4-1106-preview",
-                        Streaming = true,
-                        FrequencyPenalty = 1,
-                        PresencePenalty = 1,
-                        Temperature = 1,
-                        TopP = 1,
-                        Premise = "You are a helpful but cynical and humorous assistant (but not over the top). " +
-                                  "You give short answers, straight, to the point answers. Use md syntax and be " +
-                                  "sure to specify language for code blocks."
-                    });
+                    .HasData(CreateDefaultChatSettings("general"));
 
         modelBuilder.Entity<DbCategory>()
                     .HasData(new DbCategory
@@ -93,6 +81,20 @@ public class UserProfileDbContext : DbContext
                         Description = "General Purpose AI Assistant"
                     });
     }
+
+    public DbChatSettings CreateDefaultChatSettings(string id) =>
+        new()
+        {
+            IdSettings = id,
+            Model = "gpt-4-1106-preview",
+            Streaming = true,
+            FrequencyPenalty = 1,
+            PresencePenalty = 1,
+            Temperature = 1,
+            TopP = 1,
+            Premise = "You are a helpful but cynical and humorous assistant (but not over the top). " +
+                      "You give short answers, straight, to the point answers."
+        };
 }
 
 public class DbConversation
@@ -129,9 +131,10 @@ public class DbCategory
     [Key] public string IdCategory { get; set; }
     public string IdSettings { get; set; }
     public string Name { get; set; }
+    public bool IsTrash { get; set; }
     public string IconGlyph { get; set; }
     public string Description { get; set; }
-
+    
     public DbChatSettings Settings { get; set; }
 }
 

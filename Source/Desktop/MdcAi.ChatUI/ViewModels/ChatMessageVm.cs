@@ -13,7 +13,7 @@ public class ChatMessageVm : ViewModel
     public string Id { get; set; }
     public string Role { get; set; }
     public ChatMessageSelectorVm Selector { get; }
-    [Reactive] public ChatSettingsVm Settings { get; set; }
+    [Reactive] public ChatSettingsVm Settings { get; set; } 
     [Reactive] public string Content { get; set; }
     [Reactive] public string HTMLContent { get; set; }
     public DateTime CreatedTs { get; set; }
@@ -151,7 +151,7 @@ public class ChatMessageVm : ViewModel
     {
         if (Debugging.Enabled && Debugging.MockMessages)
             return Observable
-                   .FromAsync(async () => await GenerateResponse())
+                   .FromAsync(() => GenerateResponse())
                    .SelectMany(c => c.Split(' ')
                                      .ToObservable()
                                      .Select(s => Observable.Timer(TimeSpan.FromMilliseconds(200))
@@ -174,11 +174,13 @@ public class ChatMessageVm : ViewModel
             currentParent = currentParent.Previous;
         }
 
+        const string premiseSpice = " Use md syntax and be sure to specify language for code blocks.";
+
         messages.Insert(0,
                         new()
                         {
                             Role = ChatMessageRole.System,
-                            Content = Settings.Premise
+                            Content = Settings.Premise + premiseSpice
                         });
 
         var req = new ChatRequest

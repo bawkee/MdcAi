@@ -36,6 +36,13 @@
           <NavigationViewItem.Icon>
             <FontIcon Glyph="{x:Bind IconGlyph, Mode=OneWay, TargetNullValue='&#xE8BD;'}" />
           </NavigationViewItem.Icon>
+
+          <NavigationViewItem.ContextFlyout>
+            <MenuFlyout>
+              <MenuFlyoutItem Text="New Category" Command="{x:Bind Conversations.AddCategoryCmd, Mode=OneWay}" />
+              <MenuFlyoutItem Text="Delete" Command="{x:Bind DeleteCmd, Mode=OneWay}" />
+            </MenuFlyout>
+          </NavigationViewItem.ContextFlyout>
         </NavigationViewItem>
       </DataTemplate>
 
@@ -129,7 +136,7 @@
                     Canvas.ZIndex="0"
                     Grid.RowSpan="2"
                     Grid.Column="1"
-                    MenuItemsSource="{x:Bind ViewModel.Conversations.Items, Mode=OneWay}"
+                    MenuItemsSource="{x:Bind ViewModel.Conversations.ItemsView, Mode=OneWay}"
                     MenuItemTemplateSelector="{StaticResource NavigationViewDataTemplateSelector}"
                     SelectedItem="{x:Bind ViewModel.Conversations.SelectedPreviewItem, Mode=TwoWay}">
 

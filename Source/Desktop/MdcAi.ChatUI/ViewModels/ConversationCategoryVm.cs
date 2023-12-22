@@ -16,7 +16,7 @@ public class ConversationCategoryVm : ActivatableViewModel
 
     public ReactiveCommand<Unit, DbCategory> LoadCmd { get; }
     public ReactiveCommand<Unit, Unit> RenameCmd { get; }
-    public Interaction<string, string> RenameIntr { get; } = new(RxApp.MainThreadScheduler);
+    public Interaction<string, string> RenameIntr { get; } = new();
 
     public ConversationCategoryVm(IconsVm icons, ChatSettingsVm settings)
     {

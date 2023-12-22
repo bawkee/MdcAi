@@ -49,6 +49,17 @@ public sealed partial class RootPage
                              r.SetOutput(dialogResult);
                          })
                      .DisposeWith(disposables);
+
+            viewModel.Conversations.AddCategoryIntr.RegisterHandler(
+                         async r =>
+                         {
+                             var dialogResult = await this.ShowTextInputDialog(
+                                 "New Category Name:",
+                                 null,
+                                 config => config.Validation = t => !string.IsNullOrEmpty(t));
+                             r.SetOutput(dialogResult);
+                         })
+                     .DisposeWith(disposables);
         });
     }
 

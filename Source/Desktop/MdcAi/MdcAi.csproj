@@ -34,6 +34,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="FodyWeavers.xml" />
     <None Remove="Views\RootPage.xaml" />
   </ItemGroup>
 

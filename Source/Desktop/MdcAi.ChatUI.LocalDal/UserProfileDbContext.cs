@@ -1,6 +1,5 @@
 ﻿namespace MdcAi.ChatUI.LocalDal;
 
-using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
@@ -95,57 +94,4 @@ public class UserProfileDbContext : DbContext
             Premise = "You are a helpful but cynical and humorous assistant (but not over the top). " +
                       "You give short answers, straight, to the point answers."
         };
-}
-
-public class DbConversation
-{
-    [Key] public string IdConversation { get; set; }
-    public string IdCategory { get; set; }
-    public string IdSettingsOverride { get; set; }
-    public string Name { get; set; }
-    public bool IsTrash { get; set; }
-    public DateTime CreatedTs { get; set; }
-
-    public DbCategory Category { get; set; }
-    public List<DbMessage> Messages { get; set; } = new();
-    public DbChatSettings SettingsOverride { get; set; }
-}
-
-public class DbMessage
-{
-    [Key] public string IdMessage { get; set; }
-    public string IdMessageParent { get; set; }
-    public string IdConversation { get; set; }
-    public int Version { get; set; }
-    public bool IsCurrentVersion { get; set; }
-    public DateTime CreatedTs { get; set; }
-    public string Role { get; set; }
-    public string Content { get; set; }
-    public bool IsTrash { get; set; }
-
-    public DbConversation Conversation { get; set; }
-}
-
-public class DbCategory
-{
-    [Key] public string IdCategory { get; set; }
-    public string IdSettings { get; set; }
-    public string Name { get; set; }
-    public bool IsTrash { get; set; }
-    public string IconGlyph { get; set; }
-    public string Description { get; set; }
-    
-    public DbChatSettings Settings { get; set; }
-}
-
-public class DbChatSettings
-{
-    [Key] public string IdSettings { get; set; }
-    public string Model { get; set; }
-    public bool Streaming { get; set; } = true;
-    public decimal Temperature { get; set; } = 1m;
-    public decimal TopP { get; set; } = 1m;
-    public decimal FrequencyPenalty { get; set; } = 1m;
-    public decimal PresencePenalty { get; set; } = 1m;
-    public string Premise { get; set; }
 }

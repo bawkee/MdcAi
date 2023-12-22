@@ -1,7 +1,7 @@
 ﻿namespace MdcAi.ChatUI.ViewModels;
 
 using Mapster;
-using MdcAi.ChatUI.LocalDal;
+using LocalDal;
 using Microsoft.EntityFrameworkCore;
 using OpenAiApi;
 

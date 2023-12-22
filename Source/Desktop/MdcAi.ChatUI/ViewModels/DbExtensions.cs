@@ -5,6 +5,7 @@ using Mapster;
 
 public static class DbExtensions
 {
+    // TODO: Move this over to relevant classes
     public static IEnumerable<DbMessage> ToDbMessages(this ChatMessageVm source, int idx = 0)
     {
         if (source == null)

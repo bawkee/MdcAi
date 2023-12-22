@@ -61,7 +61,7 @@
         </NavigationViewItem>
       </DataTemplate>
 
-      <local:NavigationViewDataTemplateSelector
+      <local:RootNaviDataTemplateSelector
         x:Key="NavigationViewDataTemplateSelector"
         ItemTemplate="{StaticResource NavigationViewItemTemplate}"
         CategoryTemplate="{StaticResource NavigationViewCategoryTemplate}" />

@@ -96,11 +96,11 @@ public class ConversationCategoryVm : ActivatableViewModel
                   .Switch());
 
 
-        this.WhenActivated(disposables =>
-        {
-            Debug.WriteLine($"Activated {Name}");
-            Disposable.Create(() => Debug.WriteLine($"Deactivated {Name}")).DisposeWith(disposables);
-        });
+        //this.WhenActivated(disposables =>
+        //{
+        //    Debug.WriteLine($"Activated {Name}");
+        //    Disposable.Create(() => Debug.WriteLine($"Deactivated {Name}")).DisposeWith(disposables);
+        //});
     }
 
     static ConversationCategoryVm()

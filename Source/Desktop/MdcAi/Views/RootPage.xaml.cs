@@ -101,7 +101,7 @@ public sealed partial class RootPage
     }
 }
 
-public class NavigationViewDataTemplateSelector : DataTemplateSelector
+public class RootNaviDataTemplateSelector : DataTemplateSelector
 {
     public DataTemplate CategoryTemplate { get; set; }
     public DataTemplate ItemTemplate { get; set; }

@@ -52,10 +52,6 @@
 
   <controls:DockPanel DataContext="{x:Bind ViewModel, Mode=OneWay}">
     <StackPanel Orientation="Horizontal" controls:DockPanel.Dock="Top" Margin="20">
-      <!--<Grid Margin="0,5,15,0">
-        <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE8BD;" />
-      </Grid>-->
-
       <TextBlock Style="{StaticResource TitleTextBlockStyle}">
         <Run Text="{x:Bind ViewModel.Name, Mode=OneWay}" />
       </TextBlock>
@@ -69,7 +65,6 @@
       <StackPanel Spacing="5">
         <controls:SettingsExpander Header="Category Icon">
           <controls:SettingsExpander.HeaderIcon>
-            <!--<FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE8BD;" />-->
             <FontIcon Glyph="{x:Bind ViewModel.IconGlyph, Mode=OneWay, TargetNullValue='&#xE8BD;'}" />
           </controls:SettingsExpander.HeaderIcon>
           <controls:SettingsExpander.Items>

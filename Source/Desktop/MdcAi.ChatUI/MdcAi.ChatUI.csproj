@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <None Remove="Assets\Icons.json" />
+    <None Remove="FodyWeavers.xml" />
     <None Remove="MdcAi.ChatUI.csproj.DotSettings" />
     <None Remove="Views\Conversation.xaml" />
     <None Remove="Views\ConversationCategory.xaml" />

@@ -56,6 +56,8 @@ public sealed partial class Conversation : ILogging
                 .LogErrors(this)
                 .SubscribeSafe();
 
+        // TODO: Move the chatlist.zip to this project ChatList.zip
+
         initCore.Do(core =>
                 {
                     core.Settings.IsWebMessageEnabled = true;

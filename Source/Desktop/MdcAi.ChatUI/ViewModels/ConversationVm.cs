@@ -45,7 +45,7 @@ public class ConversationVm : ActivatableViewModel
     public ReactiveCommand<string, Unit> SelectModelCmd { get; }
     public ReactiveCommand<Unit, Unit> SendPromptCmd { get; }
     public ReactiveCommand<Unit, Unit> DebugCmd { get; }
-    public ReactiveCommand<ConversationSaveOptions, Unit> SaveCmd { get; }
+    public ReactiveCommand<Unit, Unit> SaveCmd { get; }
     public ReactiveCommand<Unit, DbConversation> LoadCmd { get; }
     public ReactiveCommand<Unit, Unit> ResetSettingsCmd { get; }
     public ReactiveCommand<Unit, Unit> SaveSettingsCmd { get; set; }
@@ -330,7 +330,7 @@ public class ConversationVm : ActivatableViewModel
             this.WhenAnyValue(vm => vm.SettingsOverriden));
 
         SaveCmd = ReactiveCommand.CreateFromObservable(
-            (ConversationSaveOptions opt) => Observable.Using(
+            () => Observable.Using(
                 () => AppServices.GetUserProfileDb(),
                 ctx =>
                 {
@@ -387,7 +387,7 @@ public class ConversationVm : ActivatableViewModel
                           .Select(_ => Unit.Default),
                       DeleteSelectedCmd)
                   .Throttle(TimeSpan.FromMilliseconds(500))
-                  .Select(_ => new ConversationSaveOptions())
+                  .Select(_ => Unit.Default)
                   .InvokeCommand(SaveCmd);
 
         this.WhenAnyValue(vm => vm.GlobalSettings)
@@ -485,8 +485,8 @@ public class ConversationVm : ActivatableViewModel
 
         this.WhenActivated(disposables =>
         {
-            Debug.WriteLine($"Activated {Name}");
-            Disposable.Create(() => Debug.WriteLine($"Deactivated {Name}")).DisposeWith(disposables);
+            //Debug.WriteLine($"Activated {Name}");
+            //Disposable.Create(() => Debug.WriteLine($"Deactivated {Name}")).DisposeWith(disposables);
 
             // Trigger completions when user posts a message
             this.WhenAnyValue(vm => vm.Tail)
@@ -569,12 +569,6 @@ public class ConversationVm : ActivatableViewModel
             .NewConfig()
             .IgnoreMember((member, _) => !member.Type.IsBuiltInConvertibleType());
     }
-}
-
-public class ConversationSaveOptions
-{
-    // TODO: Remove this
-    public UserProfileDbContext DbContext { get; set; }
 }
 
 public class PromptVm : ViewModel

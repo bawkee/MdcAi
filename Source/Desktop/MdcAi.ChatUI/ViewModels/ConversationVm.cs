@@ -265,6 +265,12 @@ public class ConversationVm : ActivatableViewModel
                   .ObserveOnMainThread()
                   .SubscribeSafe();
 
+        // Reload settings on subsequent activations since they can be changed externally (category editor)
+        Activator.Activated
+                 .Skip(1)
+                 .Where(_ => IdSettingsOverride == null)
+                 .InvokeCommand(Settings.ReloadCmd);
+
         // Save settings, or if convo is new then don't, it will be saved when saving the convo.
         SaveSettingsCmd = ReactiveCommand.CreateFromObservable(
             () => IsNew ?
@@ -479,8 +485,8 @@ public class ConversationVm : ActivatableViewModel
 
         this.WhenActivated(disposables =>
         {
-            //Debug.WriteLine($"Activated {GetType()} - {Name}");
-            //Disposable.Create(() => Debug.WriteLine($"Deactivated {GetType()} - {Name}")).DisposeWith(disposables);
+            Debug.WriteLine($"Activated {Name}");
+            Disposable.Create(() => Debug.WriteLine($"Deactivated {Name}")).DisposeWith(disposables);
 
             // Trigger completions when user posts a message
             this.WhenAnyValue(vm => vm.Tail)

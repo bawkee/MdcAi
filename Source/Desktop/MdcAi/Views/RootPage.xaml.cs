@@ -57,12 +57,7 @@ public sealed partial class RootPage
         if (args.IsSettingsSelected)
             NaviPivot.SelectedItem = SettingsPivotItem;
         else
-        {
-            if (args.SelectedItem is ConversationPreviewVm)
-                NaviPivot.SelectedItem = ConversationPivotItem;
-            else if (args.SelectedItem is ConversationCategoryPreviewVm)
-                NaviPivot.SelectedItem = CategoryPivotItem;
-        }
+            NaviPivot.SelectedItem = ConversationPivotItem;
     }
 
     private void NavigationView_OnDisplayModeChanged(NavigationView sender, NavigationViewDisplayModeChangedEventArgs args)

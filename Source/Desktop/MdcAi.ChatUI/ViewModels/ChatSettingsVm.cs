@@ -30,6 +30,7 @@ public class ChatSettingsVm : ViewModel
 
     public ReactiveCommand<Unit, AiModel[]> LoadModelsCmd { get; }
     public ReactiveCommand<string, DbChatSettings> LoadCmd { get; }
+    public ReactiveCommand<Unit, Unit> ReloadCmd { get; }
     public ReactiveCommand<Unit, Unit> SaveCmd { get; }
 
     public ChatSettingsVm(IOpenAiApi api)
@@ -74,6 +75,10 @@ public class ChatSettingsVm : ViewModel
                                  .Do(i => IsDifferentFromOriginal = i))
                .SubscribeSafe();
 
+        ReloadCmd = ReactiveCommand.CreateFromObservable(
+            () => LoadCmd.Execute(IdSettings).Select(_ => Unit.Default),
+            this.WhenAnyValue(vm => vm.IdSettings).Select(v => v != null));
+
         changes.Select(_ => changes.IsDirty())
                .Do(i => IsDirty = i)
                .SubscribeSafe();
@@ -93,7 +98,7 @@ public class ChatSettingsVm : ViewModel
         LoadModelsCmd.IsExecuting
                      .ObserveOnMainThread()
                      .Do(i => IsLoadingModels = i)
-                     .SubscribeSafe();        
+                     .SubscribeSafe();
     }
 
     // TODO: The change tracker is quite odd

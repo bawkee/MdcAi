@@ -131,7 +131,7 @@
                     Grid.Column="1"
                     MenuItemsSource="{x:Bind ViewModel.Conversations.Items, Mode=OneWay}"
                     MenuItemTemplateSelector="{StaticResource NavigationViewDataTemplateSelector}"
-                    SelectedItem="{x:Bind ViewModel.Conversations.SelectedItem, Mode=TwoWay}">
+                    SelectedItem="{x:Bind ViewModel.Conversations.SelectedPreviewItem, Mode=TwoWay}">
 
       <NavigationView.AutoSuggestBox>
         <AutoSuggestBox x:Name="NavViewSearchBox" QueryIcon="Find" />
@@ -157,17 +157,12 @@
           </Style>
         </Pivot.Resources>
 
-        <PivotItem x:Name="CategoryPivotItem" Style="{StaticResource MarginFixedPivot}">
-          <winUi:ViewHost ViewModel="{x:Bind ViewModel.Conversations.SelectedCategory, Mode=OneWay}"
+        <PivotItem x:Name="ConversationPivotItem" Style="{StaticResource MarginFixedPivot}">
+          <winUi:ViewHost ViewModel="{x:Bind ViewModel.Conversations.SelectedItem, Mode=OneWay}"
                           CacheType="ByType"
-                          Visibility="{x:Bind Path=ViewModel.Conversations.SelectedCategory, Converter={StaticResource NullToVisibilityConverter}, FallbackValue='Collapsed', Mode=OneWay}" />
+                          Visibility="{x:Bind Path=ViewModel.Conversations.SelectedItem, Converter={StaticResource NullToVisibilityConverter}, FallbackValue='Collapsed', Mode=OneWay}" />
         </PivotItem>
 
-        <PivotItem x:Name="ConversationPivotItem" Style="{StaticResource MarginFixedPivot}">
-          <winUi:ViewHost ViewModel="{x:Bind ViewModel.Conversations.SelectedConversation, Mode=OneWay}"
-                          CacheType="ByType"
-                          Visibility="{x:Bind Path=ViewModel.Conversations.SelectedConversation, Converter={StaticResource NullToVisibilityConverter}, FallbackValue='Collapsed', Mode=OneWay}" />
-        </PivotItem>
 
         <PivotItem x:Name="SettingsPivotItem" Style="{StaticResource MarginFixedPivot}">
           <winUi:ViewHost ViewModel="{x:Bind ViewModel.Settings}" />

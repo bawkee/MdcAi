@@ -19,12 +19,11 @@ using MdcAi.ChatUI.Views;
 
 public class ConversationsVm : ViewModel
 {
-    [Reactive] public ConversationVm SelectedConversation { get; set; }
-    [Reactive] public ConversationCategoryVm SelectedCategory { get; set; }
     [Reactive] public object SelectedItem { get; set; }
-    [Reactive] public ObservableCollectionExtended<IConversationItem> Items { get; private set; }
+    [Reactive] public object SelectedPreviewItem { get; set; }
+    [Reactive] public ObservableCollectionExtended<IConversationPreviewItem> Items { get; private set; }
     public ObservableCollection<ConversationPreviewVm> TrashBin { get; } = new();
-    public ReactiveCommand<Unit, IConversationItem[]> LoadItems { get; }
+    public ReactiveCommand<Unit, IConversationPreviewItem[]> LoadItems { get; }
     public ReactiveCommand<Unit, Unit> SaveConversationsCmd { get; }
     [Reactive] public bool ShowUndoDelete { get; private set; }
     public ReactiveCommand<Unit, ConversationPreviewVm> UndoDeleteCmd { get; }
@@ -67,65 +66,44 @@ public class ConversationsVm : ViewModel
                 return cat;
             });
 
-            return (await Task.WhenAll(ret)).Cast<IConversationItem>()
+            return (await Task.WhenAll(ret)).Cast<IConversationPreviewItem>()
                                             .ToArray();
         });
 
         LoadItems.ObserveOnMainThread()
                  .Do(i => Items = new(i))
                  .SubscribeSafe();
+        
+        this.WhenAnyValue(vm => vm.SelectedPreviewItem)
+            .As<IConversationPreviewItem>()
+            .Select(p => p == null ? Observable.Return((IConversationPreviewItem)null) : p.WhenAnyValue(vm => vm.FullItem))
+            .Switch()
+            .ObserveOnMainThread()
+            .Do(p => SelectedItem = p)
+            .SubscribeSafe();
 
-        var selectedCatPreview = this.WhenAnyValue(vm => vm.SelectedItem)
-                                     .As<ConversationCategoryPreviewVm>();
-
-        // Activation logic for the category preview
-        selectedCatPreview
+        // Activation logic for preview items
+        this.WhenAnyValue(vm => vm.SelectedPreviewItem)
+            .As<ActivatableViewModel>()
+            .WhereNotNull()
             .PairWithPrevious()
             .ObserveOnMainThread()
-            .Do(x =>
+            .Do(p =>
             {
-                x.Item1?.Activator.Deactivate();
-                x.Item2?.Activator.Activate();
+                p.Item1?.Activator.Deactivate();
+                p.Item2?.Activator.Activate();
             })
             .SubscribeSafe();
 
-        // Forward the current category to the SelectedCategory property
-        selectedCatPreview
-            .Select(p => p == null ? Observable.Return((ConversationCategoryVm)null) : p.WhenAnyValue(vm => vm.Category))
-            .Switch()
-            .ObserveOnMainThread()
-            .Do(p => SelectedCategory = p)
-            .SubscribeSafe();
-
-        var selectedConvoPreview = this.WhenAnyValue(vm => vm.SelectedItem)
-                                       .As<ConversationPreviewVm>();
-
-        // Activation logic for the conversation preview
-        selectedConvoPreview
-            .PairWithPrevious()
-            .ObserveOnMainThread()
-            .Do(x =>
-            {
-                x.Item1?.Activator.Deactivate();
-                x.Item2?.Activator.Activate();
-            })
-            .SubscribeSafe();
-
-        // Forward the current conversation to the SelectedConversation property
-        selectedConvoPreview
-            .Select(p => p == null ? Observable.Return((ConversationVm)null) : p.WhenAnyValue(vm => vm.Conversation))
-            .Switch()
-            .ObserveOnMainThread()
-            .Do(p => SelectedConversation = p)
-            .SubscribeSafe();
 
         SaveConversationsCmd = ReactiveCommand.CreateFromObservable(
             () => Observable.Using(
                 () => AppServices.GetUserProfileDb(),
                 ctx => Items.OfType<ConversationCategoryPreviewVm>()
                             .GetConversations()
-                            .Select(c => c.Conversation)
+                            .Select(c => c.FullItem)
                             .WhereNotNull()
+                            .Cast<ConversationVm>()
                             .Where(c => ((ICommand)c.SaveCmd).CanExecute(null))
                             .ToObservable()
                             .SelectMany(c => c.SaveCmd.Execute(new() { DbContext = ctx }))
@@ -167,12 +145,13 @@ public class ConversationsVm : ViewModel
     }
 }
 
-public interface IConversationItem
+public interface IConversationPreviewItem : IReactiveObject
 {
-    public string Name { get; set; }
+    string Name { get; set; }
+    object FullItem { get; }
 }
 
-public class ConversationCategoryPreviewVm : ActivatableViewModel, IConversationItem
+public class ConversationCategoryPreviewVm : ActivatableViewModel, IConversationPreviewItem
 {
     public string Id { get; set; }
     [Reactive] public string Name { get; set; }
@@ -180,7 +159,7 @@ public class ConversationCategoryPreviewVm : ActivatableViewModel, IConversation
     public ConversationsVm Conversations { get; set; }
     public ObservableCollectionExtended<ConversationPreviewVm> Items { get; } = new();
     public AdvancedCollectionView ItemsView { get; }
-    [Reactive] public ConversationCategoryVm Category { get; private set; }
+    [Reactive] public object FullItem { get; private set; }
 
     public ConversationCategoryPreviewVm()
     {
@@ -196,7 +175,7 @@ public class ConversationCategoryPreviewVm : ActivatableViewModel, IConversation
 
         // Load category from the list
         Activator.Activated
-                 .Where(_ => Category == null)
+                 .Where(_ => FullItem == null)
                  .Select(_ =>
                  {
                      var cat = AppServices.Container.Resolve<ConversationCategoryVm>();
@@ -205,11 +184,13 @@ public class ConversationCategoryPreviewVm : ActivatableViewModel, IConversation
                      return cat;
                  })
                  .ObserveOnMainThread()
-                 .Do(cat => Category = cat)
+                 .Do(cat => FullItem = cat)
                  .SubscribeSafe();
 
-        this.WhenAnyValue(vm => vm.Category)
+        // Propagate data to/from full item
+        this.WhenAnyValue(vm => vm.FullItem)
             .WhereNotNull()
+            .Cast<ConversationCategoryVm>()
             .Select(cat => Observable.Merge(
                         this.WhenAnyValue(vm => vm.Name)
                             .Do(v => cat.Name = v)
@@ -235,7 +216,7 @@ public class ConversationCategoryPreviewVm : ActivatableViewModel, IConversation
         };
 }
 
-public class ConversationPreviewVm : ActivatableViewModel, IConversationItem
+public class ConversationPreviewVm : ActivatableViewModel, IConversationPreviewItem
 {
     public string Id { get; init; }
     public DateTime CreatedTs { get; init; }
@@ -243,7 +224,7 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationItem
     [Reactive] public bool IsNewPlaceholder { get; set; }
     [Reactive] public bool IsTrash { get; set; }
     [Reactive] public ConversationCategoryPreviewVm Category { get; set; }
-    [Reactive] public ConversationVm Conversation { get; private set; }
+    [Reactive] public object FullItem { get; private set; }
 
     public ReactiveCommand<Unit, Unit> DeleteCmd { get; }
     public ReactiveCommand<Unit, Unit> RenameCmd { get; }
@@ -252,9 +233,10 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationItem
     {
         Activator.Activated
                  .Take(1)
-                 .Where(_ => Conversation == null && IsNewPlaceholder)
+                 .Where(_ => FullItem == null && IsNewPlaceholder)
                  // Create a new conversation
-                 .Select(_ => Conversation = AppServices.Container.Resolve<ConversationVm>())
+                 .Select(_ => FullItem = AppServices.Container.Resolve<ConversationVm>())
+                 .Cast<ConversationVm>()
                  // When system completion is initiated, clear the 'new item' flag
                  .Select(convo => convo.WhenAnyValue(vm => vm.Head.Message.Next)
                                        .WhereNotNull()
@@ -281,7 +263,8 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationItem
             .Where(_ => !Debugging.Enabled || Debugging.AutoSuggestNames)
             .SelectMany(_ => Observable.FromAsync(async () =>
             {
-                var result = await Conversation.Api.CreateChatCompletions(new()
+                var convo = (ConversationVm)FullItem;
+                var result = await convo.Api.CreateChatCompletions(new()
                 {
                     Messages = new List<ChatMessage>(
                         new[]
@@ -292,7 +275,7 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationItem
                             ),
                             new ChatMessage(
                                 ChatMessageRole.User,
-                                Conversation.Head.Message.Content)
+                                convo.Head.Message.Content)
                         }),
                     Model = AiModel.GPT35Turbo
                 });
@@ -313,7 +296,7 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationItem
 
         // Load conversation from the list
         Activator.Activated
-                 .Where(_ => Conversation == null && !IsNewPlaceholder)
+                 .Where(_ => FullItem == null && !IsNewPlaceholder)
                  .Select(_ =>
                  {
                      var convo = AppServices.Container.Resolve<ConversationVm>();
@@ -328,11 +311,13 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationItem
                                        .Take(1))
                  .Switch()
                  .ObserveOnMainThread()
-                 .Do(convo => Conversation = convo)
+                 .Do(convo => FullItem = convo)
                  .SubscribeSafe();
 
-        this.WhenAnyValue(vm => vm.Conversation)
+        // Propagate data to/from full item
+        this.WhenAnyValue(vm => vm.FullItem)
             .WhereNotNull()
+            .Cast<ConversationVm>()
             .Select(c => Observable.Merge(
                         this.WhenAnyValue(vm => vm.Name)
                             .Do(v => c.Name = v)
@@ -360,8 +345,8 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationItem
         DeleteCmd.ObserveOnMainThread()
                  .Do(_ =>
                  {
-                     if (Category.Conversations.SelectedItem == this)
-                         Category.Conversations.SelectedItem = null;
+                     if (Category.Conversations.SelectedPreviewItem == this)
+                         Category.Conversations.SelectedPreviewItem = null;
                      IsTrash = true;
                      Category.Conversations.TrashBin.Add(this);
                  })

@@ -21,5 +21,5 @@ public static class Debugging
 
     public static bool IsBindingTracingEnabled = false;
 
-    public static bool LogSql = true;
+    public static bool LogSql = false;
 }

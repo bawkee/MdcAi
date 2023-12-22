@@ -181,7 +181,8 @@
           </controls:SettingsExpander.Items>
         </controls:SettingsExpander>
 
-        <controls:SettingsExpander Header="Premise">
+        <controls:SettingsExpander Header="Premise"
+                                   Description="Tell the AI what to do, how to behave and what its role is going to be in this category.">
           <controls:SettingsExpander.HeaderIcon>
             <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE8BD;" />
           </controls:SettingsExpander.HeaderIcon>

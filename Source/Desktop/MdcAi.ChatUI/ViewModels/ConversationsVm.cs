@@ -11,7 +11,6 @@ using Microsoft.UI.Xaml.Controls;
 using RxUIExt.Windsor;
 
 // MPV TODO
-// TODO: Simple category editor
 // TODO: Suggestions and tips in new chat
 // TODO: Hide the search box for now
 // TODO: Make the back button work for convos
@@ -24,7 +23,7 @@ public class ConversationsVm : ViewModel
     [Reactive] public object SelectedItem { get; set; }
     [Reactive] public object SelectedPreviewItem { get; set; }
     public ObservableCollectionExtended<IConversationPreviewItem> Items { get; } = new();
-    public AdvancedCollectionView ItemsView { get; }
+    public AdvancedCollectionView ItemsView { get; private set; }
     public ObservableCollection<IConversationPreviewItem> TrashBin { get; } = new();
     [Reactive] public bool ShowUndoDelete { get; private set; }
 
@@ -37,16 +36,6 @@ public class ConversationsVm : ViewModel
 
     public ConversationsVm()
     {
-        ItemsView = new(Items, true)
-        {
-            Filter = item => !((IConversationPreviewItem)item).IsTrash
-        };
-
-        // The navigation pane gets all fucked up when sort happens, its safe to say it doesnt support this
-        //ItemsView.SortDescriptions.Add(new("ItemsCount", SortDirection.Descending));
-      
-        ItemsView.ObserveFilterProperty(nameof(IConversationPreviewItem.IsTrash));
-
         LoadItems = ReactiveCommand.CreateFromTask(async () =>
         {
             await using var ctx = AppServices.GetUserProfileDb();
@@ -54,7 +43,9 @@ public class ConversationsVm : ViewModel
             var convos = ctx.Conversations;
             var categories = await ctx.Categories
                                       // ReSharper disable once AccessToDisposedClosure (this is linq to sql)
-                                      .OrderByDescending(cat => ctx.Conversations.Count(con => con.IdCategory == cat.IdCategory))
+                                      .OrderByDescending(cat => ctx.Conversations
+                                                                   .Count(con => con.IdCategory == cat.IdCategory &&
+                                                                                 !con.IsTrash))
                                       .ToArrayAsync();
 
             var ret = categories.Select(async category =>
@@ -87,7 +78,19 @@ public class ConversationsVm : ViewModel
         });
 
         LoadItems.ObserveOnMainThread()
-                 .Do(i => Items.Load(i))
+                 .Do(i =>
+                 {
+                     Items.Load(i);
+                     // Have to recreate view, there is a sort issue where it does its own odd thing if there is no sort
+                     ItemsView = new(Items, true)
+                     {
+                         Filter = item => !((IConversationPreviewItem)item).IsTrash
+                     };
+                     // The navigation pane gets all fucked up when sort happens, its safe to say it doesnt support this so 
+                     // no live sorting
+                     //ItemsView.SortDescriptions.Add(new("ItemsCount", SortDirection.Descending));
+                     ItemsView.ObserveFilterProperty(nameof(IConversationPreviewItem.IsTrash));
+                 })
                  .SubscribeSafe();
 
         this.WhenAnyValue(vm => vm.SelectedPreviewItem)
@@ -129,9 +132,7 @@ public class ConversationsVm : ViewModel
 
         var trashBinHasItems = TrashBin.WhenAnyValue(t => t.Count)
                                        .Select(c => c > 0);
-
-        // TODO: Can't delete 'default' category....
-
+        
         UndoDeleteCmd = ReactiveCommand.CreateFromTask(
             async () =>
             {
@@ -223,7 +224,7 @@ public interface IConversationPreviewItem : IReactiveObject
 
 public class ConversationCategoryPreviewVm : ActivatableViewModel, IConversationPreviewItem
 {
-    public string Id { get; set; }
+    [Reactive] public string Id { get; set; }
     [Reactive] public string Name { get; set; }
     [Reactive] public string IconGlyph { get; set; }
     [Reactive] public bool IsTrash { get; set; }
@@ -290,7 +291,8 @@ public class ConversationCategoryPreviewVm : ActivatableViewModel, IConversation
                 await ctx.Categories
                          .Where(c => c.IdCategory == Id)
                          .ExecuteUpdateAsync(c => c.SetProperty(p => p.IsTrash, true));
-            });
+            },
+            this.WhenAnyValue(vm => vm.Id).Select(id => id != "default"));
 
         DeleteCmd.ObserveOnMainThread()
                  .Do(_ =>
@@ -313,8 +315,8 @@ public class ConversationCategoryPreviewVm : ActivatableViewModel, IConversation
 
 public class ConversationPreviewVm : ActivatableViewModel, IConversationPreviewItem
 {
-    public string Id { get; set; }
-    public DateTime CreatedTs { get; init; }
+    [Reactive] public string Id { get; set; }
+    [Reactive] public DateTime CreatedTs { get; init; }
     [Reactive] public string Name { get; set; }
     [Reactive] public bool IsNewPlaceholder { get; set; }
     [Reactive] public bool IsTrash { get; set; }

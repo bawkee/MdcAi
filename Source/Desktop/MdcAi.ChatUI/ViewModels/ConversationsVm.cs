@@ -37,14 +37,29 @@ public class ConversationsVm : ViewModel
         LoadItems = ReactiveCommand.CreateFromTask(async () =>
         {
             await using var ctx = AppServices.GetUserProfileDb();
+            
+            // Sort categories by number of conversations (capped at 10) and then by the avg freshness of 
+            // these conversations from the last 10 days. This should make sure that most used categories
+            // come first but only if they're actually being used, and without mega-categories always being
+            // on top.
+            const string categoriesSql =
+                @"SELECT * 
+                    FROM Categories 
+                    ORDER BY MIN(10, (SELECT COUNT(*) 
+                                        FROM Conversations C 
+                                        WHERE C.IdCategory = IdCategory) 
+                             ) DESC, 
+                             (SELECT DATETIME(AVG(STRFTIME('%s', CreatedTs)), 'unixepoch') AS AvgCreatedTs 
+                              FROM Messages M 
+                              WHERE M.CreatedTs >= DATETIME('now', '-10 day') AND 
+                                    M.IdConversation = (SELECT IdConversation FROM Conversations C WHERE C.IdCategory = IdCategory)
+                              ) DESC;";
+
+            var categories = await ctx.Set<DbCategory>()
+                                      .FromSqlRaw(categoriesSql)
+                                      .ToArrayAsync();
 
             var convos = ctx.Conversations;
-            var categories = await ctx.Categories
-                                      // ReSharper disable once AccessToDisposedClosure (this is linq to sql)
-                                      .OrderByDescending(cat => ctx.Conversations
-                                                                   .Count(con => con.IdCategory == cat.IdCategory &&
-                                                                                 !con.IsTrash))
-                                      .ToArrayAsync();
 
             var ret = categories.Select(async category =>
             {
@@ -111,10 +126,10 @@ public class ConversationsVm : ViewModel
                 p.Item2?.Activator.Activate();
             })
             .SubscribeSafe();
-       
+
         var trashBinHasItems = TrashBin.WhenAnyValue(t => t.Count)
                                        .Select(c => c > 0);
-        
+
         UndoDeleteCmd = ReactiveCommand.CreateFromTask(
             async () =>
             {

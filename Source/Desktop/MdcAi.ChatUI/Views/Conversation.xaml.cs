@@ -55,9 +55,7 @@ public sealed partial class Conversation : ILogging
                 })
                 .LogErrors(this)
                 .SubscribeSafe();
-
-        // TODO: Move the chatlist.zip to this project ChatList.zip
-
+       
         initCore.Do(core =>
                 {
                     core.Settings.IsWebMessageEnabled = true;
@@ -158,16 +156,16 @@ public sealed partial class Conversation : ILogging
                      .ObserveOnMainThread()
                      .Do(models =>
                      {
-                         modelsMenu.Items.Clear();
-                         modelsMenu.Items.AddRange(models.Select(m => new MenuFlyoutItem()
+                         ModelsMenu.Items.Clear();
+                         ModelsMenu.Items.AddRange(models.Select(m => new MenuFlyoutItem()
                          {
                              Text = m.ModelID,
                              Command = viewModel.SelectModelCmd,
                              CommandParameter = (string)m
                          }));
 
-                         modelsMenu.Items.Add(new MenuFlyoutSeparator());
-                         modelsMenu.Items.Add(new MenuFlyoutItem()
+                         ModelsMenu.Items.Add(new MenuFlyoutSeparator());
+                         ModelsMenu.Items.Add(new MenuFlyoutItem()
                          {
                              Text = "Which one to pick? 😕",
                              Command = ReactiveCommand.CreateFromTask(async () =>
@@ -273,7 +271,7 @@ public sealed partial class Conversation : ILogging
         // Using statement will take care of all return paths so no worries.
         using var deferral = e.GetDeferral();
 
-        var zipFile = await StorageFile.GetFileFromApplicationUriAsync(new Uri("ms-appx:///Assets/chatlist.zip"));
+        var zipFile = await StorageFile.GetFileFromApplicationUriAsync(new Uri("ms-appx:///MdcAi.ChatUI/Assets/ChatListUI.zip"));
         await using var zipStream = await zipFile.OpenStreamForReadAsync();
 
         var path = sourceUri.AbsolutePath[1..];

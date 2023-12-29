@@ -69,7 +69,7 @@
               <SymbolIcon Symbol="Send" VerticalAlignment="Center" Margin="10,0,0,0" />
             </StackPanel>
             <SplitButton.Flyout>
-              <MenuFlyout x:Name="modelsMenu" />
+              <MenuFlyout x:Name="ModelsMenu" />
             </SplitButton.Flyout>
           </SplitButton>
 

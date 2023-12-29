@@ -18,6 +18,7 @@ using Windows.System;
 using DynamicData;
 using ReactiveMarbles.ObservableEvents;
 using System.Reactive.Disposables;
+using System.Runtime.InteropServices;
 using RxUIExt.Windsor;
 using Microsoft.UI.Xaml.Data;
 using MdcAi.OpenAiApi;
@@ -53,9 +54,8 @@ public sealed partial class Conversation : ILogging
                     await ProcessWebResource(e.Sender, e.Args);
                     return Unit.Default;
                 })
-                .LogErrors(this)
                 .SubscribeSafe();
-       
+
         initCore.Do(core =>
                 {
                     core.Settings.IsWebMessageEnabled = true;
@@ -68,7 +68,6 @@ public sealed partial class Conversation : ILogging
                         // circumvent it.
                         ChatWebView.Source = new(@"http://localhost:3431/index.html");
                 })
-                .LogErrors(this)
                 .SubscribeSafe();
 
         var messages = initCore
@@ -128,7 +127,6 @@ public sealed partial class Conversation : ILogging
 
             messages.Where(r => r.Name == "SetSelection")
                     .Do(r => viewModel.SelectedMessage = viewModel.Messages[Convert.ToInt32(r.Data)].Selector)
-                    .LogErrors(this)
                     .SubscribeSafe()
                     .DisposeWith(disposables);
 
@@ -136,11 +134,22 @@ public sealed partial class Conversation : ILogging
                                           .WhereNotNull())
                     .Switch()
                     .Do(r =>
-                    {
-                        // TODO: There is a com exception here if completion gets interrupted by app closing
-                        ChatWebView.CoreWebView2.PostWebMessageAsJson(JsonConvert.SerializeObject(r));
+                    {                        
+                        try
+                        {
+                            ChatWebView.CoreWebView2.PostWebMessageAsJson(JsonConvert.SerializeObject(r));
+                        }
+                        catch (COMException cex)
+                        {
+                            if (cex.Data.Contains("Description"))
+                            {
+                                // Thanks WinUI for such wonderfully helpful catch-all COM exceptions
+                                if (cex.Data["Description"]?.ToString()?.Contains("The object has been closed") ?? false)
+                                    return; // We ignore this
+                            }
+                            throw;
+                        }
                     })
-                    .LogErrors(this)
                     .SubscribeSafe()
                     .DisposeWith(disposables);
 
@@ -171,10 +180,16 @@ public sealed partial class Conversation : ILogging
                              Command = ReactiveCommand.CreateFromTask(async () =>
                              {
                                  var prompt = new ContentDialog
-                                 {
-                                     Content = "Dunno 🤷‍♂️",
+                                 {                                     
+                                     Content = "gpt-4-1106-preview ➡️\U0001faf0💲💲⚡⚡🚀🚀 (cheap, powerful, fast)\r" +
+                                     "gpt-4 ➡️⚡⚡⚡ (powerful, very slow)\r" +
+                                     "gpt-3.5-turbo-1106 ➡️\U0001faf0💲💲💲💲⚡🚀🚀🚀🚀 (very cheap, very fast)\r\r" +
+                                     "You may experiment with other models but price is the same as above 3 and capabilities " +
+                                     "are either same, lower, or don't make a difference in the context of this app (at this moment).\r\r" +
+                                     "The first model, GPT4-Turbo, is a clear winner so it's a great general purpose model.\r\r" +
+                                     "Use GPT-3 for mundane tasks such as translation, data conversion, log analysis, fast summaries, etc.",
                                      XamlRoot = XamlRoot,
-                                     Title = "Explanation",
+                                     Title = "Explanation of GPT models as of January 2024",
                                      CloseButtonText = "OK",
                                  };
                                  await prompt.ShowAsync();

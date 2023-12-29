@@ -138,7 +138,8 @@
                     Grid.Column="1"
                     MenuItemsSource="{x:Bind ViewModel.Conversations.ItemsView, Mode=OneWay}"
                     MenuItemTemplateSelector="{StaticResource NavigationViewDataTemplateSelector}"
-                    SelectedItem="{x:Bind ViewModel.Conversations.SelectedPreviewItem, Mode=TwoWay}">
+                    SelectedItem="{x:Bind ViewModel.Conversations.SelectedPreviewItem, Mode=TwoWay}"
+                    IsBackEnabled="{x:Bind ViewModel.Conversations.IsBackEnabled, Mode=OneWay}">
 
       <!--<NavigationView.AutoSuggestBox>
         <AutoSuggestBox x:Name="NavViewSearchBox" QueryIcon="Find" />

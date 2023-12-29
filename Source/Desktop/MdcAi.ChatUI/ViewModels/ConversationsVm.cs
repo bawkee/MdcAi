@@ -2,16 +2,11 @@
 
 using LocalDal;
 using System.Linq.Expressions;
-using System.Windows.Input;
 using CommunityToolkit.WinUI.UI;
 using Microsoft.EntityFrameworkCore;
-using MdcAi.ChatUI.Views;
-using Microsoft.UI.Xaml.Controls;
-using RxUIExt.Windsor;
 
 // MPV TODO
 // TODO: Suggestions and tips in new chat
-// TODO: Make the back button work for convos
 
 // TODO: Localisation
 // TODO: Clean up names "Name" instead of "name"
@@ -23,20 +18,23 @@ public class ConversationsVm : ViewModel
     public ObservableCollectionExtended<IConversationPreviewItem> Items { get; } = new();
     public AdvancedCollectionView ItemsView { get; private set; }
     public ObservableCollection<IConversationPreviewItem> TrashBin { get; } = new();
+    public ObservableCollection<IConversationPreviewItem> SelectionHistory { get; } = new();
     [Reactive] public bool ShowUndoDelete { get; private set; }
+    [Reactive] public bool IsBackEnabled { get; private set; }
 
     public ReactiveCommand<Unit, IConversationPreviewItem[]> LoadItems { get; }
     public ReactiveCommand<Unit, IConversationPreviewItem> UndoDeleteCmd { get; }
     public Interaction<ConversationPreviewVm, string> RenameIntr { get; } = new();
     public ReactiveCommand<Unit, Unit> AddCategoryCmd { get; }
     public Interaction<Unit, string> AddCategoryIntr { get; } = new();
+    public ReactiveCommand<Unit, Unit> GoBackCmd { get; }
 
     public ConversationsVm()
     {
         LoadItems = ReactiveCommand.CreateFromTask(async () =>
         {
             await using var ctx = AppServices.GetUserProfileDb();
-            
+
             // Sort categories by number of conversations (capped at 10) and then by the avg freshness of 
             // these conversations from the last 10 days. This should make sure that most used categories
             // come first but only if they're actually being used, and without mega-categories always being
@@ -203,6 +201,57 @@ public class ConversationsVm : ViewModel
                                   })
                                   .Select(_ => Unit.Default))
                   .Switch());
+
+        var goingBack = false;
+
+        GoBackCmd = ReactiveCommand.CreateFromObservable(
+            () => Observable.Using(
+                () =>
+                {
+                    goingBack = true;
+                    return Disposable.Create(() => goingBack = false);
+                },
+                _ => Observable
+                     .Return(Unit.Default)
+                     .Do(_ =>
+                     {
+                         // Linq won't work here since we have duplicate items (as expected)
+                         for (var i = SelectionHistory.Count - 1; i >= 0; i--)
+                         {
+                             if (SelectionHistory[i].IsTrash)
+                                 continue;
+                             SelectedPreviewItem = SelectionHistory[i];
+                             SelectionHistory.RemoveAt(i);
+                             break;
+                         }
+                     })
+            ),
+            this.WhenAnyValue(vm => vm.IsBackEnabled));
+
+        Observable.Merge(SelectionHistory.ObserveCollectionChanges(),
+                         TrashBin.ObserveCollectionChanges(),
+                         this.WhenAnyValue(vm => vm.SelectedPreviewItem))
+                  .Do(_ =>
+                  {
+                      var lastItem = SelectionHistory.LastOrDefault(i => !i.IsTrash);
+                      IsBackEnabled = lastItem != null && SelectedPreviewItem != lastItem;
+                  })
+                  .SubscribeSafe();
+
+        // Maintain selection history
+        this.WhenAnyValue(vm => vm.SelectedPreviewItem)
+            .Cast<IConversationPreviewItem>()
+            .PairWithPrevious()            
+            .Where(_ => !goingBack) // Prevent reentrancy when going back
+            .Select(p => p.Item1)
+            .WhereNotNull()
+            .Do(item =>
+            {
+                SelectionHistory.Add(item);
+                if (SelectionHistory.Count > 20) // Limit backlog to 20 items
+                    SelectionHistory.RemoveAt(0);
+            })
+            .SubscribeSafe();
     }
 }
 

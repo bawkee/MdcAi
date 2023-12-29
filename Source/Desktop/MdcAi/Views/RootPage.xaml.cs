@@ -60,6 +60,13 @@ public sealed partial class RootPage
                              r.SetOutput(dialogResult);
                          })
                      .DisposeWith(disposables);
+
+            NavigationViewControl
+                .Events()
+                .BackRequested
+                .Select(_ => Unit.Default)
+                .InvokeCommand(viewModel.Conversations.GoBackCmd)
+                .DisposeWith(disposables);
         });
     }
 

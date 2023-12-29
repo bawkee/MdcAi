@@ -5,12 +5,6 @@ using System.Linq.Expressions;
 using CommunityToolkit.WinUI.UI;
 using Microsoft.EntityFrameworkCore;
 
-// MPV TODO
-// TODO: Suggestions and tips in new chat
-
-// TODO: Localisation
-// TODO: Clean up names "Name" instead of "name"
-
 public class ConversationsVm : ViewModel
 {
     [Reactive] public object SelectedItem { get; set; }

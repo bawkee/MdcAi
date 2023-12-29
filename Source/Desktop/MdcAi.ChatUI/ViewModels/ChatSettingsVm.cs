@@ -100,7 +100,6 @@ public class ChatSettingsVm : ViewModel
                      .SubscribeSafe();
     }
 
-    // TODO: The change tracker is quite odd
     private ViewModelChangeTracker TrackRelevantChanges() =>
         TrackChanges(nameof(Streaming),
                      nameof(Temperature),

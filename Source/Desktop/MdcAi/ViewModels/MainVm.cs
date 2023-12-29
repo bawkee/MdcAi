@@ -3,6 +3,12 @@
 using MdcAi.ChatUI.LocalDal;
 using MdcAi.ChatUI.ViewModels;
 
+// MPV:
+// TODO: Suggestions and tips in new chat
+
+// Other
+// TODO: Localisation
+
 [Singleton]
 public class MainVm : ActivatableViewModel
 {

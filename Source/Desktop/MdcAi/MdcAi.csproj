@@ -59,9 +59,9 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging" Version="7.0.0" />
-    <PackageReference Include="NLog" Version="5.2.5" />
-    <PackageReference Include="NLog.Extensions.Logging" Version="5.3.5" />
-    <PackageReference Include="ReactiveUI.Fody" Version="19.5.1" />
+    <PackageReference Include="NLog" Version="5.2.8" />
+    <PackageReference Include="NLog.Extensions.Logging" Version="5.3.8" />
+    <PackageReference Include="ReactiveUI.Fody" Version="19.5.31" />
     <!--<PackageReference Include="Microsoft.WindowsAppSDK" Version="1.4.231115000" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.22621.2428" />-->
     <Manifest Include="$(ApplicationManifest)" />

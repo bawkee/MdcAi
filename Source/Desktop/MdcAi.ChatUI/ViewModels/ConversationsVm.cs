@@ -11,7 +11,6 @@ using RxUIExt.Windsor;
 
 // MPV TODO
 // TODO: Suggestions and tips in new chat
-// TODO: Hide the search box for now
 // TODO: Make the back button work for convos
 
 // TODO: Localisation

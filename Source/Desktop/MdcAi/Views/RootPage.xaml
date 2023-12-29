@@ -140,9 +140,9 @@
                     MenuItemTemplateSelector="{StaticResource NavigationViewDataTemplateSelector}"
                     SelectedItem="{x:Bind ViewModel.Conversations.SelectedPreviewItem, Mode=TwoWay}">
 
-      <NavigationView.AutoSuggestBox>
+      <!--<NavigationView.AutoSuggestBox>
         <AutoSuggestBox x:Name="NavViewSearchBox" QueryIcon="Find" />
-      </NavigationView.AutoSuggestBox>
+      </NavigationView.AutoSuggestBox>-->
 
       <!--<NavigationView.PaneHeader>
 

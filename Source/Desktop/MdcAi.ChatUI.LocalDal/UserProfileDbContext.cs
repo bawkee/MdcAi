@@ -92,6 +92,6 @@ public class UserProfileDbContext : DbContext
             Temperature = 1,
             TopP = 1,
             Premise = "You are a helpful but cynical and humorous assistant (but not over the top). " +
-                      "You give short answers, straight, to the point answers."
+                      "You give short and straight to the point answers."
         };
 }

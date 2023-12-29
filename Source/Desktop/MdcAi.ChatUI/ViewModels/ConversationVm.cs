@@ -212,11 +212,9 @@ public class ConversationVm : ActivatableViewModel
             () => Observable.FromAsync(async ct =>
                             {
                                 await using var ctx = AppServices.GetUserProfileDb();
-
                                 var convo = await ctx.Conversations
                                                      .Include(c => c.Messages)
                                                      .FirstOrDefaultAsync(c => c.IdConversation == Id);
-
                                 return ct.IsCancellationRequested ? null : convo;
                             })
                             .WhereNotNull()
@@ -276,16 +274,22 @@ public class ConversationVm : ActivatableViewModel
             () => IsNew ?
                 Observable.Return(Unit.Default) :
                 Observable.Using(
-                    () => AppServices.GetUserProfileDb(),
+                    () => AppServices.GetUserProfileDbTrans(),
                     // We have to save some conversation data and/or the settings (separate entity)
-                    ctx => (IdSettingsOverride == null ? Observable.Return(Unit.Default) : Settings.SaveCmd.Execute())
-                           .Select(_ => Observable.FromAsync(async () =>
-                           {
-                               await ctx.Conversations
-                                        .Where(c => c.IdConversation == Id)
-                                        .ExecuteUpdateAsync(c => c.SetProperty(p => p.IdSettingsOverride, IdSettingsOverride));
-                           }))
-                           .Switch()),
+                    token => (IdSettingsOverride == null ?
+                                 Observable.Return(Unit.Default) :
+                                 Settings.SaveCmd.Execute(new()
+                                 {
+                                     Ctx = token.Ctx
+                                 }))
+                             .Select(_ => Observable.FromAsync(async () =>
+                             {
+                                 await token.Ctx.Conversations
+                                            .Where(c => c.IdConversation == Id)
+                                            .ExecuteUpdateAsync(c => c.SetProperty(p => p.IdSettingsOverride, IdSettingsOverride));
+                             }))
+                             .Switch()
+                             .Do(_ => token.Trans.Commit())),
             this.WhenAnyValue(vm => vm.Settings.IsDirty));
 
         // Edit settins is a command that the view can create to show the edit dialog
@@ -331,34 +335,38 @@ public class ConversationVm : ActivatableViewModel
 
         SaveCmd = ReactiveCommand.CreateFromObservable(
             () => Observable.Using(
-                () => AppServices.GetUserProfileDb(),
-                ctx =>
+                () => AppServices.GetUserProfileDbTrans(),
+                token =>
                 {
                     var save = Observable.FromAsync(
                         async () =>
                         {
                             var convo = this.ToDbConversation();
-                            var existingConvo = await ctx.Conversations.FirstOrDefaultAsync(c => c.IdConversation == Id);
+                            var existingConvo = await token.Ctx.Conversations.FirstOrDefaultAsync(c => c.IdConversation == Id);
 
                             if (existingConvo == null)
-                                ctx.Conversations.Add(convo);
+                                token.Ctx.Conversations.Add(convo);
                             else
                             {
                                 this.Adapt(existingConvo);
-                                await ctx.Messages.Where(m => MessageTrashBin.Contains(m.IdMessage))
-                                         .ExecuteDeleteAsync();
+                                await token.Ctx.Messages.Where(m => MessageTrashBin.Contains(m.IdMessage))
+                                           .ExecuteDeleteAsync();
                                 await Task.WhenAll(
-                                    convo.Messages.Select(msg => ctx.Messages.Upsert(msg).RunAsync()));
+                                    convo.Messages.Select(msg => token.Ctx.Messages.Upsert(msg).RunAsync()));
                             }
 
-                            await ctx.SaveChangesAsync();
+                            await token.Ctx.SaveChangesAsync();
                         });
 
                     return (SettingsOverriden ?
-                               Settings.SaveCmd.Execute() : // Save settings first, a separate entity
+                               Settings.SaveCmd.Execute(new()
+                               {
+                                   Ctx = token.Ctx
+                               }) : // Save settings first, a separate entity
                                Observable.Return(Unit.Default))
                            .Select(_ => save)
                            .Switch()
+                           .Do(_ => token.Trans.Commit())
                            .ObserveOnMainThread()
                            .Do(_ =>
                            {

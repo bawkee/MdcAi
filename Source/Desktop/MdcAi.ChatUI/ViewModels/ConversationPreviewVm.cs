@@ -55,9 +55,10 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationPreviewI
                 {
                     Messages = new List<ChatMessage>(
                         new[]
-                        {
+                        {                            
                             new ChatMessage(
                                 ChatMessageRole.System,
+                                // This prompt doesn't really give the expected results with 3.5
                                 "Given the content provided by the user, you are to create witty yet concise names, with a maximum of 20 characters, excluding any form of punctuation or line breaks. The names should be complete words or phrases, avoiding any cutoffs. A sprinkle of humor is welcome, as long as it adheres to the character limit. Maximum 20 characters!"
                             ),
                             new ChatMessage(

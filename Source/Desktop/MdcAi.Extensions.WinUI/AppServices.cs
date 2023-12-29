@@ -32,10 +32,12 @@ public static class AppServices
 
         return Container;
     }
-   
+
     public static UserProfileDbContext GetUserProfileDb() => Container.Resolve<UserProfileDbContext>();
 
-    // TODO: Use UserProfileDbContextWithTrans???
+    /// <summary>
+    /// Gets the ef context and encapsulates it with a transaction.
+    /// </summary>   
     public static UserProfileDbContextWithTrans GetUserProfileDbTrans() => Container.Resolve<UserProfileDbContextWithTrans>();
 }
 

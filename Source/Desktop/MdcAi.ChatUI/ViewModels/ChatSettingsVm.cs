@@ -31,19 +31,18 @@ public class ChatSettingsVm : ViewModel
     public ReactiveCommand<Unit, AiModel[]> LoadModelsCmd { get; }
     public ReactiveCommand<string, DbChatSettings> LoadCmd { get; }
     public ReactiveCommand<Unit, Unit> ReloadCmd { get; }
-    public ReactiveCommand<Unit, Unit> SaveCmd { get; }
+    public ReactiveCommand<ChatSettingsSaveOpts, Unit> SaveCmd { get; }
 
     public ChatSettingsVm(IOpenAiApi api)
     {
         var changes = TrackRelevantChanges();
 
         SaveCmd = ReactiveCommand.CreateFromObservable(
-            () => Observable.FromAsync(
+            (ChatSettingsSaveOpts opts) => Observable.FromAsync(
                 async () =>
                 {
-                    await using var ctx = AppServices.GetUserProfileDb();
                     var dbSettings = this.Adapt<DbChatSettings>();
-                    await ctx.ChatSettings.Upsert(dbSettings).RunAsync();
+                    await opts.Ctx.ChatSettings.Upsert(dbSettings).RunAsync();
                 }),
             this.WhenAnyValue(vm => vm.IsDirty));
 
@@ -110,7 +109,7 @@ public class ChatSettingsVm : ViewModel
                      nameof(PresencePenalty),
                      nameof(Premise),
                      nameof(Model));
-    
+
     public void CopyTo(ChatSettingsVm c)
     {
         c.TopP = TopP;
@@ -138,4 +137,9 @@ public class ChatSettingsVm : ViewModel
         new("gpt-4-0613"),
         new("gpt-4-0314")
     };
+}
+
+public class ChatSettingsSaveOpts
+{
+    public UserProfileDbContext Ctx { get; set; }
 }

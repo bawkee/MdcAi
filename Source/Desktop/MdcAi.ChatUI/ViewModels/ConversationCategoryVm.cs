@@ -61,8 +61,14 @@ public class ConversationCategoryVm : ActivatableViewModel
                 .Select(_ => Settings.WhenAnyValue(vm => vm.IsDirty))
                 .Switch()
                 .Throttle(TimeSpan.FromSeconds(1))
-                .Select(_ => Unit.Default)
-                .InvokeCommand(Settings.SaveCmd);
+                .Select(_ => Observable.Using(
+                            AppServices.GetUserProfileDb,
+                            ctx => Settings.SaveCmd.Execute(new()
+                            {
+                                Ctx = ctx
+                            })))
+                .Switch()
+                .SubscribeSafe();
 
         LoadCmd.Select(_ => this.WhenAnyValue(vm => vm.IconGlyph)
                                 .Skip(1))

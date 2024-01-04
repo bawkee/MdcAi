@@ -11,6 +11,7 @@ using ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using ReactiveMarbles.ObservableEvents;
+using MdcAi.ChatUI.Views.GettingStartedTips;
 
 /// <summary>
 /// An empty window that can be used on its own or navigated to within a Frame.
@@ -32,5 +33,19 @@ public sealed partial class MainWindow
             .Take(1)
             .Do(_ => ViewModel.Activator.Activate())
             .SubscribeSafe();
+
+        PrivacyInfoWindow privacyInfoWnd = null;
+
+        ViewModel.Settings.ShowPrivacyStatementCmd =
+            ReactiveCommand.Create(() =>
+            {
+                privacyInfoWnd ??= new();
+                privacyInfoWnd.Activate();
+                privacyInfoWnd.Events()
+                              .Closed
+                              .Take(1)
+                              .Do(_ => privacyInfoWnd = null)
+                              .SubscribeSafe();
+            });
     }
 }

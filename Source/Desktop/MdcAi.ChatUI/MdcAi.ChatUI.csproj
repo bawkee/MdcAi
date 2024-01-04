@@ -7,6 +7,8 @@
     <Platforms>AnyCPU;x86;x64;ARM64</Platforms>
     <UseWinUI>true</UseWinUI>
     <EnableMsixTooling>true</EnableMsixTooling>
+    <AssemblyVersion></AssemblyVersion>
+    <FileVersion></FileVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,6 +18,11 @@
     <None Remove="MdcAi.ChatUI.csproj.DotSettings" />
     <None Remove="Views\Conversation.xaml" />
     <None Remove="Views\ConversationCategory.xaml" />
+    <None Remove="Views\GettingStartedTips\Categories.xaml" />
+    <None Remove="Views\GettingStartedTips\Conversations.xaml" />
+    <None Remove="Views\GettingStartedTips\Editing.xaml" />
+    <None Remove="Views\GettingStartedTips\Premise.xaml" />
+    <None Remove="Views\GettingStartedTips\Settings.xaml" />
     <None Remove="Views\OpenAISettingsPage.xaml" />
     <None Remove="Views\Settings.xaml" />
   </ItemGroup>
@@ -24,9 +31,9 @@
     <PackageReference Include="CommunityToolkit.WinUI" Version="7.1.2" />
     <PackageReference Include="CommunityToolkit.WinUI.Controls.SettingsControls" Version="8.0.230907" />
     <PackageReference Include="CommunityToolkit.WinUI.UI.Controls.Markdown" Version="7.1.2" />
-    <PackageReference Include="Markdig" Version="0.33.0" />
+    <PackageReference Include="Markdig" Version="0.34.0" />
     <PackageReference Include="ReactiveMarbles.ObservableEvents.SourceGenerator" Version="1.3.1" />
-    <PackageReference Include="ReactiveUI.Fody" Version="19.5.31" />
+    <PackageReference Include="ReactiveUI.Fody" Version="19.5.39" />
   </ItemGroup>
 
   <ItemGroup>
@@ -59,18 +66,33 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Update="Chat.Designer.cs">
+    <Compile Update="Properties\GlobalChatSettings.Designer.cs">
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
       <AutoGen>True</AutoGen>
-      <DependentUpon>Chat.settings</DependentUpon>
+      <DependentUpon>GlobalChatSettings.settings</DependentUpon>
     </Compile>
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Chat.settings">
+    <None Update="Properties\GlobalChatSettings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
-      <LastGenOutput>Chat.Designer.cs</LastGenOutput>
+      <LastGenOutput>GlobalChatSettings.Designer.cs</LastGenOutput>
     </None>
+    <Page Update="Views\GettingStartedTips\Settings.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Update="Views\GettingStartedTips\Editing.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Update="Views\GettingStartedTips\Premise.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Update="Views\GettingStartedTips\Categories.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Update="Views\GettingStartedTips\Conversations.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Update="Views\ConversationCategory.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>

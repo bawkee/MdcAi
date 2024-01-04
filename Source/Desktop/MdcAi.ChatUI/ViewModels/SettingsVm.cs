@@ -1,26 +1,46 @@
 ﻿namespace MdcAi.ChatUI.ViewModels;
 
+using Properties;
 using RxUIExt.Windsor;
 
 [Singleton]
 public class SettingsVm : ActivatableViewModel
 {
     public OpenAiSettingsVm OpenAi { get; set; }
+    [Reactive] public bool ShowGettingStartedConvoTip { get; set; }
+    public ReactiveCommand<Unit, Unit> ShowPrivacyStatementCmd { get; set; }
 
-    public SettingsVm(OpenAiSettingsVm openAi) { OpenAi = openAi; }
+    public SettingsVm(OpenAiSettingsVm openAi)
+    {
+        OpenAi = openAi;
+
+        GlobalChatSettings.Default.WhenAnyValue(s => s.ShowGettingStartedConvoTip)
+                          .ObserveOnMainThread()
+                          .Do(v => ShowGettingStartedConvoTip = v)
+                          .SubscribeSafe();
+
+        this.WhenAnyValue(vm => vm.ShowGettingStartedConvoTip)
+            .Skip(1)
+            .Do(v =>
+            {
+                GlobalChatSettings.Default.ShowGettingStartedConvoTip = v;
+                GlobalChatSettings.Default.Save();
+            })
+            .SubscribeSafe();
+    }
 }
 
 public class OpenAiSettingsVm : ActivatableViewModel
 {
     [Reactive] public string ApiKeys { get; set; }
     [Reactive] public string CurrentApiKey { get; private set; }
-    [Reactive] public string OrganisationName { get; set; }    
+    [Reactive] public string OrganisationName { get; set; }
 
     public OpenAiSettingsVm()
     {
         ApiKeys = AppCredsManager.GetValue("ApiKeys");
         OrganisationName = AppCredsManager.GetValue("OrganisationName");
-        
+
         this.WhenAnyValue(vm => vm.ApiKeys)
             .Skip(1)
             .ObserveOnMainThread()

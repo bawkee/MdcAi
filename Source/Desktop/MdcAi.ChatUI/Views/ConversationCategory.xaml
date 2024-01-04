@@ -120,7 +120,7 @@
             </controls:SettingsCard>
 
             <controls:SettingsCard Header="Top Probability"
-                                   Description="Lower value is less nonsense, higher value means more factual answers. Lower it to see the weirdo, but more human, side of AI more often.">
+                                   Description="Higher value means more factual answers and less nonsense. Lower it to see the weirdo, but more human, side of AI more often.">
               <StackPanel Orientation="Horizontal" Spacing="10">
                 <TextBlock
                   Text="{x:Bind ViewModel.Settings.TopP, Mode=OneWay, Converter={StaticResource StringFormatConverter}, ConverterParameter='{}{0:N2}'}"

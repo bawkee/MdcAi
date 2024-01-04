@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<Page
+  x:Class="MdcAi.ChatUI.Views.GettingStartedTips.Conversations"
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:local="using:MdcAi.ChatUI.Views.GettingStartedTips"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  mc:Ignorable="d">
+
+  <StackPanel Spacing="5">
+    <TextBlock TextWrapping="Wrap">
+      Start new conversations for distinct topics. Stick to one task at a time to maintain
+      focus and clarity. For instance, debating AI whether tea trumps coffee should be separate
+      from exploring milk's compatibility with either. They may seem related but deserve their
+      own spotlight.
+    </TextBlock>
+    <TextBlock TextWrapping="Wrap">
+      This approach sharpens AI precision and conserves
+      <Hyperlink NavigateUri="https://help.openai.com/en/articles/4936856-what-are-tokens-and-how-to-count-them">tokens</Hyperlink>
+      . Discussing whether milk
+      meshes well with tea or coffee is a world apart from the tea vs. coffee affair. Mixing the two
+      dilutes the conversation. Remember, GPT AI recalls <Bold>every message</Bold> of the conversation, not
+      just the last few exchanges. Every new question sends the whole transcript back through,
+      cranking up token costs exponentially.
+    </TextBlock>
+    <TextBlock TextWrapping="Wrap">
+      <Bold>To summarize:</Bold> focus each conversation, and break down big topics into bite-sized conversations.
+    </TextBlock>
+  </StackPanel>
+</Page>

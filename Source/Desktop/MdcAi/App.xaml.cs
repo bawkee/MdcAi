@@ -50,8 +50,8 @@ public partial class App : ILogging
 
         UnhandledException += async (_, e) =>
         {
-            await HandleException(e.Exception);
             e.Handled = true;
+            await HandleException(e.Exception);            
         };
 
         EnableAdditionalWebView2Optons(new (string name, string value)[]

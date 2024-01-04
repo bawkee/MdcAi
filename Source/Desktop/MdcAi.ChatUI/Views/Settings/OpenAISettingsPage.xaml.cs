@@ -21,7 +21,7 @@ public sealed partial class OpenAISettingsPage
         this.WhenActivated(disposables =>
         {
             if (string.IsNullOrEmpty(ViewModel.ApiKeys))
-                apiExpander.IsExpanded = true;
+                ApiExpander.IsExpanded = true;
         });
     }
 

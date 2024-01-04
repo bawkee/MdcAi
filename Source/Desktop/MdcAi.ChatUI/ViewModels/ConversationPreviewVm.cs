@@ -22,7 +22,12 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationPreviewI
                  .Take(1)
                  .Where(_ => FullItem == null && IsNewPlaceholder)
                  // Create a new conversation
-                 .Select(_ => FullItem = AppServices.Container.Resolve<ConversationVm>())
+                 .Select(_ =>
+                 {
+                     var convo = AppServices.Container.Resolve<ConversationVm>();
+                     convo.Conversations = Category.Conversations;
+                     return FullItem = convo;
+                 })
                  .Cast<ConversationVm>()
                  // When system completion is initiated, clear the 'new item' flag
                  .Select(convo => convo.WhenAnyValue(vm => vm.Head.Message.Next)

@@ -5,6 +5,7 @@ namespace MdcAi.ChatUI.Views;
 
 using ViewModels;
 using RxUIExt.Windsor;
+using Microsoft.UI.Xaml.Documents;
 
 public sealed partial class Settings 
 {
@@ -12,6 +13,13 @@ public sealed partial class Settings
     {
         InitializeComponent();
     }
+
+    private void ShowPrivacyHyperlink_OnClick(Hyperlink sender, HyperlinkClickEventArgs args)
+    {
+        if (ViewModel.ShowPrivacyStatementCmd is { } cmd)
+            Observable.Return(Unit.Default).InvokeCommand(cmd);
+    }
+
 }
 
 [DoNotRegister]

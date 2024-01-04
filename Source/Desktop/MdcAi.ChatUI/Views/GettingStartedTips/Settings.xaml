@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<Page
+  x:Class="MdcAi.ChatUI.Views.GettingStartedTips.Settings"
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:local="using:MdcAi.ChatUI.Views.GettingStartedTips"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  mc:Ignorable="d">
+
+  <StackPanel Spacing="5">
+    <TextBlock TextWrapping="Wrap">
+      To tailor the behavior of the OpenAI models to your preferences, click the Settings button.
+      This helps adjust the AI's responses — known as 'completions.' Whether they're not quite right,
+      too verbose, too brief, indecisive, or simply uninteresting, the Settings panel is your tool for
+      tweaking. Adjust away to your heart's content!
+    </TextBlock>
+    <TextBlock TextWrapping="Wrap">
+      You can configure Settings at two levels: <Hyperlink Click="CategoryHyperlink_OnClick">Category</Hyperlink> and
+      <Hyperlink Click="ConversationsHyperlink_OnClick">Conversation</Hyperlink>. By default, the app uses the Category settings, but
+      you can override these for each individual Conversation. For a twist, modify the
+      <Hyperlink Click="PremiseHyperlink_OnClick">Premise</Hyperlink> setting in this conversation. Go ahead, give your chats some zing!
+    </TextBlock>
+    <TextBlock TextWrapping="Wrap">
+      To wrap it up: Settings matter—a lot. Don't hesitate to experiment with them. The most
+      effective AI experience comes from your personal touch on the controls. Be bold, and happy tweaking!
+    </TextBlock>
+  </StackPanel>
+</Page>

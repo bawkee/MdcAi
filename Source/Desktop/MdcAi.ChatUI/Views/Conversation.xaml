@@ -15,6 +15,7 @@
   xmlns:extensions="using:MdcAi.Extensions.WinUI"
   xmlns:componentModel="using:System.ComponentModel"
   xmlns:viewModels="using:MdcAi.ChatUI.ViewModels"
+  xmlns:controls="using:CommunityToolkit.WinUI.UI.Controls"
   mc:Ignorable="d">
 
   <UserControl.Resources>
@@ -58,7 +59,8 @@
         <StackPanel c:DockPanel.Dock="Right" Margin="0,10,10,10" VerticalAlignment="Bottom" Orientation="Horizontal">
           <StackPanel.Resources>
             <DataTemplate x:Key="OverrideSettingsBtnTemplate" x:DataType="viewModels:ConversationVm">
-              <Button Command="{Binding Path=EditSettingsCmd, Mode=OneWay}" Height="32" Padding="10,0" Margin="10,0,0,0">
+              <Button Command="{Binding Path=EditSettingsCmd, Mode=OneWay}" Height="32" Padding="10,0"
+                      Margin="10,0,0,0">
                 <SymbolIcon Symbol="Setting" />
               </Button>
             </DataTemplate>
@@ -124,7 +126,6 @@
               HorizontalAlignment="Right"
               Margin="0,0,30,20"
               Visibility="{x:Bind ViewModel.Tail.Message.IsCompleting, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, FallbackValue=Collapsed}">
-          <!-- TODO: This button is really annoying, gets in the way -->
           <Button Content="Stop Generating"
                   Padding="10,5,10,8"
                   Command="{x:Bind ViewModel.Tail.Message.StopCompletionCmd, Mode=OneWay}">
@@ -140,6 +141,106 @@
             </Button.Resources>
           </Button>
         </Grid>
+
+        <StackPanel
+          Margin="20"
+          HorizontalAlignment="Center"
+          VerticalAlignment="Center"
+          Visibility="{x:Bind ViewModel.ShowGettingStartedTip, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+          <Border
+            CornerRadius="10"
+            Background="{ThemeResource ControlFillColorDefaultBrush}">
+
+            <c:DockPanel>
+              <Border c:DockPanel.Dock="Left" Width="300">
+                <Border.Background>
+                  <ImageBrush ImageSource="ms-appx:///MdcAi.ChatUI/Assets/AiProfiles.jpg"
+                              Stretch="UniformToFill"
+                              AlignmentX="Center"
+                              AlignmentY="Center" />
+                </Border.Background>
+              </Border>
+
+              <StackPanel Margin="2">
+                <TextBlock Style="{ThemeResource TitleTextBlockStyle}" Margin="15,5,15,5">
+                  Getting Started Tips ✨
+                </TextBlock>
+                <NavigationView x:Name="TipsNavigationView"
+                                PaneDisplayMode="Top"
+                                IsSettingsVisible="False"
+                                IsBackButtonVisible="Collapsed"
+                                ItemInvoked="TipsNavigationView_OnItemInvoked"
+                                SelectionChanged="TipsNavigationView_OnSelectionChanged"
+                                Loaded="TipsNavigationView_OnLoaded">
+                  <NavigationView.MenuItems>
+                    <NavigationViewItem Content="Conversations" Tag="Conversations" />
+                    <NavigationViewItem Content="Categories" Tag="Categories" />
+                    <NavigationViewItem Content="Editing" Tag="Editing" />
+                    <NavigationViewItem Content="Settings" Tag="Settings" />
+                    <NavigationViewItem Content="Premise" Tag="Premise" />
+                  </NavigationView.MenuItems>
+                  <Frame x:Name="TipsContentFrame" Margin="10" />
+                </NavigationView>
+              </StackPanel>
+            </c:DockPanel>
+          </Border>
+
+          <StackPanel Margin="10" Spacing="10">
+            <TextBlock>
+              <Hyperlink Click="DontShowGettingStartedTip_OnClick">Don't show these tips anymore (can be re-enabled in Settings)</Hyperlink>
+            </TextBlock>
+
+            <TextBlock Visibility="{x:Bind ViewModel.GlobalSettings.ShowPrivacyStatementCmd, Converter={StaticResource NullToVisibilityConverter}, FallbackValue=Collapsed, Mode=OneWay}">
+              <Hyperlink Click="ShowPrivacyHyperlink_OnClick">Your Privacy is Safe</Hyperlink>
+            </TextBlock>
+          </StackPanel>
+        </StackPanel>
+
+        <!--<Border HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Padding="20"
+                Margin="20"
+                CornerRadius="5"
+                Background="{ThemeResource ControlFillColorDefaultBrush}"
+                Visibility="{x:Bind ViewModel.ShowGettingStartedTip, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+          <StackPanel>
+            <TextBlock Style="{ThemeResource TitleTextBlockStyle}">
+              Good to Know Information 👇
+            </TextBlock>
+            <StackPanel Spacing="5" Margin="0,10,0,0">
+              <TextBlock TextWrapping="Wrap">
+                🔐 <Bold>Privacy</Bold> - your data and information will NOT be collected or used for AI training. No servers
+                or APIs are used other than OpenAI. Your inputs are saved locally to your computer and
+                managed by Windows and/or Microsoft App Store. This app itself does not collect any information and OpenAI
+                API is subject to OpenAI Enterprise Privacy policy which is available on the OpenAI website.
+              </TextBlock>
+
+              <TextBlock TextWrapping="Wrap">
+                💵 <Bold>Costs</Bold> - no cost-saving algorithms are used - you pay for what you use, all inputs are directly sent
+                to OpenAI API. Average users may spend far less than $20 a month, while power users have no constraints and may use the fullest
+                power of latest GPT LLMs including pre-releases. You may spend your tokens any time and any way you like.
+              </TextBlock>
+
+              <TextBlock TextWrapping="Wrap">
+                ⚠️ <Bold>Risks</Bold> - With great power comes great responsibility, GPTs are extremely powerful tools and personal responsibility
+                is greater all the more since this app uses the OpenAI API directly with no constraints. Sometimes, AI will provide incorrect answers
+                so use with due diligence.
+              </TextBlock>
+
+              <TextBlock TextWrapping="Wrap">
+                🤔 <Bold>How to start?</Bold> - If you are new using GPT, don't fret, just ask the AI itself how it can help you and how best to
+                use it. It cannot be stressed enough how powerful GPTs are so any suggestion out-of-the-box would be comical, just start the
+                conversation and don't hold back from asking about any topic. When in doubt, OpenAI has a community Forum where you may discuss ideas,
+                suggestions and challenges.
+              </TextBlock>
+
+              <TextBlock Margin="0,5,0,0">
+                <Hyperlink Click="DontShowGettingStartedTip_OnClick">Ok, I understand. Don't show this stuff anymore (can be re-enabled in Settings).</Hyperlink>
+              </TextBlock>
+
+            </StackPanel>
+          </StackPanel>
+        </Border>-->
 
         <ContentDialog x:Name="SettingsDialog"
                        PrimaryButtonText="Done"
@@ -172,7 +273,7 @@
 
                 <c:UniformGrid Margin="0,5,0,0" Columns="2">
                   <TextBlock Margin="0,5"
-                             ToolTipService.ToolTip="Lower value is less nonsense, higher value means more factual answers. Lower it to see the weirdo, but more human, side of AI more often.">
+                             ToolTipService.ToolTip="Higher value means more factual answers and less nonsense. Lower it to see the weirdo, but more human, side of AI more often.">
                     <Run Text="Top Probability:" />
                     <Run
                       Text="{x:Bind Path=ViewModel.Settings.TopP, Mode=OneWay, Converter={StaticResource StringFormatConverter}, ConverterParameter='{}{0:N2}'}" />

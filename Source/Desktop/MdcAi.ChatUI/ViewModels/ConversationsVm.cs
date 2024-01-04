@@ -21,7 +21,7 @@ public class ConversationsVm : ViewModel
     public Interaction<ConversationPreviewVm, string> RenameIntr { get; } = new();
     public ReactiveCommand<Unit, Unit> AddCategoryCmd { get; }
     public Interaction<Unit, string> AddCategoryIntr { get; } = new();
-    public ReactiveCommand<Unit, Unit> GoBackCmd { get; }
+    public ReactiveCommand<Unit, Unit> GoBackCmd { get; }    
 
     public ConversationsVm()
     {
@@ -234,7 +234,8 @@ public class ConversationsVm : ViewModel
 
         // Maintain selection history
         this.WhenAnyValue(vm => vm.SelectedPreviewItem)
-            .Cast<IConversationPreviewItem>()
+            .As<IConversationPreviewItem>()
+            .WhereNotNull()
             .PairWithPrevious()            
             .Where(_ => !goingBack) // Prevent reentrancy when going back
             .Select(p => p.Item1)

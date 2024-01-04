@@ -21,7 +21,7 @@
 
     <salaConverters:BoolConverter x:Key="BoolToHighlightedConverter">
       <salaConverters:BoolConverter.True>
-        <SolidColorBrush Color="{ThemeResource SystemAccentColorLight1}" />
+        <SolidColorBrush Color="{ThemeResource SystemAccentColorLight2}" />
       </salaConverters:BoolConverter.True>
     </salaConverters:BoolConverter>
   </Page.Resources>

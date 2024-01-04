@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<Page
+  x:Class="MdcAi.ChatUI.Views.GettingStartedTips.Editing"
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:local="using:MdcAi.ChatUI.Views.GettingStartedTips"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  mc:Ignorable="d">
+
+  <StackPanel Spacing="5">
+    <TextBlock TextWrapping="Wrap">
+      Ever wish you could take a conversation in more than one direction? Hit the <Bold>Edit</Bold>
+      button on any message you've sent. It's like having a storybook where you control the twists and turns — edit your
+      message, and off you go down a new path. There's no cap on how creative you can get; the conversation can branch
+      out infinitely! And with the <Bold>Previous/Next</Bold> buttons on the Toolbar, you can navigate the tangle of what-ifs
+      effortlessly.
+    </TextBlock>
+    <TextBlock TextWrapping="Wrap">
+      Took a wrong turn in chat? No worries. If the conversation hits a snag or the AI gets it wrong, you're the boss –
+      delete the message and take it from the top with fresh words. It's like having a chat "Ctrl+Z"!
+    </TextBlock>
+    <TextBlock TextWrapping="Wrap">
+      <Bold>To wrap it up:</Bold> Carve your own path, rewrite to your heart's content, and remember, retracing steps to the original
+      convo is always an option. Adventure awaits within your chat—explore away!
+    </TextBlock>
+  </StackPanel>
+</Page>

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<Page
+  x:Class="MdcAi.ChatUI.Views.GettingStartedTips.Premise"
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:local="using:MdcAi.ChatUI.Views.GettingStartedTips"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  mc:Ignorable="d">
+
+  <StackPanel Spacing="5">
+    <TextBlock TextWrapping="Wrap">
+      The "Premise" setting is pivotal—it's like giving the AI its marching orders. Picture it as a mission brief; it
+      shapes how the AI approaches conversations by defining its identity and role. Like a sneak peek, the Premise is the
+      very first thing the AI encounters, setting the stage for all that follows. You can pack it with context—be it a
+      legal document, coding queries, a resume, or even an SVG image in text form—to ensure AI's responses are on point.
+    </TextBlock>
+
+    <TextBlock TextWrapping="Wrap">
+      For a dash of fun, go ahead and mold the AI's character. Fancy it to be a bit more humorous, sarcastic, shy, bold,
+      or even channel your favorite fictional pirate or a techno-savvy crypto enthusiast? The Premise is your canvas—paint
+      its personality with broad strokes or finely-tuned nuances to strike the perfect chord.
+    </TextBlock>
+
+    <TextBlock TextWrapping="Wrap">
+      In short, the Premise is your secret ingredient for crafting a truly customized AI experience. It’s your chance
+      to infuse creativity and animate the digital mind with a spark of personality. Think of it as the DNA that makes
+      your AI uniquely yours.
+    </TextBlock>
+  </StackPanel>
+</Page>

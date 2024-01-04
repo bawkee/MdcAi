@@ -5,6 +5,7 @@ using OpenAiApi;
 using LocalDal;
 using Microsoft.EntityFrameworkCore;
 using Mapster;
+using Properties;
 
 public class ConversationVm : ActivatableViewModel
 {
@@ -12,6 +13,7 @@ public class ConversationVm : ActivatableViewModel
     public SettingsVm GlobalSettings { get; }
     public string Id { get; set; }
     public ChatSettingsVm Settings { get; }
+    [Reactive] public ConversationsVm Conversations { get; set; }
     [Reactive] public DateTime CreatedTs { get; set; }
     [Reactive] public string Name { get; set; }
     [Reactive] public string IdCategory { get; set; }
@@ -32,6 +34,8 @@ public class ConversationVm : ActivatableViewModel
     [Reactive] public bool IsCompleting { get; private set; }
     [Reactive] public bool SettingsOverriden { get; private set; }
     [Reactive] public bool IsNew { get; private set; }
+    [Reactive] public bool IsEmpty { get; private set; } = true;
+    [Reactive] public bool ShowGettingStartedTip { get; private set; }
 
     public ReactiveCommand<Unit, Unit> DebugGeneratePromptCmd { get; }
     public ReactiveCommand<Unit, Unit> EditSelectedCmd { get; }
@@ -50,6 +54,7 @@ public class ConversationVm : ActivatableViewModel
     public ReactiveCommand<Unit, Unit> ResetSettingsCmd { get; }
     public ReactiveCommand<Unit, Unit> SaveSettingsCmd { get; set; }
     [Reactive] public ReactiveCommand<Unit, bool> EditSettingsCmd { get; set; }
+    public ReactiveCommand<Unit, Unit> TurnOffGettingStartedTipCmd { get; }
 
     [Reactive] public ObservableCollection<ChatMessageVm> Messages { get; set; }
     [Reactive] public WebViewRequestDto LastMessagesRequest { get; set; }
@@ -81,6 +86,25 @@ public class ConversationVm : ActivatableViewModel
             .Select(_ => Head?.Message.GetNextMessages() ?? Enumerable.Empty<ChatMessageVm>())
             .Do(m => Messages = new(m.ToArray()))
             .SubscribeSafe();
+
+        this.WhenAnyValue(vm => vm.Messages)
+            .WhereNotNull()
+            .Select(m => m.WhenAnyValue(x => x.Count)
+                          .Select(c => c > 0))
+            .Switch()
+            .Do(v => IsEmpty = !v)
+            .SubscribeSafe();
+
+        Observable.CombineLatest(
+                      this.WhenAnyValue(vm => vm.IsEmpty),
+                      GlobalChatSettings.Default.WhenAnyValue(s => s.ShowGettingStartedConvoTip),
+                      (a, b) => a && b)
+                  .ObserveOnMainThread()
+                  .Do(v => ShowGettingStartedTip = v)
+                  .SubscribeSafe();
+
+        TurnOffGettingStartedTipCmd = ReactiveCommand.Create(
+            () => { GlobalChatSettings.Default.ShowGettingStartedConvoTip = false; });
 
         EditSelectedCmd = ReactiveCommand.Create(
             () =>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<Page
+  x:Class="MdcAi.ChatUI.Views.GettingStartedTips.Categories"
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:local="using:MdcAi.ChatUI.Views.GettingStartedTips"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  mc:Ignorable="d">
+
+  <StackPanel Spacing="5">
+    <TextBlock TextWrapping="Wrap">
+      Enhance your workflow by using <Bold>Categories</Bold>. These act not just as organizational units, but as 
+      powerful tools to shape distinct AI models. Set preferences like <Hyperlink Click="PremiseHyperlink_OnClick">
+        Premise</Hyperlink> and Temperature easily. Think of Categories as your personal AI profiles 
+      that adapt the AI behavior to fit specific needs.
+    </TextBlock>
+    <TextBlock TextWrapping="Wrap">
+      Reduce repetition in ongoing topics by establishing a bespoke category. This personalization allows you 
+      to include standard instructions and contextual background. Say goodbye to re-entering lengthy text for 
+      every new chat. Insert extensive documents into the Premise once and let all subsequent conversations in 
+      that category benefit automatically.
+    </TextBlock>
+    <TextBlock TextWrapping="Wrap">
+      To kick-start a fresh Category, simply right-click an existing one and opt for <Bold>New Category</Bold>. 
+      The settings deployed here become the new norm for every conversation tied to it, but you retain the 
+      freedom to fine-tune these settings for individual discussions as needed.
+    </TextBlock>
+  </StackPanel>
+</Page>

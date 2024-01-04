@@ -21,8 +21,10 @@ using System.Reactive.Disposables;
 using System.Runtime.InteropServices;
 using RxUIExt.Windsor;
 using Microsoft.UI.Xaml.Data;
-using MdcAi.OpenAiApi;
+using OpenAiApi;
 using Microsoft.UI.Xaml.Controls.Primitives;
+using Microsoft.UI.Xaml.Documents;
+using Microsoft.UI.Xaml.Navigation;
 
 public sealed partial class Conversation : ILogging
 {
@@ -134,7 +136,7 @@ public sealed partial class Conversation : ILogging
                                           .WhereNotNull())
                     .Switch()
                     .Do(r =>
-                    {                        
+                    {
                         try
                         {
                             ChatWebView.CoreWebView2.PostWebMessageAsJson(JsonConvert.SerializeObject(r));
@@ -147,6 +149,7 @@ public sealed partial class Conversation : ILogging
                                 if (cex.Data["Description"]?.ToString()?.Contains("The object has been closed") ?? false)
                                     return; // We ignore this
                             }
+
                             throw;
                         }
                     })
@@ -180,14 +183,14 @@ public sealed partial class Conversation : ILogging
                              Command = ReactiveCommand.CreateFromTask(async () =>
                              {
                                  var prompt = new ContentDialog
-                                 {                                     
+                                 {
                                      Content = "gpt-4-1106-preview ➡️\U0001faf0💲💲⚡⚡🚀🚀 (cheap, powerful, fast)\r" +
-                                     "gpt-4 ➡️⚡⚡⚡ (powerful, very slow)\r" +
-                                     "gpt-3.5-turbo-1106 ➡️\U0001faf0💲💲💲💲⚡🚀🚀🚀🚀 (very cheap, very fast)\r\r" +
-                                     "You may experiment with other models but price is the same as above 3 and capabilities " +
-                                     "are either same, lower, or don't make a difference in the context of this app (at this moment).\r\r" +
-                                     "The first model, GPT4-Turbo, is a clear winner so it's a great general purpose model.\r\r" +
-                                     "Use GPT-3 for mundane tasks such as translation, data conversion, log analysis, fast summaries, etc.",
+                                               "gpt-4 ➡️⚡⚡⚡ (powerful, very slow)\r" +
+                                               "gpt-3.5-turbo-1106 ➡️\U0001faf0💲💲💲💲⚡🚀🚀🚀🚀 (very cheap, very fast)\r\r" +
+                                               "You may experiment with other models but price is the same as above 3 and capabilities " +
+                                               "are either same, lower, or don't make a difference in the context of this app (at this moment).\r\r" +
+                                               "The first model, GPT4-Turbo, is a clear winner so it's a great general purpose model.\r\r" +
+                                               "Use GPT-3 for mundane tasks such as translation, data conversion, log analysis, fast summaries, etc.",
                                      XamlRoot = XamlRoot,
                                      Title = "Explanation of GPT models as of January 2024",
                                      CloseButtonText = "OK",
@@ -337,6 +340,45 @@ public sealed partial class Conversation : ILogging
         randomAccessStream.Seek(0);
 
         return randomAccessStream;
+    }
+
+    private void DontShowGettingStartedTip_OnClick(Hyperlink sender, HyperlinkClickEventArgs args)
+    {
+        Observable.Return(Unit.Default).InvokeCommand(ViewModel.TurnOffGettingStartedTipCmd);
+    }
+
+    private void TipsNavigationView_OnItemInvoked(NavigationView sender, NavigationViewItemInvokedEventArgs args) { }
+
+    private void TipsNavigationView_OnLoaded(object sender, RoutedEventArgs e)
+    {
+        TipsNavigationView.SelectedItem = TipsNavigationView.MenuItems.FirstOrDefault();
+    }
+
+    private void TipsNavigationView_OnSelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
+    {
+        var navOptions = new FrameNavigationOptions()
+        {
+            TransitionInfoOverride = args.RecommendedNavigationTransitionInfo,
+            IsNavigationStackEnabled = false
+        };
+
+        var pageType = ((NavigationViewItem)args.SelectedItem).Tag switch
+        {
+            nameof(GettingStartedTips.Categories) => typeof(GettingStartedTips.Categories),
+            nameof(GettingStartedTips.Conversations) => typeof(GettingStartedTips.Conversations),
+            nameof(GettingStartedTips.Editing) => typeof(GettingStartedTips.Editing),
+            nameof(GettingStartedTips.Premise) => typeof(GettingStartedTips.Premise),
+            nameof(GettingStartedTips.Settings) => typeof(GettingStartedTips.Settings),
+            _ => throw new ArgumentOutOfRangeException()
+        };
+
+        TipsContentFrame.NavigateToType(pageType, null, navOptions);
+    }
+
+    private void ShowPrivacyHyperlink_OnClick(Hyperlink sender, HyperlinkClickEventArgs args)
+    {
+        if (ViewModel.GlobalSettings.ShowPrivacyStatementCmd is { } cmd)
+            Observable.Return(Unit.Default).InvokeCommand(cmd);
     }
 }
 

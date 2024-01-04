@@ -8,9 +8,31 @@
   xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
   xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
   xmlns:winUi="using:RxUIExt.WinUI"
+  xmlns:controls="using:CommunityToolkit.WinUI.Controls"
+  xmlns:salaConverters="using:RxUIExt.WinUI.SalaConverters"
   mc:Ignorable="d">
 
-  <StackPanel Margin="20">
+  <UserControl.Resources>
+    <salaConverters:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
+  </UserControl.Resources>
+
+  <StackPanel Margin="20" Spacing="5">
     <winUi:ViewHost ViewModel="{x:Bind ViewModel.OpenAi}" />
+
+    <controls:SettingsCard Header="Show Getting Started Tips">
+      <controls:SettingsCard.Description>
+        <RichTextBlock>
+          <Paragraph>
+            Show the 'Getting Started Tips' when starting new conversations.
+          </Paragraph>
+        </RichTextBlock>
+      </controls:SettingsCard.Description>
+      <ToggleSwitch IsOn="{x:Bind ViewModel.ShowGettingStartedConvoTip, Mode=TwoWay}" />
+    </controls:SettingsCard>
+
+    <TextBlock Visibility="{x:Bind ViewModel.ShowPrivacyStatementCmd, Converter={StaticResource NullToVisibilityConverter}, FallbackValue=Collapsed, Mode=OneWay}">
+      <Hyperlink Click="ShowPrivacyHyperlink_OnClick">Privacy Policy</Hyperlink>
+    </TextBlock>
+
   </StackPanel>
 </local:SettingsBase>

@@ -3,7 +3,7 @@
 
 namespace MdcAi.ChatUI.Views;
 
-using MdcAi.ChatUI.ViewModels;
+using ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;

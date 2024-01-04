@@ -16,7 +16,7 @@
     <salaConverters:NullToVisibilityConverter x:Key="NullToVisibilityConverterInv" />
   </Page.Resources>
 
-  <controls:SettingsExpander x:Name="apiExpander"
+  <controls:SettingsExpander x:Name="ApiExpander"
                              Header="OpenAI API Access"
                              HeaderIcon="Permissions"
                              Description="Your OpenAI API Credentials. These settings are saved to your account's Windows Credentials and only you can access them.">

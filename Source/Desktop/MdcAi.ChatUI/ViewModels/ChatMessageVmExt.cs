@@ -1,6 +1,6 @@
 ﻿namespace MdcAi.ChatUI.ViewModels;
 
-using MdcAi.ChatUI.LocalDal;
+using LocalDal;
 
 public static class ChatMessageVmExt
 {

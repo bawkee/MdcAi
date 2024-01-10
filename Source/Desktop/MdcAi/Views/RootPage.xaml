@@ -114,11 +114,11 @@
 
       <StackPanel VerticalAlignment="Center"
                   Orientation="Horizontal">
-        <Image Width="18" />
+        <Image Width="24" Source="ms-appx:///Assets/Square44x44Logo.targetsize-24_altform-unplated.png" />
 
         <TextBlock
           x:Name="AppTitle"
-          Margin="0,0,0,0"
+          Margin="15,0,0,0"
           VerticalAlignment="Center"
           Style="{ThemeResource CaptionTextBlockStyle}"
           FontSize="15"

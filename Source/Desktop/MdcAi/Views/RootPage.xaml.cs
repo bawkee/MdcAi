@@ -36,7 +36,7 @@ public sealed partial class RootPage
         InitializeComponent();
 
         Loaded += (s, e) => ((App)Application.Current).Window.SetTitleBar(AppTitleBar);
-
+        
         this.WhenActivated((disposables, viewModel) =>
         {
             viewModel.Conversations.RenameIntr.RegisterHandler(

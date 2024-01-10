@@ -18,6 +18,7 @@
     <Packaged>True</Packaged>
     <Optimized>True</Optimized>
     <Optimized Condition="'$(Configuration)' == 'Debug'">False</Optimized>
+    <ApplicationIcon>Assets\Icon.ico</ApplicationIcon>
   </PropertyGroup>
 
   <Target Name="DebugLog" BeforeTargets="Build">
@@ -62,6 +63,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging" Version="7.0.0" />
     <PackageReference Include="NLog" Version="5.2.8" />
     <PackageReference Include="NLog.Extensions.Logging" Version="5.3.8" />
+    <PackageReference Include="PInvoke.User32" Version="0.7.124" />
     <PackageReference Include="ReactiveUI.Fody" Version="19.5.39" />
     <!--<PackageReference Include="Microsoft.WindowsAppSDK" Version="1.4.231115000" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.22621.2428" />-->
@@ -134,6 +136,12 @@
     <Using Include="LinqMini" />
     <Using Include="MdcAi.Extensions.WinUI" />
     <Using Include="SalaTools.Core" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="Assets\Icon.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>

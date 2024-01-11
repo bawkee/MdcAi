@@ -24,7 +24,7 @@ public sealed partial class MainWindow
 
     public MainWindow()
     {
-        ViewModel = AppServices.Container.Resolve<MainVm>();        
+        ViewModel = AppServices.Container.Resolve<MainVm>();
 
         InitializeComponent();
 
@@ -51,10 +51,13 @@ public sealed partial class MainWindow
                               .Do(_ => privacyInfoWnd = null)
                               .SubscribeSafe();
             });
+
+        ViewModel.Settings.ShowAboutCmd =
+            ReactiveCommand.CreateFromTask(async () => { await AboutDialog.ShowAsync(); });
     }
 
     private void SetIcon(string iconName)
-    {        
+    {
         var hwnd = WindowNative.GetWindowHandle(this);
         var hIcon = PInvoke.User32.LoadImage(
             IntPtr.Zero,

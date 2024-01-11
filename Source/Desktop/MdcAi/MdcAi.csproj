@@ -36,6 +36,8 @@
 
   <ItemGroup>
     <None Remove="FodyWeavers.xml" />
+    <None Remove="Views\AboutPage.xaml" />
+    <None Remove="Views\LicensesWindow.xaml" />
     <None Remove="Views\PrivacyInfoWindow.xaml" />
     <None Remove="Views\RootPage.xaml" />
   </ItemGroup>
@@ -142,6 +144,18 @@
     <Content Update="Assets\Icon.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Page Update="Views\LicensesWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Page Update="Views\AboutPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
 
   <ItemGroup>

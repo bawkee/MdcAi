@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<Page
+  x:Class="MdcAi.Views.AboutPage"
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:local="using:MdcAi.Views"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  mc:Ignorable="d">
+  <Page.Resources>
+  </Page.Resources>
+
+  <ScrollViewer Margin="-10">
+    <StackPanel Spacing="15" MaxWidth="400" Margin="10">
+      <StackPanel Orientation="Horizontal">
+        <Image Width="64" Source="ms-appx:///Assets/Square44x44Logo.scale-200.png" />
+
+        <StackPanel VerticalAlignment="Center" Margin="10,0,0,0">
+          <TextBlock FontWeight="Bold">
+            Multipurpose Desktop Conversational AI
+          </TextBlock>
+          <TextBlock>
+            <Run>Version</Run><Run>1.0.0.0</Run>
+          </TextBlock>
+          <TextBlock>
+            <Run>Created and © by Bojan Sala</Run>
+          </TextBlock>
+        </StackPanel>
+      </StackPanel>
+
+
+      <TextBlock TextWrapping="Wrap">
+        This application is free and open-source. It does not collect your personal data or your
+        conversations with the AI.
+      </TextBlock>
+
+      <StackPanel>
+        <TextBlock>
+          <Hyperlink NavigateUri="https://github.com/bawkee/MdcAi">https://github.com/bawkee/MdcAi</Hyperlink>
+        </TextBlock>
+        <TextBlock FontWeight="Bold">☝️ Add a Star on the GitHub repo to show your support!</TextBlock>
+      </StackPanel>
+
+      <TextBlock TextWrapping="Wrap">
+        <Run>Props to the following software 👇</Run>
+      </TextBlock>
+      <ScrollViewer MaxHeight="150" Margin="-10,0" Padding="10,0">
+        <StackPanel>
+          <TextBlock><Run FontWeight="Bold">Reactive Extensions</Run> by .NET Foundation</TextBlock>
+          <TextBlock><Run FontWeight="Bold">ReactiveUI</Run> by .NET Foundation</TextBlock>
+          <TextBlock><Run FontWeight="Bold">React</Run> by Meta Corporation</TextBlock>
+          <TextBlock><Run FontWeight="Bold">Starry Night</Run> by Titus Wormer</TextBlock>
+          <TextBlock><Run FontWeight="Bold">Markdig</Run> by Alexandre Mutel</TextBlock>
+          <TextBlock><Run FontWeight="Bold">.NET Community Toolkit</Run> by .NET Foundation</TextBlock>
+          <TextBlock><Run FontWeight="Bold">Castle.Core</Run> by Castle Project</TextBlock>
+          <TextBlock><Run FontWeight="Bold">FlexLabs</Run> Upsert by Artiom Chilaru</TextBlock>
+          <TextBlock><Run FontWeight="Bold">Mapster</Run> by Chaowlert Chaisrichalermpol and Eric Swann</TextBlock>
+          <TextBlock><Run FontWeight="Bold">Newtonsoft.Json</Run> by James Newton-King</TextBlock>
+          <TextBlock><Run FontWeight="Bold">NLog</Run> by Jaroslaw Kowalski, Kim Christensen, Julian Verdurmen</TextBlock>
+          <TextBlock><Run FontWeight="Bold">Fody</Run> by Simon Cropp</TextBlock>
+          <TextBlock><Run FontWeight="Bold">hast-util-to-dom</Run> by Keith McKnight</TextBlock>
+          <TextBlock><Run FontWeight="Bold">P/Invoke</Run> by .NET Foundation</TextBlock>
+          <TextBlock>
+            <Run FontWeight="Bold">SQLitePCLRaw</Run>
+          </TextBlock>
+        </StackPanel>
+      </ScrollViewer>
+
+      <Button Content="License Information and Terms of Use" Click="ButtonBase_OnClick" />
+
+      <TextBlock TextWrapping="Wrap" FontSize="10">
+        Neither this app nor Bojan Sala are affiliated with OpenAI in any way. This app connects to GPT AI models by using the
+        proprietary OpenAI API key that you may purchase yourself from the OpenAI as either a private person or a business
+        entity.
+      </TextBlock>
+
+    </StackPanel>
+  </ScrollViewer>
+</Page>

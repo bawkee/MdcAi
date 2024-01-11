@@ -7,12 +7,9 @@ using ViewModels;
 using RxUIExt.Windsor;
 using Microsoft.UI.Xaml.Documents;
 
-public sealed partial class Settings 
+public sealed partial class Settings
 {
-    public Settings()
-    {
-        InitializeComponent();
-    }
+    public Settings() { InitializeComponent(); }
 
     private void ShowPrivacyHyperlink_OnClick(Hyperlink sender, HyperlinkClickEventArgs args)
     {
@@ -20,6 +17,11 @@ public sealed partial class Settings
             Observable.Return(Unit.Default).InvokeCommand(cmd);
     }
 
+    private void AboutHyperlink_OnClick(Hyperlink sender, HyperlinkClickEventArgs args)
+    {
+        if (ViewModel.ShowAboutCmd is { } cmd)
+            Observable.Return(Unit.Default).InvokeCommand(cmd);
+    }
 }
 
 [DoNotRegister]

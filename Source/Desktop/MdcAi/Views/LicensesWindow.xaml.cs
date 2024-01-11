@@ -15,7 +15,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
-using System.Windows.Controls;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
 using Windows.Storage;
@@ -24,9 +23,9 @@ using CommunityToolkit.WinUI.UI.Controls;
 /// <summary>
 /// An empty window that can be used on its own or navigated to within a Frame.
 /// </summary>
-public sealed partial class PrivacyInfoWindow : ILogging
+public sealed partial class LicensesWindow
 {
-    public PrivacyInfoWindow()
+    public LicensesWindow()
     {
         InitializeComponent();
 
@@ -40,14 +39,14 @@ public sealed partial class PrivacyInfoWindow : ILogging
         });
     }
 
-    private async void PrivacyInfoWindow_OnActivated(object sender, WindowActivatedEventArgs args)
+    private async void Licenses_OnActivated(object sender, WindowActivatedEventArgs args)
     {
         var privacyMd = await StorageFile.GetFileFromApplicationUriAsync(
-            new("ms-appx:///Assets/PrivacyPolicy.md"));
+            new("ms-appx:///Assets/Licenses.md"));
 
         MdTextBlock.Text = await FileIO.ReadTextAsync(privacyMd);
     }
 
-    private void MdTextBlock_OnLinkClicked(object sender, LinkClickedEventArgs e) =>
+    private void MdTextBlock_OnLinkClicked(object sender, LinkClickedEventArgs e) => 
         ShellUtil.StartUrl(e.Link);
 }

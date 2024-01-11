@@ -175,6 +175,10 @@
         <PivotItem x:Name="SettingsPivotItem" Style="{StaticResource MarginFixedPivot}">
           <winUi:ViewHost ViewModel="{x:Bind ViewModel.Settings}" />
         </PivotItem>
+
+        <PivotItem x:Name="WelcomePivotItem">
+          <!-- Maybe it would be useful in the future, for now, not so much -->
+        </PivotItem>
       </Pivot>
     </NavigationView>
   </Grid>

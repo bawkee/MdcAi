@@ -30,9 +30,16 @@
       <ToggleSwitch IsOn="{x:Bind ViewModel.ShowGettingStartedConvoTip, Mode=TwoWay}" />
     </controls:SettingsCard>
 
-    <TextBlock Visibility="{x:Bind ViewModel.ShowPrivacyStatementCmd, Converter={StaticResource NullToVisibilityConverter}, FallbackValue=Collapsed, Mode=OneWay}">
-      <Hyperlink Click="ShowPrivacyHyperlink_OnClick">Privacy Policy</Hyperlink>
-    </TextBlock>
+    <StackPanel Spacing="10" Margin="0,15,0,10">
+      <HyperlinkButton Content="Privacy Policy..."
+                       Command="{x:Bind ViewModel.ShowPrivacyStatementCmd, Mode=OneWay}"
+                       Visibility="{x:Bind ViewModel.ShowPrivacyStatementCmd, Converter={StaticResource NullToVisibilityConverter}, FallbackValue=Collapsed, Mode=OneWay}" />
+
+      <HyperlinkButton Content="About MDC AI..."
+                       Command="{x:Bind ViewModel.ShowAboutCmd, Mode=OneWay}" />
+
+      <HyperlinkButton Content="Open Logs Folder" Command="{x:Bind ViewModel.OpenAppStorageCmd, Mode=OneWay}" />
+    </StackPanel>
 
   </StackPanel>
 </local:SettingsBase>

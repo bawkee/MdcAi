@@ -13,5 +13,16 @@
     <MicaBackdrop />
   </Window.SystemBackdrop>
 
-  <views:RootPage />
+  <Grid>
+    <views:RootPage />
+
+    <ContentDialog x:Name="AboutDialog"
+                   PrimaryButtonText="Close"
+                   Margin="10">
+      <ContentDialog.Resources>
+        <Thickness x:Key="ContentDialogPadding">10</Thickness>
+      </ContentDialog.Resources>
+      <views:AboutPage />
+    </ContentDialog>
+  </Grid>
 </Window>

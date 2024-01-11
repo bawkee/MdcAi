@@ -36,7 +36,7 @@ public sealed partial class RootPage
         InitializeComponent();
 
         Loaded += (s, e) => ((App)Application.Current).Window.SetTitleBar(AppTitleBar);
-        
+
         this.WhenActivated((disposables, viewModel) =>
         {
             viewModel.Conversations.RenameIntr.RegisterHandler(
@@ -67,6 +67,24 @@ public sealed partial class RootPage
                 .Select(_ => Unit.Default)
                 .InvokeCommand(viewModel.Conversations.GoBackCmd)
                 .DisposeWith(disposables);
+
+            // Since we don't have anything fancy to show as a welcoming screen, just auto-select a new conversation
+            // placeholder from the default 'General' category.
+            viewModel.Conversations
+                     .WhenAnyValue(vm => vm.Items.Count)
+                     .Select(_ => viewModel.Conversations.Items
+                                           .OfType<ConversationCategoryPreviewVm>()
+                                           .FirstOrDefault(c => c.Id == "default"))
+                     .WhereNotNull()
+                     .Select(c => c.WhenAnyValue(vm => vm.Items.Count)
+                                   .Select(_ => c.Items.FirstOrDefault(i => i.IsNewPlaceholder))
+                                   .WhereNotNull())
+                     .Switch()
+                     .ObserveOnMainThread()
+                     .Do(i => viewModel.Conversations.SelectedPreviewItem ??= i)
+                     .Take(1)
+                     .Subscribe()
+                     .DisposeWith(disposables);
         });
     }
 

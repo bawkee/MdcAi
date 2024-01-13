@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2023 Bojan Sala and Contributors
+﻿// Copyright (c) 2023 Bojan Sala
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -14,7 +14,6 @@ namespace MdcAi.ViewModels;
 using MdcAi.ChatUI.ViewModels;
 
 // MPV:
-// TODO: Better welcoming experience (i.e. app just started, no API key)
 // TODO: That 'root page' thing looks pointless
 // TODO: When making a new category auto select it
 

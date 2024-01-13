@@ -22,6 +22,7 @@ public class ConversationsVm : ViewModel
     public ReactiveCommand<Unit, Unit> AddCategoryCmd { get; }
     public Interaction<Unit, string> AddCategoryIntr { get; } = new();
     public ReactiveCommand<Unit, Unit> GoBackCmd { get; }    
+    public ReactiveCommand<Unit, Unit> GoToSettingsCmd { get; set; }
 
     public ConversationsVm()
     {

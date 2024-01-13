@@ -24,18 +24,21 @@ public class ConversationVm : ActivatableViewModel
     [Reactive] public ChatMessageSelectorVm SelectedMessage { get; set; }
     [Reactive] public ChatMessageSelectorVm EditMessage { get; set; }
     [Reactive] public PromptVm Prompt { get; set; } = new();
-    [Reactive] public bool IsOpenAIReady { get; private set; }
+    [Reactive] public bool IsAIReady { get; private set; }
     [Reactive] public AiModel[] Models { get; private set; }
     [Reactive] public bool IsLoadingModels { get; private set; }
     [Reactive] public bool IsDirty { get; private set; } = true;
     [Reactive] public bool IsTrash { get; set; }
-    [Reactive] public bool IsSendPromptEnabled { get; private set; }
+    [Reactive] public bool CanSendPrompt { get; private set; }
+    [Reactive] public bool CanEdit { get; private set; }
+    [Reactive] public bool CanRegenerate { get; private set; }
     [Reactive] public bool IsLoading { get; private set; }
     [Reactive] public bool IsCompleting { get; private set; }
     [Reactive] public bool SettingsOverriden { get; private set; }
     [Reactive] public bool IsNew { get; private set; }
     [Reactive] public bool IsEmpty { get; private set; } = true;
-    [Reactive] public bool ShowGettingStartedTip { get; private set; }
+    [Reactive] public bool ShowGettingStartedTips { get; private set; }
+    [Reactive] public bool ShowReadOnlyNotice { get; private set; }
 
     public ReactiveCommand<Unit, Unit> DebugGeneratePromptCmd { get; }
     public ReactiveCommand<Unit, Unit> EditSelectedCmd { get; }
@@ -97,10 +100,10 @@ public class ConversationVm : ActivatableViewModel
 
         Observable.CombineLatest(
                       this.WhenAnyValue(vm => vm.IsEmpty),
-                      GlobalChatSettings.Default.WhenAnyValue(s => s.ShowGettingStartedConvoTip),
-                      (a, b) => a && b)
+                      GlobalChatSettings.Default.WhenAnyValue(s => s.ShowGettingStartedConvoTip))
+                  .Select(l => l.All(x => x))
                   .ObserveOnMainThread()
-                  .Do(v => ShowGettingStartedTip = v)
+                  .Do(v => ShowGettingStartedTips = v)
                   .SubscribeSafe();
 
         TurnOffGettingStartedTipCmd = ReactiveCommand.Create(
@@ -115,8 +118,14 @@ public class ConversationVm : ActivatableViewModel
                     Contents = EditMessage.Message.Content
                 };
             },
-            this.WhenAnyValue(vm => vm.SelectedMessage)
-                .Select(m => m?.Message.Role == ChatMessageRole.User));
+            this.WhenAnyValue(vm => vm.CanEdit));
+
+        Observable.CombineLatest(
+                      this.WhenAnyValue(vm => vm.SelectedMessage)
+                          .Select(m => m?.Message.Role == ChatMessageRole.User),
+                      this.WhenAnyValue(vm => vm.IsAIReady))
+                  .Do(v => CanEdit = v.All(x => x))
+                  .SubscribeSafe();
 
         DeleteSelectedCmd = ReactiveCommand.CreateFromObservable(
             () =>
@@ -143,8 +152,14 @@ public class ConversationVm : ActivatableViewModel
         RegenerateSelectedCmd = ReactiveCommand.CreateFromObservable(
             () => SelectedMessage.Message.CompleteCmd.Execute(Unit.Default)
                                  .Select(_ => Unit.Default),
-            this.WhenAnyValue(vm => vm.SelectedMessage)
-                .Select(m => m?.Message.Role == ChatMessageRole.System && m == Tail));
+            this.WhenAnyValue(vm => vm.CanRegenerate));
+
+        Observable.CombineLatest(
+                      this.WhenAnyValue(vm => vm.SelectedMessage)
+                          .Select(m => m?.Message.Role == ChatMessageRole.System && m == Tail),
+                      this.WhenAnyValue(vm => vm.IsAIReady))
+                  .Do(v => CanRegenerate = v.All(x => x))
+                  .SubscribeSafe();
 
         SendPromptCmd = ReactiveCommand.CreateFromObservable(
             () => Observable
@@ -178,14 +193,17 @@ public class ConversationVm : ActivatableViewModel
                           Tail.Message.Next = data.Message;
                   })
                   .Select(_ => Unit.Default),
-            this.WhenAnyValue(vm => vm.IsSendPromptEnabled));
+            this.WhenAnyValue(vm => vm.CanSendPrompt));
 
         SendPromptCmd.Do(_ => Prompt = new())
                      .SubscribeSafe();
 
-        this.WhenAnyValue(vm => vm.IsLoadingModels, vm => vm.Prompt.Contents)
-            .Do(x => IsSendPromptEnabled = !x.Item1 &&
-                                           !string.IsNullOrEmpty(x.Item2))
+        this.WhenAnyValue(vm => vm.IsLoadingModels,
+                          vm => vm.Prompt.Contents,
+                          vm => vm.IsAIReady)
+            .Do(x => CanSendPrompt = !x.Item1 &&
+                                     !string.IsNullOrEmpty(x.Item2) &&
+                                     IsAIReady)
             .SubscribeSafe();
 
         SelectCmd = ReactiveCommand.Create((string m) =>
@@ -427,7 +445,7 @@ public class ConversationVm : ActivatableViewModel
             .Switch()
             .Select(s => s != null && !string.IsNullOrEmpty(s))
             .ObserveOnMainThread()
-            .Do(i => IsOpenAIReady = i)
+            .Do(i => IsAIReady = i)
             .SubscribeSafe();
 
         this.WhenAnyValue(vm => vm.SelectedMessage)
@@ -461,8 +479,16 @@ public class ConversationVm : ActivatableViewModel
                .Do(_ => IsDirty = true)
                .SubscribeSafe();
 
+        this.WhenAnyValue(vm => vm.ShowGettingStartedTips,
+                          vm => vm.IsNew,
+                          vm => vm.IsAIReady)
+            .Do(_ => ShowReadOnlyNotice = !ShowGettingStartedTips &&
+                                          !IsNew &&
+                                          !IsAIReady)
+            .SubscribeSafe();
+
         Activator.Activated.Take(1)
-                 .Select(_ => this.WhenAnyValue(vm => vm.IsOpenAIReady)
+                 .Select(_ => this.WhenAnyValue(vm => vm.IsAIReady)
                                   .Where(i => i)
                                   .Select(_ => Unit.Default))
                  .Switch()

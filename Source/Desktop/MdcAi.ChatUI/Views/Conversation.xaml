@@ -28,14 +28,14 @@
       <ResourceDictionary.ThemeDictionaries>
 
         <ResourceDictionary x:Key="Default">
-          <AcrylicBrush x:Key="GettingStartedTipsTint"
+          <AcrylicBrush x:Key="OverlayMessageTint"
                         TintOpacity="0.2"
                         TintColor="#1e1e1e"
                         FallbackColor="#1e1e1e" />
         </ResourceDictionary>
 
         <ResourceDictionary x:Key="Light">
-          <AcrylicBrush x:Key="GettingStartedTipsTint"
+          <AcrylicBrush x:Key="OverlayMessageTint"
                         TintOpacity="0.7"
                         TintColor="White"
                         FallbackColor="White" />
@@ -76,6 +76,7 @@
       <c:DockPanel c:DockPanel.Dock="Bottom">
         <StackPanel c:DockPanel.Dock="Right" Margin="0,10,10,10" VerticalAlignment="Bottom" Orientation="Horizontal">
           <StackPanel.Resources>
+            <!-- Override settings button -->
             <DataTemplate x:Key="OverrideSettingsBtnTemplate" x:DataType="viewModels:ConversationVm">
               <Button Command="{Binding Path=EditSettingsCmd, Mode=OneWay}" Height="32" Padding="10,0"
                       Margin="10,0,0,0">
@@ -83,6 +84,8 @@
               </Button>
             </DataTemplate>
           </StackPanel.Resources>
+
+          <!-- Send prompt button -->
           <SplitButton Command="{x:Bind ViewModel.SendPromptCmd, Mode=OneWay}" Height="32" Padding="10,0">
             <StackPanel Orientation="Horizontal">
               <TextBlock Text="{x:Bind ViewModel.Settings.SelectedModel, Mode=OneWay}" />
@@ -93,6 +96,7 @@
             </SplitButton.Flyout>
           </SplitButton>
 
+          <!-- Override Settings button content depending on whether it is overriden -->
           <ContentControl ContentTemplate="{StaticResource OverrideSettingsBtnTemplate}"
                           Content="{x:Bind ViewModel, Mode=OneWay}"
                           Visibility="{x:Bind ViewModel.SettingsOverriden, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
@@ -113,11 +117,27 @@
         </StackPanel>
 
         <StackPanel>
+          <!-- Read only notice -->
+          <StackPanel Margin="10,10,10,0"
+                      Orientation="Horizontal"
+                      Visibility="{x:Bind ViewModel.ShowReadOnlyNotice, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+            <TextBlock FontSize="12"
+                       Foreground="{ThemeResource AccentTextFillColorSecondaryBrush}">
+              <Run>⚠️</Run>
+              <Run Text="Messages are read-only due to missing or incorrect configuration" />
+              <Hyperlink
+                winUi:HyperlinkExtensions.Command="{x:Bind ViewModel.Conversations.GoToSettingsCmd, Mode=OneWay}">
+                <Run Text="(go to Settings)" />
+              </Hyperlink>
+            </TextBlock>
+          </StackPanel>
+
+          <!-- Editing a message notice -->
           <StackPanel Margin="10,10,10,0"
                       Orientation="Horizontal"
                       Visibility="{x:Bind ViewModel.EditMessage, Converter={StaticResource NullToVisibilityConverter}, Mode=OneWay}">
             <TextBlock FontSize="12"
-                       Foreground="{ThemeResource SystemAccentColorLight1}">
+                       Foreground="{ThemeResource AccentTextFillColorSecondaryBrush}">
               <Run Text="Editing message sent on" />
               <Run Text="{x:Bind ViewModel.EditMessage.Message.CreatedTs, Mode=OneWay}" />
               <Hyperlink winUi:HyperlinkExtensions.Command="{x:Bind ViewModel.CancelEditCmd, Mode=OneWay}">
@@ -125,6 +145,8 @@
               </Hyperlink>
             </TextBlock>
           </StackPanel>
+
+          <!-- Prompt field -->
           <TextBox x:Name="PromptField"
                    Margin="10"
                    MaxHeight="400"
@@ -139,9 +161,9 @@
 
       <Grid>
         <WebView2 x:Name="ChatWebView"
-                  DefaultBackgroundColor="Transparent"
-                  Visibility="Visible" />
+                  DefaultBackgroundColor="Transparent"/>
 
+        <!-- Stop generating button -->
         <Grid VerticalAlignment="Bottom"
               HorizontalAlignment="Right"
               Margin="0,0,30,20"
@@ -162,8 +184,9 @@
           </Button>
         </Grid>
 
+        <!-- Welcome notice -->
         <Grid
-          Visibility="{x:Bind ViewModel.ShowGettingStartedTip, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+          Visibility="{x:Bind ViewModel.ShowGettingStartedTips, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
 
           <Border>
             <Border.Background>
@@ -182,9 +205,38 @@
             <Border CornerRadius="5" Shadow="{StaticResource DropShadow}">
 
               <Grid>
-                <Rectangle Fill="{ThemeResource GettingStartedTipsTint}" />
+                <Rectangle Fill="{ThemeResource OverlayMessageTint}" />
 
-                <c:DockPanel>
+                <!-- Welcoming notice, when AI is not ready -->
+                <Grid
+                  Visibility="{x:Bind ViewModel.IsAIReady, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=True, Mode=OneWay}"
+                  Padding="15">
+                  <StackPanel Spacing="10">
+                    <TextBlock Style="{ThemeResource TitleTextBlockStyle}">Welcome to MDC AI 👋</TextBlock>
+                    <TextBlock TextWrapping="Wrap">
+                      To be able to chat with AI, you will need an <Bold>OpenAI API Key</Bold> which is a pay-as-you-go subscription service
+                      that you can sign up for directly from
+                      <Hyperlink NavigateUri="https://openai.com/blog/openai-api">OpenAI website</Hyperlink>.
+                      It is a fast and straightforward process that takes 5 minutes. It costs
+                      <Hyperlink NavigateUri="https://help.openai.com/en/articles/8264644-what-is-prepaid-billing">as little as $5</Hyperlink>
+                      to get you started
+                      and you can extend the limit when and as you like.
+                    </TextBlock>
+
+                    <TextBlock TextWrapping="Wrap">
+                      To use your API key, go to the
+                      <Hyperlink
+                        winUi:HyperlinkExtensions.Command="{x:Bind ViewModel.Conversations.GoToSettingsCmd, Mode=OneWay}">
+                        settings page
+                      </Hyperlink>
+                      and paste it.
+                    </TextBlock>
+                  </StackPanel>
+                </Grid>
+
+                <!-- Getting started tips -->
+                <c:DockPanel
+                  Visibility="{x:Bind ViewModel.IsAIReady, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
                   <StackPanel Margin="2">
                     <TextBlock Style="{ThemeResource TitleTextBlockStyle}" Margin="15,5,15,5">
                       Getting Started Tips
@@ -210,12 +262,14 @@
               </Grid>
             </Border>
 
+            <!-- Extra links, outside of the tinted border -->
             <StackPanel Margin="10" Spacing="10">
-              <TextBlock>
+              <TextBlock HorizontalAlignment="Left">
                 <Hyperlink Click="DontShowGettingStartedTip_OnClick">Don't show these tips anymore (can be re-enabled in Settings)</Hyperlink>
               </TextBlock>
 
               <TextBlock
+                HorizontalAlignment="Left"
                 Visibility="{x:Bind ViewModel.GlobalSettings.ShowPrivacyStatementCmd, Converter={StaticResource NullToVisibilityConverter}, FallbackValue=Collapsed, Mode=OneWay}">
                 <Hyperlink Click="ShowPrivacyHyperlink_OnClick">Your Privacy is Safe</Hyperlink>
               </TextBlock>
@@ -223,6 +277,7 @@
           </StackPanel>
         </Grid>
 
+        <!-- Settings override popup -->
         <ContentDialog x:Name="SettingsDialog"
                        PrimaryButtonText="Done"
                        IsSecondaryButtonEnabled="{x:Bind ViewModel.SettingsOverriden, Mode=OneWay}"

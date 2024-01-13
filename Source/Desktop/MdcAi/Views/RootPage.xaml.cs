@@ -85,6 +85,12 @@ public sealed partial class RootPage
                      .Take(1)
                      .Subscribe()
                      .DisposeWith(disposables);
+
+            viewModel.Conversations.GoToSettingsCmd = ReactiveCommand.Create(() =>
+            {
+                NavigationViewControl.SelectedItem =
+                    NavigationViewControl.SettingsItem;
+            });
         });
     }
 

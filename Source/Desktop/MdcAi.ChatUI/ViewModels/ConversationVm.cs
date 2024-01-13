@@ -169,14 +169,12 @@ public class ConversationVm : ActivatableViewModel
                           new ChatMessageVm(this, ChatMessageRole.User)
                           {
                               Content = Prompt.Contents,
-                              Previous = Tail?.Message,
-                              Settings = Settings,
+                              Previous = Tail?.Message
                           } :
                           new ChatMessageVm(this, ChatMessageRole.User, EditMessage)
                           {
                               Content = Prompt.Contents,
-                              Previous = EditMessage.Message.Previous,
-                              Settings = Settings,
+                              Previous = EditMessage.Message.Previous
                           },
                       EditMessage
                   })
@@ -524,8 +522,7 @@ public class ConversationVm : ActivatableViewModel
                       return new ChatMessageVm(this, ChatMessageRole.User)
                       {
                           Content = contents,
-                          Previous = Tail?.Message,
-                          Settings = Settings,
+                          Previous = Tail?.Message
                       };
                   })
                   .ObserveOnMainThread()
@@ -554,8 +551,7 @@ public class ConversationVm : ActivatableViewModel
                     Tail = t,
                     Completion = new ChatMessageVm(this, ChatMessageRole.System)
                     {
-                        Previous = t.Message,
-                        Settings = t.Message.Settings,
+                        Previous = t.Message
                     }
                 })
                 .Do(x => x.Tail.Message.Next = x.Completion)

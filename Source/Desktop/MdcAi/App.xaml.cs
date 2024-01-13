@@ -51,7 +51,7 @@ public partial class App : ILogging
         UnhandledException += async (_, e) =>
         {
             e.Handled = true;
-            await HandleException(e.Exception);            
+            await HandleException(e.Exception);
         };
 
         EnableAdditionalWebView2Optons(new (string name, string value)[]
@@ -90,10 +90,10 @@ public partial class App : ILogging
         AppServices.Container.RegisterViewModelsAndViews("MdcAi.ChatUI");
         AppServices.Container.RegisterViewModelsAndViews(Types.FromAssembly(Assembly.GetExecutingAssembly()));
 
-        RegisterApi();        
+        RegisterApi();
 
         InitializeComponent();
-    }    
+    }
 
     private void EnableAdditionalWebView2Optons((string name, string value)[] options) =>
         Environment.SetEnvironmentVariable("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
@@ -182,7 +182,9 @@ public partial class App : ILogging
         var settings = AppServices.Container.Resolve<SettingsVm>();
         var api = new OpenAiClient();
 
-        AppServices.Container.Register(Component.For<IOpenAiApi>().Instance(api));
+        AppServices.Container.Register(Component.For<IOpenAiApi>()
+                                                .Instance(api)
+                                                .LifeStyle.Singleton);
 
         settings.WhenAnyValue(vm => vm.OpenAi.CurrentApiKey,
                               vm => vm.OpenAi.OrganisationName)
@@ -198,7 +200,7 @@ public partial class App : ILogging
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
         DebugSettings.IsBindingTracingEnabled = Debugging.IsBindingTracingEnabled;
-        
+
         Window = new MainWindow();
         Window.Activate();
     }

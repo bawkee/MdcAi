@@ -12,8 +12,7 @@ public class ChatMessageVm : ViewModel
 {
     public string Id { get; set; }
     public string Role { get; set; }
-    public ChatMessageSelectorVm Selector { get; }
-    [Reactive] public ChatSettingsVm Settings { get; set; } 
+    public ChatMessageSelectorVm Selector { get; }    
     [Reactive] public string Content { get; set; }
     [Reactive] public string HTMLContent { get; set; }
     public DateTime CreatedTs { get; set; }
@@ -45,7 +44,7 @@ public class ChatMessageVm : ViewModel
         CompleteCmd = ReactiveCommand.CreateFromObservable(
             () => Observable.Return(Unit.Default)
                             .Do(_ => Content = null) // Just because there can be such a big delay when regenerating
-                            .Select(_ => Settings.Streaming ?
+                            .Select(_ => Conversation.Settings.Streaming ?
                                         CreateGenerationStream()
                                             .TakeUntil(StopCompletionCmd)
                                             .Scan("", (a, b) => a + b) :
@@ -180,13 +179,13 @@ public class ChatMessageVm : ViewModel
                         new()
                         {
                             Role = ChatMessageRole.System,
-                            Content = Settings.Premise + premiseSpice
+                            Content = Conversation.Settings.Premise + premiseSpice
                         });
 
         var req = new ChatRequest
         {
             Messages = messages,
-            Model = Settings.SelectedModel
+            Model = Conversation.Settings.SelectedModel
         };
 
         return req;

@@ -19,7 +19,7 @@ public static class Debugging
     public static int UserMessageCounter = 0;
     public static int SystemMessageCounter = 0;
 
-    public static bool IsBindingTracingEnabled = false;
+    public static bool IsBindingTracingEnabled = true;
 
-    public static bool LogSql = true;
+    public static bool LogSql = false;
 }

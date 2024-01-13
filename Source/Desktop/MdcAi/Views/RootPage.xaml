@@ -11,6 +11,7 @@
   xmlns:converters="using:CommunityToolkit.WinUI.UI.Converters"
   xmlns:salaConverters="using:RxUIExt.WinUI.SalaConverters"
   xmlns:winUi="using:RxUIExt.WinUI"
+  xmlns:ct="using:CommunityToolkit.WinUI"
   mc:Ignorable="d"
   Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
@@ -18,13 +19,6 @@
     <!-- WARNING: Placing convereters anywhere else than here will result in 'unspecified error' being thrown at runtime -->
     <salaConverters:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
     <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
-
-    <salaConverters:BoolConverter x:Key="BoolToHighlightedConverter">
-      <salaConverters:BoolConverter.True>
-        <!-- BUG: Have to use visual states here instead -->
-        <SolidColorBrush Color="{ThemeResource SystemAccentColorDark2}" />
-      </salaConverters:BoolConverter.True>
-    </salaConverters:BoolConverter>
   </Page.Resources>
 
   <Grid>
@@ -50,8 +44,23 @@
       <DataTemplate x:Key="NavigationViewItemTemplate" x:DataType="viewModels:ConversationPreviewVm">
 
         <NavigationViewItem DataContext="{x:Bind}">
-          <TextBlock Text="{Binding Path=Name, Mode=OneWay}"
-                     Foreground="{Binding Path=IsNewPlaceholder, Mode=OneWay, Converter={StaticResource BoolToHighlightedConverter}}" />
+          <UserControl>
+            <VisualStateManager.VisualStateGroups>
+              <VisualStateGroup>
+                <VisualState x:Name="NewItem">
+                  <VisualState.StateTriggers>
+                    <ct:IsEqualStateTrigger
+                      Value="{Binding Path=IsNewPlaceholder, Mode=OneWay}"
+                      To="True" />
+                  </VisualState.StateTriggers>
+                  <VisualState.Setters>
+                    <Setter Target="NameTextBlock.Foreground" Value="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                  </VisualState.Setters>
+                </VisualState>
+              </VisualStateGroup>
+            </VisualStateManager.VisualStateGroups>
+            <TextBlock x:Name="NameTextBlock" Text="{Binding Path=Name, Mode=OneWay}" />
+          </UserControl>
 
           <NavigationViewItem.ContextFlyout>
             <MenuFlyout>

@@ -120,7 +120,6 @@ public partial class App : ILogging
             {                
                 var dialog = new ContentDialog
                 {
-                    // TODO: A proper exception dialog with link to the log file
                     Content = message,
                     XamlRoot = Window.Content.XamlRoot,
                     Title = "Something Broke 😳",

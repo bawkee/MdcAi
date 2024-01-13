@@ -6,8 +6,6 @@ public class OpenAiSettingsVm : ActivatableViewModel
     [Reactive] public string CurrentApiKey { get; private set; }
     [Reactive] public string OrganisationName { get; set; }
 
-    // TODO: Validate API key before committing
-
     public OpenAiSettingsVm()
     {
         ApiKeys = AppCredsManager.GetValue("ApiKeys");

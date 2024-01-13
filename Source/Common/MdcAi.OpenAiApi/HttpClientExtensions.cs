@@ -1,6 +1,7 @@
 ﻿namespace MdcAi.OpenAiApi;
 
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Linq;
 using SalaTools.Core;
 
 /// <summary>
@@ -122,29 +123,46 @@ public static class HttpClientExtensions
             return response;
 
         string resultAsString;
+        ApiError parsedError = null;
 
         try
         {
             resultAsString = await response.Content.ReadAsStringAsync();
+
+            try
+            {
+                if (JObject.Parse(resultAsString) is { } jObj && jObj["error"] is { } jErrObj)
+                    parsedError = jErrObj.ToObject<ApiError>();
+            }
+            catch (Exception ex)
+            {
+                typeof(HttpClientExtensions).GetLogger().LogError(ex, "Parsing ApiError");
+            }
         }
         catch (Exception e)
         {
-            resultAsString = "Additionally, the following error was thrown when attemping to read the response content: " + e;
+            resultAsString = "Additionally, the following error was thrown when attemping to read the response content: " + e.Message;
         }
+
+        var telemetryMessage = GetErrorMessage(resultAsString, response, uri.ToString());
+
+        typeof(HttpClientExtensions).GetLogger().LogError(telemetryMessage);
+
+        if (parsedError is { Code: "invalid_api_key" })
+            throw new OpenAiInvalidApiKeyException(parsedError.Message);
 
         throw response.StatusCode switch
         {
-            HttpStatusCode.Unauthorized => new AuthenticationException(
-                "OpenAI rejected your authorization, most likely due to an invalid API Key. " +
-                "Try checking your API Key and see https://github.com/OkGoDoIt/OpenAI-API-dotnet#authentication for guidance. " +
-                "Full API response follows: " + resultAsString),
-            HttpStatusCode.InternalServerError => new HttpRequestException(
-                "OpenAI had an internal server error, which can happen occasionally. Please retry your request. " +
-                GetErrorMessage(resultAsString, response, uri.ToString())),
+            HttpStatusCode.Unauthorized => new OpenAiApiAuthException(
+                parsedError?.Message ?? "OpenAI rejected the authorization with the given API key."),
+            HttpStatusCode.TooManyRequests => new OpenAiApiQuotaException(
+                parsedError?.Message ?? "OpenAI refused to process the request due to a rate limit."),
+            HttpStatusCode.InternalServerError => new OpenAiApiException(
+                parsedError?.Message ?? "OpenAI had an internal server error, which can happen occasionally. Please retry your request."),
             _ => new HttpRequestException(GetErrorMessage(resultAsString, response, uri.ToString()))
         };
     }
 
     private static string GetErrorMessage(string resultAsString, HttpResponseMessage response, string name, string description = "") =>
-        $"Error at {name} ({description}) with HTTP status code: {response.StatusCode}. Content: {resultAsString ?? "<no content>"}";
+        $"Error at {name} ({description}) with HTTP status code: {response.StatusCode}. Content:\r\n{resultAsString ?? "<no content>"}";
 }

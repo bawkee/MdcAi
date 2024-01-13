@@ -43,6 +43,8 @@ public partial class OpenAiClient : IOpenAiApi, IDisposable
         ApiKey = apiKey;
         Organisation = organisation;
 
+        _mem.Clear();
+
         Client.DefaultRequestHeaders.Authorization = new("Bearer", ApiKey);
         Client.AddOrUpdateDefaultHeader("Api-Key", ApiKey);
         Client.AddOrUpdateDefaultHeader("OpenAI-Organization", Organisation);

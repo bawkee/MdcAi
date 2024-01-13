@@ -16,7 +16,6 @@
   Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
   <Page.Resources>
-    <!-- WARNING: Placing convereters anywhere else than here will result in 'unspecified error' being thrown at runtime -->
     <salaConverters:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
     <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
   </Page.Resources>

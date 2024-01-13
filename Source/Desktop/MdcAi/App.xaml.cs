@@ -105,30 +105,33 @@ public partial class App : ILogging
     {
         this.LogError(ex);
 
+        Debug.WriteLine($"Thr {Thread.CurrentThread.ManagedThreadId}");
+
+        if (_errorDialogOpen)
+            return;
+
         try
-        {
-            if (_errorDialogOpen)
-                return;
+        {            
             _errorDialogOpen = true;
 
             var message = $"{ex.Message}\r\nPid: {Process.GetCurrentProcess().Id}";
 
-            var dialog = new ContentDialog
-            {
-                // TODO: A proper exception dialog with link to the log file
-                Content = message,
-                XamlRoot = Window.Content.XamlRoot,
-                Title = "Something Broke 😳",
-                CloseButtonText = "OK",
-            };
-
             try
-            {
+            {                
+                var dialog = new ContentDialog
+                {
+                    // TODO: A proper exception dialog with link to the log file
+                    Content = message,
+                    XamlRoot = Window.Content.XamlRoot,
+                    Title = "Something Broke 😳",
+                    CloseButtonText = "OK",
+                };
+
                 await dialog.ShowAsync();
             }
             catch // Unfortunately WinUI is extremely fragile and this can happen surprisingly often
             {
-                System.Windows.MessageBox.Show(message, "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                System.Windows.MessageBox.Show(message, "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);                
             }
         }
         finally

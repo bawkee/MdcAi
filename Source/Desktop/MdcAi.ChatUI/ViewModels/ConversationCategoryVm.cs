@@ -18,7 +18,7 @@ public class ConversationCategoryVm : ActivatableViewModel
     public ReactiveCommand<Unit, Unit> RenameCmd { get; }
     public Interaction<string, string> RenameIntr { get; } = new();
 
-    public ConversationCategoryVm(IconsVm icons, ChatSettingsVm settings)
+    public ConversationCategoryVm(IconsVm icons, SettingsVm globalSettings, ChatSettingsVm settings)
     {
         Icons = icons;
         Settings = settings;
@@ -55,7 +55,12 @@ public class ConversationCategoryVm : ActivatableViewModel
                .Switch()
                .SubscribeSafe();
 
-        Activator.Activated.Take(1).InvokeCommand(Settings.LoadModelsCmd);
+        Activator.Activated.Take(1)
+                 .Select(_ => globalSettings.WhenAnyValue(vm => vm.OpenAi.CurrentApiKey)
+                                            .Where(v => !string.IsNullOrEmpty(v))
+                                            .Select(_ => Unit.Default))
+                 .Switch()
+                 .InvokeCommand(Settings.LoadModelsCmd);        
 
         Settings.LoadCmd
                 .Select(_ => Settings.WhenAnyValue(vm => vm.IsDirty))

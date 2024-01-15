@@ -14,15 +14,8 @@
 namespace MdcAi.Views;
 
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 using ViewModels;
-using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
 using ReactiveMarbles.ObservableEvents;
-using MdcAi.ChatUI.Views.GettingStartedTips;
-using System.Runtime.InteropServices;
 using WinRT.Interop;
 
 /// <summary>

@@ -16,10 +16,6 @@ namespace MdcAi.Extensions.WinUI;
 using Microsoft.UI.Xaml.Data;
 using SalaTools.Core;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 public class BindingTypeConverter : IValueConverter
 {

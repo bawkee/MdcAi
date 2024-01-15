@@ -13,10 +13,8 @@
 
 namespace MdcAi.ChatUI.LocalDal;
 
-using System.Diagnostics;
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage;
 
 public class UserProfileDbContext : DbContext
 {

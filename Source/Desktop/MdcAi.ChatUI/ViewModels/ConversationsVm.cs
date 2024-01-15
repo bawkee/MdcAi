@@ -14,7 +14,6 @@
 namespace MdcAi.ChatUI.ViewModels;
 
 using LocalDal;
-using System.Linq.Expressions;
 using CommunityToolkit.WinUI.UI;
 using Microsoft.EntityFrameworkCore;
 

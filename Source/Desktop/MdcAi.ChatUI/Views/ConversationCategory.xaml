@@ -11,7 +11,7 @@
   xmlns:viewModels="using:MdcAi.ChatUI.ViewModels"
   xmlns:winUi="using:MdcAi.Extensions.WinUI"
   mc:Ignorable="d"
-  Background="Transparent">
+  >
 
   <Page.Resources>
     <x:Double x:Key="SettingsCardWrapThreshold">800</x:Double>

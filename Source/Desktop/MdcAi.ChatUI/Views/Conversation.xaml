@@ -13,6 +13,7 @@
   xmlns:salaConverters="using:RxUIExt.WinUI.SalaConverters"
   xmlns:extensions="using:MdcAi.Extensions.WinUI"
   xmlns:viewModels="using:MdcAi.ChatUI.ViewModels"
+  xmlns:animations="using:CommunityToolkit.WinUI.Animations"
   mc:Ignorable="d">
 
   <UserControl.Resources>
@@ -161,7 +162,7 @@
 
       <Grid>
         <WebView2 x:Name="ChatWebView"
-                  DefaultBackgroundColor="Transparent"/>
+                  DefaultBackgroundColor="Transparent" />
 
         <!-- Stop generating button -->
         <Grid VerticalAlignment="Bottom"
@@ -185,97 +186,144 @@
         </Grid>
 
         <!-- Welcome notice -->
-        <Grid
+        <UserControl
           Visibility="{x:Bind ViewModel.ShowGettingStartedTips, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
 
-          <Border>
-            <Border.Background>
-              <ImageBrush ImageSource="ms-appx:///MdcAi.ChatUI/Assets/WideBackgroundTransparent.png"
-                          Stretch="UniformToFill"
-                          AlignmentX="Center"
-                          AlignmentY="Top" />
-            </Border.Background>
-          </Border>
+          <Grid>
+            <VisualStateManager.VisualStateGroups>
+              <VisualStateGroup>
+                <VisualState x:Name="Default">
 
-          <StackPanel
-            Margin="20"
-            HorizontalAlignment="Center"
-            VerticalAlignment="Center">
+                </VisualState>
 
-            <Border CornerRadius="5" Shadow="{StaticResource DropShadow}">
+                <VisualState x:Name="Compact">
+                  <VisualState.StateTriggers>
+                    <winUi:ControlSizeTrigger TargetElement="{x:Bind WelcomeNotice}" MaxHeight="250" />
+                  </VisualState.StateTriggers>
+                  <VisualState.Setters>
+                    <Setter Target="WelcomeContentScroll.Visibility" Value="Collapsed" />
+                  </VisualState.Setters>
+                </VisualState>
+              </VisualStateGroup>
+            </VisualStateManager.VisualStateGroups>
 
-              <Grid>
-                <Rectangle Fill="{ThemeResource OverlayMessageTint}" />
+            <Grid x:Name="WelcomeNotice">
+              <Border>
+                <Border.Background>
+                  <ImageBrush ImageSource="ms-appx:///MdcAi.ChatUI/Assets/WideBackgroundTransparent.png"
+                              Stretch="UniformToFill"
+                              AlignmentX="Center"
+                              AlignmentY="Top" />
+                </Border.Background>
+              </Border>
 
-                <!-- Welcoming notice, when AI is not ready -->
-                <Grid
-                  Visibility="{x:Bind ViewModel.IsAIReady, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=True, Mode=OneWay}"
-                  Padding="15">
-                  <StackPanel Spacing="10">
-                    <TextBlock Style="{ThemeResource TitleTextBlockStyle}">Welcome to MDC AI 👋</TextBlock>
-                    <TextBlock TextWrapping="Wrap">
-                      To be able to chat with AI, you will need an <Bold>OpenAI API Key</Bold> which is a pay-as-you-go subscription service
-                      that you can sign up for directly from
-                      <Hyperlink NavigateUri="https://openai.com/blog/openai-api">OpenAI website</Hyperlink>.
-                      It is a fast and straightforward process that takes 5 minutes. It costs
-                      <Hyperlink NavigateUri="https://help.openai.com/en/articles/8264644-what-is-prepaid-billing">as little as $5</Hyperlink>
-                      to get you started
-                      and you can extend the limit when and as you like.
+              <ScrollViewer x:Name="WelcomeContentScroll">
+
+                <animations:Implicit.ShowAnimations>
+                  <animations:TranslationAnimation Duration="0:0:0.2" From="0,-200,0" To="0" Repeat="1"/>
+                  <animations:OpacityAnimation Duration="0:0:0.2" From="0" To="1.0" Repeat="1"/>
+                </animations:Implicit.ShowAnimations>
+
+                <!-- Messes with the ViewHost. They both mess with various things but this one is too much. -->
+                <!--<animations:Implicit.HideAnimations>
+                  <animations:OpacityAnimation Duration="0:0:0.2" To="0"/>
+                  <animations:ScalarAnimation Target="Translation.Y" Duration="0:0:0.2" To="-200">
+                    <animations:ScalarKeyFrame Key="0.1" Value="30"/>
+                    <animations:ScalarKeyFrame Key="0.5" Value="0.0"/>
+                  </animations:ScalarAnimation>
+                </animations:Implicit.HideAnimations>-->
+
+                <StackPanel
+                  Margin="20"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center"
+                  x:Name="WelcomeNoticeContent"
+                  Visibility="Visible">
+
+                  <Border CornerRadius="5" Shadow="{StaticResource DropShadow}">
+
+                    <Grid>
+                      <Rectangle Fill="{ThemeResource OverlayMessageTint}" />
+
+                      <Grid>
+
+                        <!-- Welcoming notice, when AI is not ready -->
+                        <Grid
+                          Visibility="{x:Bind ViewModel.IsAIReady, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=True, Mode=OneWay}"
+                          Padding="15">
+                          <StackPanel Spacing="10">
+                            <TextBlock Style="{ThemeResource TitleTextBlockStyle}">Welcome to MDC AI 👋</TextBlock>
+                            <TextBlock TextWrapping="Wrap">
+                              To chat with AI, you'll need an <Bold>OpenAI API Key</Bold>. This service operates on a pay-as-you-go basis
+                              and is available for sign-up directly from the
+                              <Hyperlink NavigateUri="https://openai.com/blog/openai-api">OpenAI website</Hyperlink>.
+                              Enrollment is quick, taking approximately 5 minutes, and starting costs are
+                              <Hyperlink
+                                NavigateUri="https://help.openai.com/en/articles/8264644-what-is-prepaid-billing">
+                                as low as $5
+                              </Hyperlink>
+                              .
+                              Increase your limit anytime as needed.
+                            </TextBlock>
+
+                            <TextBlock TextWrapping="Wrap">
+                              To use your API key, go to the
+                              <Hyperlink
+                                winUi:HyperlinkExtensions.Command="{x:Bind ViewModel.Conversations.GoToSettingsCmd, Mode=OneWay}">
+                                settings page
+                              </Hyperlink>
+                              and paste it.
+                            </TextBlock>
+                          </StackPanel>
+                        </Grid>
+
+                        <!-- Getting started tips -->
+                        <c:DockPanel
+                          Visibility="{x:Bind ViewModel.IsAIReady, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+                          <StackPanel Margin="2">
+                            <TextBlock Style="{ThemeResource TitleTextBlockStyle}" Margin="15,5,15,5">
+                              Getting Started Tips
+                            </TextBlock>
+                            <NavigationView x:Name="TipsNavigationView"
+                                            PaneDisplayMode="Top"
+                                            IsSettingsVisible="False"
+                                            IsBackButtonVisible="Collapsed"
+                                            ItemInvoked="TipsNavigationView_OnItemInvoked"
+                                            SelectionChanged="TipsNavigationView_OnSelectionChanged"
+                                            Loaded="TipsNavigationView_OnLoaded">
+                              <NavigationView.MenuItems>
+                                <NavigationViewItem Content="Conversations" Tag="Conversations" />
+                                <NavigationViewItem Content="Categories" Tag="Categories" />
+                                <NavigationViewItem Content="Editing" Tag="Editing" />
+                                <NavigationViewItem Content="Settings" Tag="Settings" />
+                                <NavigationViewItem Content="Premise" Tag="Premise" />
+                              </NavigationView.MenuItems>
+                              <Frame x:Name="TipsContentFrame" Margin="10" />
+                            </NavigationView>
+                          </StackPanel>
+                        </c:DockPanel>
+                      </Grid>
+                    </Grid>
+
+                  </Border>
+
+                  <!-- Extra links, outside of the tinted border -->
+                  <StackPanel Margin="10" Spacing="10">
+                    <TextBlock HorizontalAlignment="Left">
+                      <Hyperlink Click="DontShowGettingStartedTip_OnClick">Don't show these tips anymore (can be re-enabled in Settings)</Hyperlink>
                     </TextBlock>
 
-                    <TextBlock TextWrapping="Wrap">
-                      To use your API key, go to the
-                      <Hyperlink
-                        winUi:HyperlinkExtensions.Command="{x:Bind ViewModel.Conversations.GoToSettingsCmd, Mode=OneWay}">
-                        settings page
-                      </Hyperlink>
-                      and paste it.
+                    <TextBlock
+                      HorizontalAlignment="Left"
+                      Visibility="{x:Bind ViewModel.GlobalSettings.ShowPrivacyStatementCmd, Converter={StaticResource NullToVisibilityConverter}, FallbackValue=Collapsed, Mode=OneWay}">
+                      <Hyperlink Click="ShowPrivacyHyperlink_OnClick">Your Privacy is Safe</Hyperlink>
                     </TextBlock>
                   </StackPanel>
-                </Grid>
-
-                <!-- Getting started tips -->
-                <c:DockPanel
-                  Visibility="{x:Bind ViewModel.IsAIReady, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
-                  <StackPanel Margin="2">
-                    <TextBlock Style="{ThemeResource TitleTextBlockStyle}" Margin="15,5,15,5">
-                      Getting Started Tips
-                    </TextBlock>
-                    <NavigationView x:Name="TipsNavigationView"
-                                    PaneDisplayMode="Top"
-                                    IsSettingsVisible="False"
-                                    IsBackButtonVisible="Collapsed"
-                                    ItemInvoked="TipsNavigationView_OnItemInvoked"
-                                    SelectionChanged="TipsNavigationView_OnSelectionChanged"
-                                    Loaded="TipsNavigationView_OnLoaded">
-                      <NavigationView.MenuItems>
-                        <NavigationViewItem Content="Conversations" Tag="Conversations" />
-                        <NavigationViewItem Content="Categories" Tag="Categories" />
-                        <NavigationViewItem Content="Editing" Tag="Editing" />
-                        <NavigationViewItem Content="Settings" Tag="Settings" />
-                        <NavigationViewItem Content="Premise" Tag="Premise" />
-                      </NavigationView.MenuItems>
-                      <Frame x:Name="TipsContentFrame" Margin="10" />
-                    </NavigationView>
-                  </StackPanel>
-                </c:DockPanel>
-              </Grid>
-            </Border>
-
-            <!-- Extra links, outside of the tinted border -->
-            <StackPanel Margin="10" Spacing="10">
-              <TextBlock HorizontalAlignment="Left">
-                <Hyperlink Click="DontShowGettingStartedTip_OnClick">Don't show these tips anymore (can be re-enabled in Settings)</Hyperlink>
-              </TextBlock>
-
-              <TextBlock
-                HorizontalAlignment="Left"
-                Visibility="{x:Bind ViewModel.GlobalSettings.ShowPrivacyStatementCmd, Converter={StaticResource NullToVisibilityConverter}, FallbackValue=Collapsed, Mode=OneWay}">
-                <Hyperlink Click="ShowPrivacyHyperlink_OnClick">Your Privacy is Safe</Hyperlink>
-              </TextBlock>
-            </StackPanel>
-          </StackPanel>
-        </Grid>
+                </StackPanel>
+              </ScrollViewer>
+            </Grid>
+          </Grid>
+        </UserControl>
 
         <!-- Settings override popup -->
         <ContentDialog x:Name="SettingsDialog"

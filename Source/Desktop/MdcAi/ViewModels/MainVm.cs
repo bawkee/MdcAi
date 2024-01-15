@@ -14,11 +14,7 @@ namespace MdcAi.ViewModels;
 using MdcAi.ChatUI.ViewModels;
 
 // MPV:
-// TODO: When making a new category auto select it
-// BUG: Add invalid key, everything gets fucked up, start with invalid key etc
-// BUG: Regenerate doesnt work after restart
-
-
+// ...
 
 // Other
 // TODO: Localisation

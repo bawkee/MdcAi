@@ -192,7 +192,8 @@ public class ConversationsVm : ViewModel
                                   .Do(cat =>
                                   {
                                       cat.Items.Add(cat.CreateNewItemPlaceholder());
-                                      Items.Add(cat);
+                                      Items.Insert(0, cat);
+                                      SelectedPreviewItem = cat;
                                   })
                                   .Select(_ => Unit.Default))
                   .Switch());

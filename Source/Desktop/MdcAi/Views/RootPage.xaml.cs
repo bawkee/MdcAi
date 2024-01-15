@@ -23,6 +23,7 @@ using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
 using ReactiveMarbles.ObservableEvents;
+using CommunityToolkit.WinUI;
 
 /// <summary>
 /// An empty page that can be used on its own or navigated to within a Frame.
@@ -84,6 +85,21 @@ public sealed partial class RootPage
                      .Do(i => viewModel.Conversations.SelectedPreviewItem ??= i)
                      .Take(1)
                      .Subscribe()
+                     .DisposeWith(disposables);
+
+            // Newly added category is supposed to be on the top so scroll to top
+            viewModel.Conversations.AddCategoryCmd
+                     .Throttle(TimeSpan.FromMilliseconds(500)) // Grace period for the thing to do the thing
+                     .ObserveOnMainThread()
+                     .Do(_ =>
+                     {
+                         // Could use https://learn.microsoft.com/en-us/windows/apps/design/controls/items-repeater#bringing-an-element-into-view
+                         // but we're too lazy aren't we
+                         var item = NavigationViewControl.ContainerFromMenuItem(NavigationViewControl.SelectedItem);
+                         var scrollViewer = item?.FindAscendant<ScrollViewer>();
+                         scrollViewer?.ChangeView(null, 0, null);
+                     })
+                     .SubscribeSafe()
                      .DisposeWith(disposables);
 
             viewModel.Conversations.GoToSettingsCmd = ReactiveCommand.Create(() =>

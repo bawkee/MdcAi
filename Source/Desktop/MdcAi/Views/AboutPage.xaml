@@ -11,8 +11,8 @@
   <Page.Resources>
   </Page.Resources>
 
-  <ScrollViewer Margin="-10">
-    <StackPanel Spacing="15" MaxWidth="400" Margin="10">
+  <ScrollViewer Margin="-20">
+    <StackPanel Spacing="15" MaxWidth="400" Margin="20">
       <StackPanel Orientation="Horizontal">
         <Image Width="64" Source="ms-appx:///Assets/Square44x44Logo.scale-200.png" />
 

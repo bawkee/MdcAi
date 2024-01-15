@@ -20,7 +20,7 @@
                    PrimaryButtonText="Close"
                    Margin="10">
       <ContentDialog.Resources>
-        <Thickness x:Key="ContentDialogPadding">10</Thickness>
+        <Thickness x:Key="ContentDialogPadding">20</Thickness>
       </ContentDialog.Resources>
       <views:AboutPage />
     </ContentDialog>

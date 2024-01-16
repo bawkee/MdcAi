@@ -161,6 +161,15 @@
       </c:DockPanel>
 
       <Grid>
+        <!-- We need this animation so this element doesn't stay shown while child show/hide animations are running when
+        the whole control is deactivated -->
+        <animations:Implicit.ShowAnimations>
+          <animations:OpacityAnimation Duration="0:0:0.1" To="1"/>
+        </animations:Implicit.ShowAnimations>
+        <animations:Implicit.HideAnimations>
+          <animations:OpacityAnimation Duration="0:0:0.1" To="0"/>
+        </animations:Implicit.HideAnimations>
+
         <WebView2 x:Name="ChatWebView"
                   DefaultBackgroundColor="Transparent" />
 
@@ -225,13 +234,13 @@
                 </animations:Implicit.ShowAnimations>
 
                 <!-- Messes with the ViewHost. They both mess with various things but this one is too much. -->
-                <!--<animations:Implicit.HideAnimations>
+                <animations:Implicit.HideAnimations>
                   <animations:OpacityAnimation Duration="0:0:0.2" To="0"/>
                   <animations:ScalarAnimation Target="Translation.Y" Duration="0:0:0.2" To="-200">
                     <animations:ScalarKeyFrame Key="0.1" Value="30"/>
                     <animations:ScalarKeyFrame Key="0.5" Value="0.0"/>
                   </animations:ScalarAnimation>
-                </animations:Implicit.HideAnimations>-->
+                </animations:Implicit.HideAnimations>
 
                 <StackPanel
                   Margin="20"

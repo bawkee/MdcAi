@@ -53,6 +53,7 @@
           <TextBlock><Run FontWeight="Bold">Starry Night</Run> by Titus Wormer</TextBlock>
           <TextBlock><Run FontWeight="Bold">Markdig</Run> by Alexandre Mutel</TextBlock>
           <TextBlock><Run FontWeight="Bold">.NET Community Toolkit</Run> by .NET Foundation</TextBlock>
+          <TextBlock><Run FontWeight="Bold">OpenAI-API-dotnet</Run> by Roger Pincombe</TextBlock>
           <TextBlock><Run FontWeight="Bold">Castle.Core</Run> by Castle Project</TextBlock>
           <TextBlock><Run FontWeight="Bold">FlexLabs</Run> Upsert by Artiom Chilaru</TextBlock>
           <TextBlock><Run FontWeight="Bold">Mapster</Run> by Chaowlert Chaisrichalermpol and Eric Swann</TextBlock>

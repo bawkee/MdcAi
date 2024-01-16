@@ -35,7 +35,13 @@ public sealed partial class RootPage
 
         InitializeComponent();
 
-        Loaded += (s, e) => ((App)Application.Current).Window.SetTitleBar(AppTitleBar);
+        Loaded += (s, e) =>
+        {            
+            ((App)Application.Current).Window.SetTitleBar(AppTitleBar);
+
+            // Fixes the hamburger button being cut-off b u g
+            NavigationViewControl.PaneDisplayMode = NavigationViewPaneDisplayMode.Auto;
+        };
 
         this.WhenActivated((disposables, viewModel) =>
         {

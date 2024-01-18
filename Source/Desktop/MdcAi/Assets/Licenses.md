@@ -1,4 +1,4 @@
-# MDC AI
+# Mdc AI
 https://github.com/bawkee/MdcAi
 
 Apache License

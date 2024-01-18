@@ -17,7 +17,7 @@ public static class Debugging
 {
     public static bool Enabled
 #if DEBUG        
-        = true; // Turns everything off (no debugging)
+        = false; // Turns everything off (no debugging)
 #else
         = false;
 #endif

@@ -35,7 +35,7 @@
                        Command="{x:Bind ViewModel.ShowPrivacyStatementCmd, Mode=OneWay}"
                        Visibility="{x:Bind ViewModel.ShowPrivacyStatementCmd, Converter={StaticResource NullToVisibilityConverter}, FallbackValue=Collapsed, Mode=OneWay}" />
 
-      <HyperlinkButton Content="About MDC AI..."
+      <HyperlinkButton Content="About Mdc AI..."
                        Command="{x:Bind ViewModel.ShowAboutCmd, Mode=OneWay}" />
 
       <HyperlinkButton Content="Open Logs Folder" Command="{x:Bind ViewModel.OpenAppStorageCmd, Mode=OneWay}" />

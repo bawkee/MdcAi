@@ -36,13 +36,11 @@
 # For a complete CI/CD sample to get started with GitHub Action workflows for Desktop Applications,
 # refer to https://github.com/microsoft/github-actions-for-desktop-apps
 
-name: .NET Desktop
+name: WinUI 3 MSIX app
 
 on:
   push:
-    branches: [ "main" ]
   pull_request:
-    branches: [ "main" ]
 
 jobs:
 
@@ -50,16 +48,16 @@ jobs:
 
     strategy:
       matrix:
-        configuration: [Debug, Release]
+        configuration: [Release]
+        platform: [x64]
 
     runs-on: windows-latest  # For a list of available runner types, refer to
                              # https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idruns-on
 
     env:
-      Solution_Name: MdcAi/Source/Desktop/MdcAi.sln                         # Replace with your solution name, i.e. MyWpfApp.sln.
-      #Test_Project_Path: your-test-project-path                 # Replace with the path to your test project, i.e. MyWpfApp.Tests\MyWpfApp.Tests.csproj.
-      Wap_Project_Directory: MdcAi/Source/Desktop/MdcAi    # Replace with the Wap project directory relative to the solution, i.e. MyWpfApp.Package.
-      Wap_Project_Path: MdcAi/Source/Desktop/MdcAi/MdcAi.csproj                   # Replace with the path to your Wap project, i.e. MyWpf.App.Package\MyWpfApp.Package.wapproj.
+      Solution_Name: Source/Desktop/MdcAi.sln
+      Wap_Project_Directory: Source/Desktop/MdcAi
+      Wap_Project_Path: Source/Desktop/MdcAi/MdcAi.csproj
 
     steps:
     - name: Checkout
@@ -67,8 +65,8 @@ jobs:
       with:
         fetch-depth: 0
 
-    # Install the .NET Core workload
-    - name: Install .NET Core
+    # Install the .NET workload
+    - name: Install .NET
       uses: actions/setup-dotnet@v3
       with:
         dotnet-version: 6.0.x
@@ -77,9 +75,9 @@ jobs:
     - name: Setup MSBuild.exe
       uses: microsoft/setup-msbuild@v1.0.2
 
-    # Execute all unit tests in the solution
-    - name: Execute unit tests
-      run: dotnet test
+    - name: Print Working Directory
+      run: pwd
+      shell: pwsh
 
     # Restore the application to populate the obj folder with RuntimeIdentifiers
     - name: Restore the application
@@ -96,20 +94,22 @@ jobs:
 
     # Create the app package by building and packaging the Windows Application Packaging project
     - name: Create the app package
-      run: msbuild $env:Wap_Project_Path /p:Configuration=$env:Configuration /p:UapAppxPackageBuildMode=$env:Appx_Package_Build_Mode /p:AppxBundle=$env:Appx_Bundle /p:PackageCertificateKeyFile=GitHubActionsWorkflow.pfx /p:PackageCertificatePassword=${{ secrets.Pfx_Key }}
+      run: msbuild $env:Solution_Name /p:Configuration=$env:Configuration /p:Platform=$env:Platform /p:UapAppxPackageBuildMode=$env:Appx_Package_Build_Mode /p:AppxBundle=$env:Appx_Bundle /p:PackageCertificateKeyFile=GitHubActionsWorkflow.pfx /p:AppxPackageDir=$env:Appx_Package_Dir /p:GenerateAppxPackageOnBuild=true /t:Publish /p:PublishReadyToRun=false /p:PackageCertificatePassword=${{ secrets.Pfx_Key }}
       env:
         Appx_Bundle: Always
         Appx_Bundle_Platforms: x86|x64
         Appx_Package_Build_Mode: StoreUpload
+        Appx_Package_Dir: Packages\
         Configuration: ${{ matrix.configuration }}
+        Platform: ${{ matrix.platform }}
 
     # Remove the pfx
     - name: Remove the pfx
       run: Remove-Item -path $env:Wap_Project_Directory\GitHubActionsWorkflow.pfx
 
     # Upload the MSIX package: https://github.com/marketplace/actions/upload-a-build-artifact
-    - name: Upload build artifacts
+    - name: Upload MSIX package
       uses: actions/upload-artifact@v3
       with:
         name: MSIX Package
-        path: ${{ env.Wap_Project_Directory }}\AppPackages
+        path: Source/Desktop/MdcAi/Packages

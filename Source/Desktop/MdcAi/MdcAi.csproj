@@ -5,34 +5,92 @@
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <RootNamespace>MdcAi</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Platforms>AnyCPU;x86;x64;ARM64</Platforms>
+    <Platforms>x86;x64;ARM64</Platforms>
     <RuntimeIdentifiers>win10-x86;win10-x64;win10-arm64</RuntimeIdentifiers>
-    <PublishProfile>win10-$(Platform).pubxml</PublishProfile>
-    <UseWinUI>true</UseWinUI>
-    <EnableMsixTooling>true</EnableMsixTooling>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>disable</Nullable>
-    <ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
-    <Release>True</Release>
-    <Release Condition="'$(Configuration)' == 'Debug'">False</Release>
-    <Packaged>True</Packaged>
-    <Optimized>True</Optimized>
-    <Optimized Condition="'$(Configuration)' == 'Debug'">False</Optimized>
+    <Configurations>Debug;Debug-Unpackaged;Release;Release-Unpackaged</Configurations>
+    <UseWinUI>True</UseWinUI>
+    <ImplicitUsings>Enable</ImplicitUsings>
+    <Nullable>Disable</Nullable>
+    <ErrorOnDuplicatePublishOutputFiles>False</ErrorOnDuplicatePublishOutputFiles>
+    <Packaged>False</Packaged>
+    <DebugType>portable</DebugType>
+    <Packaged Condition="'$(Configuration)' == 'Debug' Or '$(Configuration)' == 'Release'">True</Packaged>
+    <SingleProject>True</SingleProject>
+    <PublishSingleFile>False</PublishSingleFile>
     <ApplicationIcon>Assets\Icon.ico</ApplicationIcon>
+    <PublishProfile>win10-$(Platform).pubxml</PublishProfile>
   </PropertyGroup>
 
   <Target Name="DebugLog" BeforeTargets="Build">
     <Message Text="Configuration: $(Configuration)" Importance="High" />
-    <Message Text="Optimized: $(Optimized)" Importance="High" />
     <Message Text="Platform: $(Platform)" Importance="High" />
-    <Message Text="Publish profile: $(PublishProfile)" Importance="High" />
+    <Message Text="Packaged: $(Packaged)" Importance="High" />
+    <Message Text="TargetPlatformVersion: $(TargetPlatformVersion)" Importance="High" />
+    <Message Text="Optimized: $(Optimized)" Importance="High" />
+    <Message Text="AssetTargetFallback: $(AssetTargetFallback)" Importance="High" />
+    <Message Text="PublishProfile: $(PublishProfile)" Importance="High" />
+    <Message Text="MSBuildProjectDirectory: $(MSBuildProjectDirectory)" Importance="High" />
+    <Message Text="WindowsAppSdkSelfContained: $(WindowsAppSdkSelfContained)" Importance="High" />
+    <Message Text="DisableHasPackageAndPublishMenuAddedByProject: $(DisableHasPackageAndPublishMenuAddedByProject)" Importance="High" />
+    <Message Text="DisableMsixProjectCapabilityAddedByProject: $(DisableMsixProjectCapabilityAddedByProject)" Importance="High" />
   </Target>
 
-  <PropertyGroup Condition="'$(Packaged)' != 'true'">
-    <PublishProfile>win10-$(Platform)-unpackaged.pubxml</PublishProfile>
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug' Or '$(Configuration)' == 'Debug-Unpackaged'">
+    <Optimized>False</Optimized>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Release' Or '$(Configuration)' == 'Release-Unpackaged'">
+    <Release>True</Release>
+    <Optimized>True</Optimized>
+  </PropertyGroup>
+
+  <!-- UNPACKAGED -->
+  <PropertyGroup Condition="'$(Packaged)' != 'True'">
     <EnableMsixTooling>False</EnableMsixTooling>
     <WindowsPackageType>None</WindowsPackageType>
+    <PublishReadyToRun>True</PublishReadyToRun>
+    <!--https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/self-contained-deploy/deploy-self-contained-apps-->
+    <!--<WindowsAppSdkSelfContained>True</WindowsAppSdkSelfContained>-->
+    <!--<PublishTrimmed>$(Optimized)</PublishTrimmed>-->
+    <SelfContained Condition="'$(Configuration)' == 'Debug'">False</SelfContained>
+    <SelfContained Condition="'$(Configuration)' != 'Debug'">True</SelfContained>
   </PropertyGroup>
+
+  <!-- PACKAGED -->
+  <PropertyGroup Condition="'$(Packaged)' == 'True'">
+    <PublishAppxPackage>False</PublishAppxPackage>
+    <PublishReadyToRun>False</PublishReadyToRun>
+    <WindowsPackageType>MSIX</WindowsPackageType>
+    <AppxBundleNameForOutput>MdcAI</AppxBundleNameForOutput>
+    <EnableMsixTooling>True</EnableMsixTooling>
+    <SDKIdentifier>Windows</SDKIdentifier>
+    <DefaultLanguage>en-US</DefaultLanguage>
+    <AppxPackage>True</AppxPackage>
+    <UapAppxPackageBuildMode>StoreUpload</UapAppxPackageBuildMode>
+    <GenerateAppxPackageOnBuild>True</GenerateAppxPackageOnBuild>
+    <AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>
+    <GenerateAppInstallerFile>False</GenerateAppInstallerFile> <!-- !! -->
+    <AssetTargetFallback>net5.0-windows$(TargetPlatformVersion);net6.0-windows$(TargetPlatformVersion);$(AssetTargetFallback)</AssetTargetFallback>
+    <AppxPackageSigningTimestampDigestAlgorithm>SHA256</AppxPackageSigningTimestampDigestAlgorithm>
+    <AppxAutoIncrementPackageRevision>False</AppxAutoIncrementPackageRevision>
+    <GenerateTestArtifacts>True</GenerateTestArtifacts>
+    <AppxBundlePlatforms>$(Platform)</AppxBundlePlatforms>
+    <AppxBundlePlatforms Condition="'$(BuildAllAppFlavors)' == 'true'">x86|x64|ARM64</AppxBundlePlatforms>
+    <AppxBundle>Always</AppxBundle>
+    <HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
+    <SDKVersion>10.0</SDKVersion>
+    <PfxFile>$(MSBuildProjectDirectory)\..\build\WinUI-Gallery-Test.pfx</PfxFile>
+    <PackageCertificateKeyFile Condition="Exists('$(PfxFile)')">$(PfxFile)</PackageCertificateKeyFile>
+  </PropertyGroup>
+
+  <!-- 
+    Defining the "Msix" ProjectCapability here allows the Single-project MSIX Packaging
+    Tools extension to be activated for this project even if the Windows App SDK Nuget
+    package has not yet been restored.
+  -->
+  <ItemGroup Condition="'$(DisableMsixProjectCapabilityAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
+    <ProjectCapability Include="Msix" />
+  </ItemGroup>
 
   <ItemGroup>
     <None Remove="FodyWeavers.xml" />
@@ -43,10 +101,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <AppxManifest Include="Package.appxmanifest" Condition="'$(Release)' == 'true'">
+    <AppxManifest Include="Package.appxmanifest" Condition="'$(Release)' == 'True'">
       <SubType>Designer</SubType>
     </AppxManifest>
-    <AppxManifest Include="Package.Dev.appxmanifest" Condition="'$(Release)' == 'false'">
+    <AppxManifest Include="Package.Dev.appxmanifest" Condition="'$(Release)' == 'False'">
       <SubType>Designer</SubType>
     </AppxManifest>
   </ItemGroup>
@@ -62,23 +120,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.4.231219000" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="7.0.0" />
     <PackageReference Include="NLog" Version="5.2.8" />
     <PackageReference Include="NLog.Extensions.Logging" Version="5.3.8" />
     <PackageReference Include="PInvoke.User32" Version="0.7.124" />
     <PackageReference Include="ReactiveUI.Fody" Version="19.5.39" />
-    <!--<PackageReference Include="Microsoft.WindowsAppSDK" Version="1.4.231115000" />
-    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.22621.2428" />-->
     <Manifest Include="$(ApplicationManifest)" />
-  </ItemGroup>
-
-  <!-- 
-    Defining the "Msix" ProjectCapability here allows the Single-project MSIX Packaging
-    Tools extension to be activated for this project even if the Windows App SDK Nuget
-    package has not yet been restored.
-  -->
-  <ItemGroup Condition="'$(DisableMsixProjectCapabilityAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
-    <ProjectCapability Include="Msix" />
   </ItemGroup>
 
   <ItemGroup>
@@ -92,27 +140,6 @@
   -->
   <PropertyGroup Condition="'$(DisableHasPackageAndPublishMenuAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
     <HasPackageAndPublishMenu>true</HasPackageAndPublishMenu>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'">
-    <Optimize>False</Optimize>
-    <DebugType>portable</DebugType>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <Optimize>False</Optimize>
-    <DebugType>portable</DebugType>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
-    <Optimize>False</Optimize>
-    <DebugType>portable</DebugType>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x86'">
-    <DebugType>portable</DebugType>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <DebugType>portable</DebugType>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
-    <DebugType>portable</DebugType>
   </PropertyGroup>
 
   <ItemGroup>

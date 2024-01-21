@@ -4,8 +4,8 @@
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <RootNamespace>MdcAi.ChatUI</RootNamespace>
     <RuntimeIdentifiers>win10-x86;win10-x64;win10-arm64</RuntimeIdentifiers>
-    <Platforms>AnyCPU;x86;x64;ARM64</Platforms>
-    <UseWinUI>true</UseWinUI>
+    <Platforms>x86;x64;ARM64</Platforms>
+    <UseWinUI>True</UseWinUI>
   </PropertyGroup>
 
   <ItemGroup>

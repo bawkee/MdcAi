@@ -57,8 +57,23 @@
       <AppBarSeparator />
 
       <AppBarButton Icon="Edit" Label="Edit" Command="{x:Bind ViewModel.EditSelectedCmd, Mode=OneWay}" />
-      <AppBarButton Icon="Previous" Command="{x:Bind ViewModel.PrevVersionCmd, Mode=OneWay}" />
-      <AppBarButton Icon="Next" Command="{x:Bind ViewModel.NextVersionCmd, Mode=OneWay}" />
+
+      <AppBarButton Command="{x:Bind ViewModel.PrevVersionCmd, Mode=OneWay}"
+                    ToolTipService.ToolTip="Select previous version"
+                    LabelPosition="Collapsed"
+                    Width="40">
+        <AppBarButton.Icon>
+          <FontIcon Glyph="&#xE973;" />
+        </AppBarButton.Icon>
+      </AppBarButton>
+      <AppBarButton Command="{x:Bind ViewModel.NextVersionCmd, Mode=OneWay}"
+                    ToolTipService.ToolTip="Select next version"
+                    LabelPosition="Collapsed"
+                    Width="40">
+        <AppBarButton.Icon>
+          <FontIcon Glyph="&#xE974;" />
+        </AppBarButton.Icon>
+      </AppBarButton>
 
       <AppBarSeparator
         Visibility="{x:Bind extensions:Debugging.Enabled, Converter={StaticResource BoolToVisibilityConverter}}" />
@@ -164,10 +179,10 @@
         <!-- We need this animation so this element doesn't stay shown while child show/hide animations are running when
         the whole control is deactivated -->
         <animations:Implicit.ShowAnimations>
-          <animations:OpacityAnimation Duration="0:0:0.1" To="1"/>
+          <animations:OpacityAnimation Duration="0:0:0.1" To="1" />
         </animations:Implicit.ShowAnimations>
         <animations:Implicit.HideAnimations>
-          <animations:OpacityAnimation Duration="0:0:0.1" To="0"/>
+          <animations:OpacityAnimation Duration="0:0:0.1" To="0" />
         </animations:Implicit.HideAnimations>
 
         <WebView2 x:Name="ChatWebView"
@@ -229,16 +244,16 @@
               <ScrollViewer x:Name="WelcomeContentScroll">
 
                 <animations:Implicit.ShowAnimations>
-                  <animations:TranslationAnimation Duration="0:0:0.2" From="0,-200,0" To="0" Repeat="1"/>
-                  <animations:OpacityAnimation Duration="0:0:0.2" From="0" To="1.0" Repeat="1"/>
+                  <animations:TranslationAnimation Duration="0:0:0.2" From="0,-200,0" To="0" Repeat="1" />
+                  <animations:OpacityAnimation Duration="0:0:0.2" From="0" To="1.0" Repeat="1" />
                 </animations:Implicit.ShowAnimations>
 
                 <!-- Messes with the ViewHost. They both mess with various things but this one is too much. -->
                 <animations:Implicit.HideAnimations>
-                  <animations:OpacityAnimation Duration="0:0:0.2" To="0"/>
+                  <animations:OpacityAnimation Duration="0:0:0.2" To="0" />
                   <animations:ScalarAnimation Target="Translation.Y" Duration="0:0:0.2" To="-200">
-                    <animations:ScalarKeyFrame Key="0.1" Value="30"/>
-                    <animations:ScalarKeyFrame Key="0.5" Value="0.0"/>
+                    <animations:ScalarKeyFrame Key="0.1" Value="30" />
+                    <animations:ScalarKeyFrame Key="0.5" Value="0.0" />
                   </animations:ScalarAnimation>
                 </animations:Implicit.HideAnimations>
 

@@ -18,6 +18,8 @@ using MdcAi.ChatUI.ViewModels;
 // MPV:
 // ...
 
+// TODO: Use gpt4 turbo for name generation, try it at least
+
 // Other
 // TODO: Localisation
 

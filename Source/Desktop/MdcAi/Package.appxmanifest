@@ -8,15 +8,15 @@
   IgnorableNamespaces="uap rescap">
 
   <Identity
-    Name="MdcAiApp"
-    Publisher="CN=BSALA"
+    Name="58458BojanSala.MdcAI"
+    Publisher="CN=794D9916-319E-4C20-AC8E-45F221035842"
     Version="1.0.0.0" />
 
   <mp:PhoneIdentity PhoneProductId="690077de-96af-43d4-aab6-9a6df601f4c8" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
     <DisplayName>Mdc AI</DisplayName>
-    <PublisherDisplayName>BSALA</PublisherDisplayName>
+    <PublisherDisplayName>Bojan Sala</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
 
@@ -39,13 +39,14 @@
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"
         Square44x44Logo="Assets\Square44x44Logo.png">
-        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" />
+        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png"  ShortName="Mdc AI" Square71x71Logo="Assets\SmallTile.png" Square310x310Logo="Assets\LargeTile.png">
+          <uap:ShowNameOnTiles>
+            <uap:ShowOn Tile="square150x150Logo"/>
+            <uap:ShowOn Tile="wide310x150Logo"/>
+            <uap:ShowOn Tile="square310x310Logo"/>
+          </uap:ShowNameOnTiles>
+        </uap:DefaultTile >
         <uap:SplashScreen Image="Assets\SplashScreen.png" />
-        <uap:InitialRotationPreference>
-          <uap:Rotation Preference="landscape"/>
-          <uap:Rotation Preference="portrait"/>
-          <uap:Rotation Preference="portraitFlipped"/>
-          <uap:Rotation Preference="landscapeFlipped"/></uap:InitialRotationPreference>
       </uap:VisualElements>
     </Application>
   </Applications>

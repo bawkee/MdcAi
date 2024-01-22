@@ -19,6 +19,9 @@
     <PublishSingleFile>False</PublishSingleFile>
     <ApplicationIcon>Assets\Icon.ico</ApplicationIcon>
     <PublishProfile>win10-$(Platform).pubxml</PublishProfile>
+    <PackageCertificateThumbprint>2BBD96CDF43B6F6A88092E09330B507911AC2FB3</PackageCertificateThumbprint>
+    <PackageCertificateKeyFile>MdcAi_TemporaryKey.pfx</PackageCertificateKeyFile>
+    <AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>
   </PropertyGroup>
 
   <Target Name="DebugLog" BeforeTargets="Build">
@@ -36,6 +39,7 @@
   </Target>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Debug' Or '$(Configuration)' == 'Debug-Unpackaged'">
+    <Release>False</Release>
     <Optimized>False</Optimized>
   </PropertyGroup>
 
@@ -68,10 +72,10 @@
     <AppxPackage>True</AppxPackage>
     <UapAppxPackageBuildMode>StoreUpload</UapAppxPackageBuildMode>
     <GenerateAppxPackageOnBuild>True</GenerateAppxPackageOnBuild>
-    <AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>
+    <!--<AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>-->
+    <!--<AppxPackageSigningTimestampDigestAlgorithm>SHA256</AppxPackageSigningTimestampDigestAlgorithm>-->
     <GenerateAppInstallerFile>False</GenerateAppInstallerFile> <!-- !! -->
     <AssetTargetFallback>net5.0-windows$(TargetPlatformVersion);net6.0-windows$(TargetPlatformVersion);$(AssetTargetFallback)</AssetTargetFallback>
-    <AppxPackageSigningTimestampDigestAlgorithm>SHA256</AppxPackageSigningTimestampDigestAlgorithm>
     <AppxAutoIncrementPackageRevision>False</AppxAutoIncrementPackageRevision>
     <GenerateTestArtifacts>True</GenerateTestArtifacts>
     <AppxBundlePlatforms>$(Platform)</AppxBundlePlatforms>
@@ -82,6 +86,15 @@
     <PfxFile>$(MSBuildProjectDirectory)\..\build\WinUI-Gallery-Test.pfx</PfxFile>
     <PackageCertificateKeyFile Condition="Exists('$(PfxFile)')">$(PfxFile)</PackageCertificateKeyFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <AppxManifest Include="Package.appxmanifest" Condition="'$(Release)' == 'True'">
+      <SubType>Designer</SubType>
+    </AppxManifest>
+    <AppxManifest Include="Package.Dev.appxmanifest" Condition="'$(Release)' == 'False'">
+      <SubType>Designer</SubType>
+    </AppxManifest>
+  </ItemGroup>
 
   <!-- 
     Defining the "Msix" ProjectCapability here allows the Single-project MSIX Packaging
@@ -101,21 +114,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <AppxManifest Include="Package.appxmanifest" Condition="'$(Release)' == 'True'">
-      <SubType>Designer</SubType>
-    </AppxManifest>
-    <AppxManifest Include="Package.Dev.appxmanifest" Condition="'$(Release)' == 'False'">
-      <SubType>Designer</SubType>
-    </AppxManifest>
-  </ItemGroup>
-
-  <ItemGroup>
     <Content Include="Assets\SplashScreen.scale-200.png" />
     <Content Include="Assets\LockScreenLogo.scale-200.png" />
     <Content Include="Assets\Square150x150Logo.scale-200.png" />
     <Content Include="Assets\Square44x44Logo.scale-200.png" />
     <Content Include="Assets\Square44x44Logo.targetsize-24_altform-unplated.png" />
-    <Content Include="Assets\StoreLogo.png" />
     <Content Include="Assets\Wide310x150Logo.scale-200.png" />
   </ItemGroup>
 

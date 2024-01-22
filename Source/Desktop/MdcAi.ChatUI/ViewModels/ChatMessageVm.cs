@@ -1,4 +1,5 @@
 ﻿#region Copyright Notice
+
 // Copyright (c) 2023 Bojan Sala
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -9,6 +10,7 @@
 //   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
+
 #endregion
 
 namespace MdcAi.ChatUI.ViewModels;
@@ -25,7 +27,7 @@ public class ChatMessageVm : ViewModel
 {
     public string Id { get; set; }
     public string Role { get; set; }
-    public ChatMessageSelectorVm Selector { get; }    
+    public ChatMessageSelectorVm Selector { get; }
     [Reactive] public string Content { get; set; }
     [Reactive] public string HTMLContent { get; set; }
     public DateTime CreatedTs { get; set; }
@@ -36,6 +38,10 @@ public class ChatMessageVm : ViewModel
 
     public ReactiveCommand<Unit, string> CompleteCmd { get; }
     public ReactiveCommand<Unit, Unit> StopCompletionCmd { get; }
+
+    private static readonly MarkdownPipeline _mdPipeline;
+
+    static ChatMessageVm() { _mdPipeline = new MarkdownPipelineBuilder().UseAdvancedExtensions().Build(); }
 
     public ChatMessageVm(ConversationVm conversation,
                          string role,
@@ -75,11 +81,11 @@ public class ChatMessageVm : ViewModel
                    .ObserveOnMainThread()
                    .Do(i => IsCompleting = i)
                    .SubscribeSafe();
-       
+
         const string stopMd = " *[Answer Cut Short by User]*";
         const string caretMd = "'%caret%'";
         const string caretHtml = "<span id=\"caret\"/>";
-        
+
         this.WhenAnyValue(vm => vm.Content)
             .Throttle(TimeSpan.FromMilliseconds(50))
             .ObserveOnMainThread()
@@ -99,7 +105,7 @@ public class ChatMessageVm : ViewModel
                 if (c.Trim().EndsWith("```"))
                     actualCaretMd = $"\r\n{caretMd}";
 
-                var html = Markdown.ToHtml(c + actualCaretMd)
+                var html = Markdown.ToHtml(c + actualCaretMd, _mdPipeline)
                                    .Replace(caretMd, caretHtml);
 
                 return html;
@@ -141,7 +147,7 @@ public class ChatMessageVm : ViewModel
                    .Replace("\r", "<br />");
 
     private async Task<string> GenerateResponse()
-    {        
+    {
         if (Debugging.Enabled && Debugging.MockMessages)
         {
             await Task.Delay(500);

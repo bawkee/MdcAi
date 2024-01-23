@@ -16,10 +16,6 @@ namespace MdcAi.ViewModels;
 using MdcAi.ChatUI.ViewModels;
 
 // MPV:
-// ...
-
-// TODO: Use gpt4 turbo for name generation, try it at least
-// TODO: Make it aware that it is inside MDC AI
 
 // BUG: When an error happens, editing the message wont work anymmore?
 

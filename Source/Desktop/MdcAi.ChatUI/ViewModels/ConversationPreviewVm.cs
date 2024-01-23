@@ -77,11 +77,14 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationPreviewI
                             new ChatMessage(
                                 ChatMessageRole.System,
                                 // This prompt doesn't really give the expected results with 3.5
-                                "Given the content provided by the user, you are to create witty yet concise names, with a maximum of 20 characters, excluding any form of punctuation or line breaks. The names should be complete words or phrases, avoiding any cutoffs. A sprinkle of humor is welcome, as long as it adheres to the character limit. Maximum 20 characters!"
+                                "Create a witty summary of the content with a maximum of 20 characters. Do not use " +
+                                "punctuation or line breaks. The names should be complete words or phrases, avoiding " +
+                                "any cutoffs. A sprinkle of humor is welcome, as long as it adheres to the character " +
+                                "limit. Maximum 20 characters!"
                             ),
                             new ChatMessage(
                                 ChatMessageRole.User,
-                                convo.Head.Message.Content)
+                                $"CONTENT:\r\n\r\n{convo.Head.Message.Content}")
                         }),
                     Model = AiModel.GPT35Turbo
                 });

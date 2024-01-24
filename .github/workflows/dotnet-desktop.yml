@@ -44,7 +44,7 @@ jobs:
 
     # Build
     - name: Build the app
-      run: msbuild $env:Solution_Name /p:Configuration=$env:Configuration /p:Platform=$env:Platform /p:Packaged=False /t:Publish
+      run: msbuild $env:Solution_Name /p:Configuration=$env:Configuration /p:Platform=$env:Platform /p:Packaged=False /t:Publish /p:PublishReadyToRun=False
       env:
         Configuration: ${{ matrix.configuration }}
         Platform: ${{ matrix.platform }}

@@ -14,6 +14,16 @@ Harness the mighty prowess of the public OpenAI GPT-4 API with MDC AI, your soph
 - Maintain discussion focus with Edit, steering conversations into new realms. Trim and direct dialogue with precision; MDC AI recalls your chosen forks, preserving context across sessions.
 - Cut down on AI expenses with flexible OpenAI API's pay-as-you-go approach, bypassing subscriptions. Delve into MDC AI's tips and guides to master GPT AI efficiencies and stretch your dollar further.
 
+## Why Yet Another GPT Wrapper?
+
+This is the only native, Windows desktop GPT App that:
+
+- Has a clear privacy policy, is free, safe, secure and does not simply serve as a lead to some paid product or monetizes in some other, sneaky fashion. Your API key is safe with this app, there are no ulterior motives.
+- Has a sleek UI that resembles Chat GPT, where markdown Just Works™, where you can select content and copy it with no problems and can search content via `Ctrl+F`. It is more compact than Chat GPT and displays conversations in compact, full-width mode which is great for code listings, tables and long documents.  
+- Offers Edit functionality just like Chat GPT, with added feature where it remembers where you left off with your edits, unlike Chat GPT which restarts your message version selection. Edit is pivotal if you want to save $ on tokens or just keep your sanity in long conversations, don't tell the AI to "take a step back" or such, just edit the message and fork the conversation.
+- Uses actual Windows native UI technology which respects your Windows theme settings, dark/light modes, accent colors and looks consistent with other Windows apps. It automatically adapts UI to your device (tablet/desktop), DPI settings, multi-monitor setups, battery performance settings, etc. by letting Windows manage it.
+- Allows you to change AI settings and the "Premise" setting (GPT system message) in the middle of a conversation or across categories. This is extremely useful. If you have a PDF or a Word document you want to "discuss" on, just create a Category with that document as the premise and ask away. This is how all those "pdf chat" apps work anyway. GPT4 Turbo has a massive token limit so you won't need embeddings in 99% of use cases.
+
 ## Screenshots
 
 ![CodingAssistant](https://github.com/bawkee/MdcAi/assets/38323343/86b40491-5075-49ba-853b-7654a7c61b1f)

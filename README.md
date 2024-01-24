@@ -2,6 +2,8 @@
 
 # MDC Ai
 
+![WinUI3 Unpackaged](https://github.com/bawkee/mdcai/actions/workflows/dotnet-desktop.yml/badge.svg?event=push)
+
 Native Windows desktop GPT assistant app, which is your portal to the very powerful Open AI API.
 
 Harness the mighty prowess of the public OpenAI GPT-4 API with MDC AI, your sophisticated Windows desktop AI companion. Your privacy and security are safe in your hands, as there are no intermediary services involved.

@@ -15,13 +15,6 @@ namespace MdcAi.ViewModels;
 
 using MdcAi.ChatUI.ViewModels;
 
-// MPV:
-
-// BUG: When an error happens, editing the message wont work anymmore?
-
-// Other
-// TODO: Localisation
-
 [Singleton]
 public class MainVm : ActivatableViewModel
 {

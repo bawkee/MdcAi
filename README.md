@@ -8,6 +8,12 @@ Native Windows desktop GPT assistant app, which is your portal to the very power
 
 Harness the mighty prowess of the public OpenAI GPT-4 API with MDC AI, your sophisticated Windows desktop AI companion. Your privacy and security are safe in your hands, as there are no intermediary services involved.
 
+<a href="https://apps.microsoft.com/detail/MDC%20AI/9NW24N9W33C9?launch=true&mode=mini">
+	<img src="https://get.microsoft.com/images/en-us%20dark.svg" width="200"/>
+</a>
+
+Click on the above Windows Store badge to install MDC AI. There is no direct/unofficial download yet.
+
 ![DarkWhiteModes](https://github.com/bawkee/MdcAi/assets/38323343/7c525d68-9910-4d74-a6f6-dbc3395df8e3)
 
 - Craft Your Own AI Genie: Customize AI personalities to your liking with our user-friendly settings. Why settle for a one-size-fits-some AI? With MDC AI, you get a digital assistant tuned to your whimsy. No grumbling, lazy, half-baked responses!

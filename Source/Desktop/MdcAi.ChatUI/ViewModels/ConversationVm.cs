@@ -445,7 +445,9 @@ public class ConversationVm : ActivatableViewModel
                           .Skip(1)
                           .Where(i => !i)
                           .Select(_ => Unit.Default),
-                      DeleteSelectedCmd)
+                      DeleteSelectedCmd,
+                      NextVersionCmd,
+                      PrevVersionCmd)
                   .Throttle(TimeSpan.FromMilliseconds(500))
                   .Select(_ => Unit.Default)
                   .InvokeCommand(SaveCmd);

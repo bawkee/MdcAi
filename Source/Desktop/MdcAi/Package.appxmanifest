@@ -15,7 +15,7 @@
   <mp:PhoneIdentity PhoneProductId="690077de-96af-43d4-aab6-9a6df601f4c8" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
-    <DisplayName>Mdc AI</DisplayName>
+    <DisplayName>MDC AI</DisplayName>
     <PublisherDisplayName>Bojan Sala</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
@@ -34,7 +34,7 @@
       Executable="$targetnametoken$.exe"
       EntryPoint="$targetentrypoint$">
       <uap:VisualElements
-        DisplayName="Mdc AI"
+        DisplayName="MDC AI"
         Description="Multipurpose desktop conversational AI. Use your OpenAI API key to converse with GPT in this native fluent Windows app powered by WebView2."
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"

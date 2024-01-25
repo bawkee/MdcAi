@@ -32,6 +32,15 @@ This is the only native, Windows desktop GPT App that:
 - Uses actual Windows native UI technology which respects your Windows theme settings, dark/light modes, accent colors and looks consistent with other Windows apps. It automatically adapts UI to your device (tablet/desktop), DPI settings, multi-monitor setups, battery performance settings, etc. by letting Windows manage it.
 - Allows you to change AI settings and the "Premise" setting (GPT system message) in the middle of a conversation or across categories. This is extremely useful. If you have a PDF or a Word document you want to "discuss" on, just create a Category with that document as the premise and ask away. This is how all those "pdf chat" apps work anyway. GPT4 Turbo has a massive token limit so you won't need embeddings in 99% of use cases.
 
+## Is it free?
+
+Yes it is totally free and open-source. It asks nothing of you, _but_ you can certainly help by: 
+- Reporting issues and bugs
+- Suggesting new feaures and ideas
+- Submitting a review on the app store and adding a star on this GitHub repo
+- Contributing to the code base if you have dev experience
+- Spreading the word and promoting the app further
+
 ## Screenshots
 
 ![CodingAssistant](https://github.com/bawkee/MdcAi/assets/38323343/86b40491-5075-49ba-853b-7654a7c61b1f)

@@ -1,4 +1,5 @@
 ﻿#region Copyright Notice
+
 // Copyright (c) 2023 Bojan Sala
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -9,6 +10,7 @@
 //   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
+
 #endregion
 
 namespace MdcAi.ChatUI.ViewModels;
@@ -40,7 +42,6 @@ public class ConversationVm : ActivatableViewModel
     [Reactive] public bool IsAIReady { get; private set; }
     [Reactive] public AiModel[] Models { get; private set; }
     [Reactive] public bool IsLoadingModels { get; private set; }
-    [Reactive] public bool IsDirty { get; private set; } = true;
     [Reactive] public bool IsTrash { get; set; }
     [Reactive] public bool CanSendPrompt { get; private set; }
     [Reactive] public bool CanEdit { get; private set; }
@@ -280,7 +281,6 @@ public class ConversationVm : ActivatableViewModel
                                 IdSettingsOverride = convo.IdSettingsOverride;
                                 IsTrash = convo.IsTrash;
                                 Head = convo.Messages.FromDbMessages(this);
-                                IsDirty = false;
                                 IsNew = false;
                             }));
 
@@ -394,6 +394,8 @@ public class ConversationVm : ActivatableViewModel
                     var save = Observable.FromAsync(
                         async () =>
                         {
+                            Debug.WriteLine("Saving");
+
                             var convo = this.ToDbConversation();
                             var existingConvo = await token.Ctx.Conversations.FirstOrDefaultAsync(c => c.IdConversation == Id);
 
@@ -423,12 +425,9 @@ public class ConversationVm : ActivatableViewModel
                            .ObserveOnMainThread()
                            .Do(_ =>
                            {
-                               IsDirty = false;
                                IsNew = false;
                            });
-                }),
-            this.WhenAnyValue(vm => vm.IsDirty, vm => vm.Messages.Count)
-                .Select(_ => IsDirty && Messages.Count > 0));
+                }));
 
         this.WhenAnyValue(vm => vm.Tail)
             .Where(t => t?.Message?.Role == ChatMessageRole.System)
@@ -473,22 +472,6 @@ public class ConversationVm : ActivatableViewModel
             .ObserveOnMainThread()
             .Do(c => CategoryName = c.Name)
             .SubscribeSafe();
-
-        LoadCmd.Select(_ => this.WhenAnyValue(vm => vm.IsDirty)
-                                .Where(v => !v))
-               .Switch()
-               .Select(_ => Observable.CombineLatest(
-                                          this.WhenAnyValue(vm => vm.Messages)
-                                              .Select(i => HashCode.Combine(i.Select(j => j.Content?.GetHashCode() ?? 0))),
-                                          this.WhenAnyValue(vm => vm.Name).Select(i => i?.GetHashCode() ?? 0),
-                                          this.WhenAnyValue(vm => vm.IdCategory).Select(i => i?.GetHashCode() ?? 0))
-                                      .Select(i => HashCode.Combine(i))
-                                      .Skip(1)
-                                      .DistinctUntilChanged()
-                                      .Take(1))
-               .Switch()
-               .Do(_ => IsDirty = true)
-               .SubscribeSafe();
 
         this.WhenAnyValue(vm => vm.ShowGettingStartedTips,
                           vm => vm.IsNew,

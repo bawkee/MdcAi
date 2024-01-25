@@ -8,3 +8,6 @@
 
 // BUGS
 // BUG: When an error happens, editing the message wont work anymmore?
+
+// NICE TO HAVE
+// - Back button stack should maybe involve Settings pane as well

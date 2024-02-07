@@ -48,7 +48,7 @@ public class ConversationsVm : ViewModel
             // on top.
             const string categoriesSql =
                 @"SELECT * 
-                    FROM Categories 
+                    FROM Categories WHERE IsTrash = 0 
                     ORDER BY MIN(10, (SELECT COUNT(*) 
                                         FROM Conversations C 
                                         WHERE C.IdCategory = IdCategory) 

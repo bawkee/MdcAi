@@ -23,7 +23,7 @@ using OpenAiApi;
 /// <summary>
 /// This is a doubly linked list, plus each message can diverge and we keep all the versions.
 /// </summary>
-public class ChatMessageVm : ViewModel
+public class ChatMessageVm : ViewModel, ILogging
 {
     public string Id { get; set; }
     public string Role { get; set; }
@@ -102,6 +102,7 @@ public class ChatMessageVm : ViewModel
 
                 // Hacky hack
                 var actualCaretMd = caretMd;
+
                 if (c.Trim().EndsWith("```"))
                     actualCaretMd = $"\r\n{caretMd}";
 
@@ -111,6 +112,7 @@ public class ChatMessageVm : ViewModel
                 return html;
             })
             .Do(h => HTMLContent = h)
+            .LogAndRetry(this)
             .SubscribeSafe();
 
         this.WhenAnyValue(vm => vm.Content)

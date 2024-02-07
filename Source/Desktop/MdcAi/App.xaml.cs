@@ -115,8 +115,6 @@ public partial class App : ILogging
     {
         this.LogError(ex);
 
-        Debug.WriteLine($"Thr {Thread.CurrentThread.ManagedThreadId}");
-
         if (_errorDialogOpen)
             return;
 

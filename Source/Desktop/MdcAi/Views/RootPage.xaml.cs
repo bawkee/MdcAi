@@ -1,4 +1,5 @@
 #region Copyright Notice
+
 // Copyright (c) 2023 Bojan Sala
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -9,6 +10,7 @@
 //   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
+
 #endregion
 
 namespace MdcAi.Views;
@@ -36,7 +38,7 @@ public sealed partial class RootPage
         InitializeComponent();
 
         Loaded += (s, e) =>
-        {            
+        {
             ((App)Application.Current).Window.SetTitleBar(AppTitleBar);
 
             // Fixes the hamburger button being cut-off b u g
@@ -86,12 +88,16 @@ public sealed partial class RootPage
                                    .Select(_ => c.Items.FirstOrDefault(i => i.IsNewPlaceholder))
                                    .WhereNotNull())
                      .Switch()
+                     // This fixes the crashing, apparently not showing this at all won't fix it but showing it 
+                     // 1 second later instead, fixes it. The stack overflow happens otherwise, when building the
+                     // chat message linked list. Fuck. Me. WinUI is some piece of work.
+                     .Throttle(TimeSpan.FromSeconds(1))
                      .ObserveOnMainThread()
                      .Do(i => viewModel.Conversations.SelectedPreviewItem ??= i)
                      .Take(1)
                      .Subscribe()
                      .DisposeWith(disposables);
-
+           
             // Newly added category is supposed to be on the top so scroll to top
             viewModel.Conversations.AddCategoryCmd
                      .Throttle(TimeSpan.FromMilliseconds(500)) // Grace period for the thing to do the thing

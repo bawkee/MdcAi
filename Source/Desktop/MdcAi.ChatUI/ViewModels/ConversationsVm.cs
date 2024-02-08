@@ -1,4 +1,5 @@
 ﻿#region Copyright Notice
+
 // Copyright (c) 2023 Bojan Sala
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -9,6 +10,7 @@
 //   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
+
 #endregion
 
 namespace MdcAi.ChatUI.ViewModels;
@@ -24,7 +26,7 @@ public class ConversationsVm : ViewModel
     public ObservableCollectionExtended<IConversationPreviewItem> Items { get; } = new();
     public AdvancedCollectionView ItemsView { get; private set; }
     public ObservableCollection<IConversationPreviewItem> TrashBin { get; } = new();
-    public ObservableCollection<IConversationPreviewItem> SelectionHistory { get; } = new();
+    public ObservableCollection<object> SelectionHistory { get; } = new();
     [Reactive] public bool ShowUndoDelete { get; private set; }
     [Reactive] public bool IsBackEnabled { get; private set; }
 
@@ -33,7 +35,7 @@ public class ConversationsVm : ViewModel
     public Interaction<ConversationPreviewVm, string> RenameIntr { get; } = new();
     public ReactiveCommand<Unit, Unit> AddCategoryCmd { get; }
     public Interaction<Unit, string> AddCategoryIntr { get; } = new();
-    public ReactiveCommand<Unit, Unit> GoBackCmd { get; }    
+    public ReactiveCommand<Unit, Unit> GoBackCmd { get; }
     public ReactiveCommand<Unit, Unit> GoToSettingsCmd { get; set; }
 
     public ConversationsVm()
@@ -226,7 +228,7 @@ public class ConversationsVm : ViewModel
                          // Linq won't work here since we have duplicate items (as expected)
                          for (var i = SelectionHistory.Count - 1; i >= 0; i--)
                          {
-                             if (SelectionHistory[i].IsTrash)
+                             if (SelectionHistory[i] is IConversationPreviewItem { IsTrash: true })
                                  continue;
                              SelectedPreviewItem = SelectionHistory[i];
                              SelectionHistory.RemoveAt(i);
@@ -241,16 +243,15 @@ public class ConversationsVm : ViewModel
                          this.WhenAnyValue(vm => vm.SelectedPreviewItem))
                   .Do(_ =>
                   {
-                      var lastItem = SelectionHistory.LastOrDefault(i => !i.IsTrash);
+                      var lastItem = SelectionHistory.LastOrDefault(i => i is not IConversationPreviewItem { IsTrash: true });
                       IsBackEnabled = lastItem != null && SelectedPreviewItem != lastItem;
                   })
                   .SubscribeSafe();
 
         // Maintain selection history
         this.WhenAnyValue(vm => vm.SelectedPreviewItem)
-            .As<IConversationPreviewItem>()
             .WhereNotNull()
-            .PairWithPrevious()            
+            .PairWithPrevious()
             .Where(_ => !goingBack) // Prevent reentrancy when going back
             .Select(p => p.Item1)
             .WhereNotNull()

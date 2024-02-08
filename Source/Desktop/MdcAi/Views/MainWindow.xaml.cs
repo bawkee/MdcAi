@@ -33,13 +33,15 @@ public sealed partial class MainWindow
 
         SetIcon("Assets\\Icon.ico");
 
+        Title = "MDC AI";
+
         ExtendsContentIntoTitleBar = true;
 
         this.Events()
             .Activated
             .Take(1)
             .Do(_ => ViewModel.Activator.Activate())
-            .SubscribeSafe();
+            .SubscribeSafe();        
 
         PrivacyInfoWindow privacyInfoWnd = null;
 

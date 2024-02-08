@@ -8,6 +8,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Platforms>AnyCPU;x64;x86;ARM64</Platforms>
     <EnableMsixTooling>True</EnableMsixTooling>
+    <AssemblyVersion>1.0.1.0</AssemblyVersion>
   </PropertyGroup>
 
   <ItemGroup>

@@ -1,4 +1,4 @@
-# Privacy Policy for Mdc AI
+# Privacy Policy for MDC AI
 
 Effective date: 01/01/2024
 

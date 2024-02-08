@@ -276,7 +276,7 @@
                           Visibility="{x:Bind ViewModel.IsAIReady, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=True, Mode=OneWay}"
                           Padding="15">
                           <StackPanel Spacing="10">
-                            <TextBlock Style="{ThemeResource TitleTextBlockStyle}">Welcome to Mdc AI 👋</TextBlock>
+                            <TextBlock Style="{ThemeResource TitleTextBlockStyle}">Welcome to MDC AI 👋</TextBlock>
                             <TextBlock TextWrapping="Wrap">
                               To chat with AI, you'll need an <Bold>OpenAI API Key</Bold>. This service operates on a pay-as-you-go basis
                               and is available for sign-up directly from the

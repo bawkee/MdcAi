@@ -34,8 +34,8 @@
       Executable="$targetnametoken$.exe"
       EntryPoint="$targetentrypoint$">
       <uap:VisualElements
-        DisplayName="Mdc AI Dev"
-        Description="Mdc AI (Dev Version)"
+        DisplayName="MDC AI Dev"
+        Description="MDC AI (Dev Version)"
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"
         Square44x44Logo="Assets\Square44x44Logo.png">

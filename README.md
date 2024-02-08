@@ -49,6 +49,7 @@ Yes it is totally free and open-source. It asks nothing of you, _but_ you can ce
 - Fixed a bug where app could hang when long conversations are selected first after starting the app.
 - Deleted categories will no longer magically reappear after restart.
 - Fixed a few odd markdown rendering errors that would otherwise require app restart.
+- When completion generation error happens, a friendlier message will show up and user will be able to retry.
 
 ## Screenshots
 

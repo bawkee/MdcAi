@@ -67,9 +67,10 @@ public class ChatMessageVm : ViewModel, ILogging
                                         CreateGenerationStream()
                                             .TakeUntil(StopCompletionCmd)
                                             .Scan("", (a, b) => a + b) :
-                                        Observable.FromAsync(async () => await GenerateResponse())
+                                        Observable.FromAsync(() => GenerateResponse())
                                                   .TakeUntil(StopCompletionCmd))
-                            .Switch());
+                            .Switch()
+                            .Catch((Exception ex) => Observable.Throw<string>(new CompletionException(ex))));
 
         CompleteCmd.ObserveOnMainThread()
                    .Do(c => Content = c)
@@ -193,11 +194,11 @@ public class ChatMessageVm : ViewModel, ILogging
             messages.Insert(0, currentParent.CreateMessageRequest());
             currentParent = currentParent.Previous;
         }
-        
+
         // This is the spice, hard coded, because not including this could lead to trouble such as various md syntax
         // bugs and the AI mistakenly thinking it's on the OpenAI's chat bot. I left room to answer whatever it wants
         // or is instructed to previously, but still make it aware that it's inside this app nonetheless.
-        const string premiseSpice = 
+        const string premiseSpice =
             " Use md syntax and be sure to specify language for code blocks. SIDE NOTE: " +
             "For your awareness (and if asked), you are an AI used inside MDC AI which is " +
             "a Windows desktop app.";
@@ -224,4 +225,10 @@ public class ChatMessageVm : ViewModel, ILogging
             Content = Content,
             Role = Role
         };
+}
+
+public class CompletionException : Exception
+{
+    public CompletionException(Exception innerEx)
+        : base("There was en error while generating the response. You may try again by clicking the Regenerate button.", innerEx) { }
 }

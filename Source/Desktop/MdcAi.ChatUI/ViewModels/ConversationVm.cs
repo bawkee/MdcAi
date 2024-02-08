@@ -555,6 +555,7 @@ public class ConversationVm : ActivatableViewModel
                 .Do(x => x.Tail.Message.Next = x.Completion)
                 .Select(x => x.Completion.CompleteCmd.Execute())
                 .Switch()
+                .Retry()
                 .SubscribeSafe()
                 .DisposeWith(disposables);
 

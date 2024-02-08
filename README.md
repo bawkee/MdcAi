@@ -41,6 +41,15 @@ Yes it is totally free and open-source. It asks nothing of you, _but_ you can ce
 - Contributing to the code base if you have dev experience
 - Spreading the word and promoting the app further
 
+## Version 1.0.1.0 Released
+
+- Fixed a bug where only the first two messages get saved with new conversations.
+- Fixed a bug where selecting message versions without doing anything else would not remember the current version.
+- Settings pane is now involved in the Back button (top left) logic.
+- Fixed a bug where app could hang when long conversations are selected first after starting the app.
+- Deleted categories will no longer magically reappear after restart.
+- Fixed a few odd markdown rendering errors that would otherwise require app restart.
+
 ## Screenshots
 
 ![CodingAssistant](https://github.com/bawkee/MdcAi/assets/38323343/86b40491-5075-49ba-853b-7654a7c61b1f)

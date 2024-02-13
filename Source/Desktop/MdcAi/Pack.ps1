@@ -1,5 +1,13 @@
-#msbuild MdcAi.csproj /p:Configuration=Release /p:UapAppxPackageBuildMode=StoreUpload /p:AppxBundle=Always /p:Platform=x64
-#dotnet publish MdcAi.csproj -c Release -p:UapAppxPackageBuildMode=StoreUpload -p:AppxBundle=Always -r win-x64
-#dotnet publish --configuration Release /p:Platform="x64"
+$platforms = @('x64', 'x86', 'ARM64')
+$msbuild = "C:\Program Files\Microsoft Visual Studio\2022\Professional\MSBuild\Current\Bin\MSBuild.exe"
 
-dotnet publish --configuration Release /p:Platform="x64" -p:UapAppxPackageBuildMode=StoreUpload -p:AppxBundle=Always
+foreach ($platform in $platforms) {
+    & $msbuild `
+      /p:Configuration=Release `
+      /p:Platform=$platform `
+      /p:UapAppxPackageBuildMode=StoreUpload `
+      /p:AppxBundle=Always `
+      /p:Packaged=True `
+      /t:Publish `
+      /p:PublishReadyToRun=False
+}

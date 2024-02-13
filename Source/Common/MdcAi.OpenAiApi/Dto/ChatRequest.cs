@@ -54,7 +54,7 @@ public class ChatRequest
         }
     }
 
-    [JsonProperty("max_tokens")] public int? MaxTokens { get; set; }
+    [JsonProperty("max_tokens")] public int? MaxTokens { get; set; } // This is for output tokens and max is 4096 for majority of models
     [JsonProperty("frequency_penalty")] public double? FrequencyPenalty { get; set; }
     [JsonProperty("presence_penalty")] public double? PresencePenalty { get; set; }
     [JsonProperty("logit_bias")] public IReadOnlyDictionary<string, float> LogitBias { get; set; }

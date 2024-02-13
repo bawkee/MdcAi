@@ -10,7 +10,7 @@
   <Identity
     Name="58458BojanSala.MdcAI"
     Publisher="CN=794D9916-319E-4C20-AC8E-45F221035842"
-    Version="1.0.0.0" />
+    Version="1.0.1.0" />
 
   <mp:PhoneIdentity PhoneProductId="690077de-96af-43d4-aab6-9a6df601f4c8" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 

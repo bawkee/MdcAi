@@ -230,5 +230,7 @@ public class ChatMessageVm : ViewModel, ILogging
 public class CompletionException : Exception
 {
     public CompletionException(Exception innerEx)
-        : base("There was en error while generating the response. You may try again by clicking the Regenerate button.", innerEx) { }
+        : base("There was en error while generating the response. " +
+               $"You may try again by clicking the Regenerate button.\r\n\r\nError message:\r\n{innerEx.Message}",
+               innerEx) { }
 }

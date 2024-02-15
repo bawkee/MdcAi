@@ -41,7 +41,7 @@ Yes it is totally free and open-source. It asks nothing of you, _but_ you can ce
 - Contributing to the code base if you have dev experience
 - Spreading the word and promoting the app further
 
-## Version 1.0.1.0 Will Soon be Released 👇
+## Version 1.0.2.0 Will Soon be Released 👇
 
 - Fixed a bug where only the first two messages get saved with new conversations.
 - Fixed a bug where selecting message versions without doing anything else would not remember the current version.

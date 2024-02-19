@@ -22,7 +22,7 @@
     <PackageCertificateThumbprint>2BBD96CDF43B6F6A88092E09330B507911AC2FB3</PackageCertificateThumbprint>
     <PackageCertificateKeyFile>MdcAi_TemporaryKey.pfx</PackageCertificateKeyFile>
     <AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>
-    <AssemblyVersion>1.0.1.0</AssemblyVersion>
+    <AssemblyVersion>1.0.2.0</AssemblyVersion>
   </PropertyGroup>
 
   <Target Name="DebugLog" BeforeTargets="Build">

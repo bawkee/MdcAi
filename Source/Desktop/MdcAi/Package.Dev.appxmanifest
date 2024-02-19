@@ -10,7 +10,7 @@
   <Identity
     Name="MdcAiApp.Dev"
     Publisher="CN=BSALA"
-    Version="1.0.1.0" />
+    Version="1.0.2.0" />
 
   <mp:PhoneIdentity PhoneProductId="690077de-96af-43d4-aab6-9a6df601f4c8" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 

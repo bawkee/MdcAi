@@ -23,7 +23,7 @@ public class ChatSettingsVm : ViewModel
     [Reactive] public string IdSettings { get; set; }
     [Reactive] public string Model { get; set; }
 #if DEBUG
-        = AiModel.GPT35Turbo;
+        = AiModel.Gpt35Turbo;
 #else
         = AiModel.GPT4Turbo;
 #endif

@@ -30,6 +30,7 @@ public class ChatMessageRole : IEquatable<ChatMessageRole>
 
     public static ChatMessageRole System { get; } = new("system");
     public static ChatMessageRole User { get; } = new("user");
+    public static ChatMessageRole Tool { get; } = new("tool");
     public static ChatMessageRole Assistant { get; } = new("assistant");
    
     public override bool Equals(object obj) => Value.Equals((obj as ChatMessageRole)?.Value);

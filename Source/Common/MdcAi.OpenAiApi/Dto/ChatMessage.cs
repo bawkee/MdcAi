@@ -36,4 +36,19 @@ public class ChatMessage
     [JsonProperty("role")] public string Role { get; set; } = ChatMessageRole.User;
     [JsonProperty("content")] public string Content { get; set; }
     [JsonProperty("name")] public string Name { get; set; }
+    [JsonProperty("tool_calls")] public ChatMessageToolCall[] ToolCalls { get; set; }
+    [JsonProperty("tool_call_id")] public string ToolCallId { get; set; }
+}
+
+public class ChatMessageToolCall
+{
+    [JsonProperty("id")] public string Id { get; set; }
+    [JsonProperty("type")] public string Type { get; set; }
+    [JsonProperty("function")] public ChatMessageFunction Function { get; set; }
+}
+
+public class ChatMessageFunction
+{
+    [JsonProperty("arguments")] public string Arguments { get; set; }
+    [JsonProperty("name")] public string Name { get; set; }
 }

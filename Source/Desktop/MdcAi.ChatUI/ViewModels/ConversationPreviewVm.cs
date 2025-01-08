@@ -86,7 +86,7 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationPreviewI
                                 ChatMessageRole.User,
                                 $"CONTENT:\r\n\r\n{convo.Head.Message.Content}")
                         }),
-                    Model = AiModel.GPT35Turbo
+                    Model = AiModel.Gpt35Turbo
                 });
 
                 var suggestion = result.Choices.Last().Message.Content.CompactWhitespace().Trim('\"');

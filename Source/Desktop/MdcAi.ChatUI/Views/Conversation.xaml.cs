@@ -44,7 +44,8 @@ public sealed partial class Conversation : ILogging
 
         var initCoreConn = Observable.FromAsync(async () =>
                                      {
-                                         await ChatWebView.EnsureCoreWebView2Async();
+                                         await ChatWebView.EnsureCoreWebView2Async();                                         
+                                         // This can still return null, for whatever reason, means that WebView2 didn't work
                                          return ChatWebView.CoreWebView2;
                                      })
                                      .ObserveOnMainThread()

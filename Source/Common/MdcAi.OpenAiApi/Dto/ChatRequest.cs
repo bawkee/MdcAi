@@ -1,4 +1,5 @@
 ﻿#region Copyright Notice
+
 // Copyright (c) 2023 Bojan Sala
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -9,13 +10,14 @@
 //   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
+
 #endregion
 
 namespace MdcAi.OpenAiApi;
 
 public class ChatRequest
 {
-    [JsonProperty("model")] public string Model { get; set; } = AiModel.GPT35Turbo;
+    [JsonProperty("model")] public string Model { get; set; } = AiModel.Gpt35Turbo;
     [JsonProperty("messages")] public IList<ChatMessage> Messages { get; set; }
     [JsonProperty("temperature")] public double? Temperature { get; set; }
     [JsonProperty("top_p")] public double? TopP { get; set; }
@@ -60,6 +62,8 @@ public class ChatRequest
     [JsonProperty("logit_bias")] public IReadOnlyDictionary<string, float> LogitBias { get; set; }
     [JsonProperty("user")] public string User { get; set; }
 
+    [JsonProperty("tools")] public ChatTool[] Tools { get; set; }
+
     public ChatRequest() { }
 
     public ChatRequest(ChatRequest basedOn)
@@ -78,4 +82,31 @@ public class ChatRequest
         PresencePenalty = basedOn.PresencePenalty;
         LogitBias = basedOn.LogitBias;
     }
+}
+
+public class ChatTool
+{
+    [JsonProperty("type")] public string Type { get; set; }
+    [JsonProperty("function")] public FunctionTool Function { get; set; }
+}
+
+public class FunctionTool
+{
+    [JsonProperty("name")] public string Name { get; set; }
+    [JsonProperty("description")] public string Description { get; set; }
+    [JsonProperty("parameters")] public FunctionToolParams Parameters { get; set; }
+}
+
+public class FunctionToolParams
+{
+    [JsonProperty("type")] public string Type { get; set; }
+    [JsonProperty("properties")] public Dictionary<string, FunctionToolParamProperty> Properties { get; set; }
+    [JsonProperty("required")] public string[] Required { get; set; }
+    [JsonProperty("additionalProperties")] public bool AdditionalProperties { get; set; }
+}
+
+public class FunctionToolParamProperty
+{
+    [JsonProperty("type")] public string Type { get; set; }
+    [JsonProperty("description")] public string Description { get; set; }
 }

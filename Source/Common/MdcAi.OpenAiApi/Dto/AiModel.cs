@@ -38,10 +38,10 @@ public class AiModel
     public AiModel(string name) { ModelID = name; }
 
     public static AiModel AdaTextEmbedding => new AiModel("text-embedding-ada-002") { OwnedBy = "openai" };
-    public static AiModel GPT35Turbo => new AiModel("gpt-3.5-turbo-1106") { OwnedBy = "openai" };
-    public static AiModel GPT35Turbo0301 => new AiModel("gpt-3.5-turbo-0301") { OwnedBy = "openai" };
-    public static AiModel GPT4Turbo => new AiModel("gpt-4-1106-preview") { OwnedBy = "openai" };
-    public static AiModel GPT4 => new AiModel("gpt-4") { OwnedBy = "openai" };
+    public static AiModel Gpt35Turbo => new AiModel("gpt-3.5-turbo-1106") { OwnedBy = "openai" };
+    public static AiModel Gpt4Turbo => new AiModel("gpt-4-1106-preview") { OwnedBy = "openai" };
+    public static AiModel Gpt4 => new AiModel("gpt-4") { OwnedBy = "openai" };
+    public static AiModel Gpt4o => new AiModel("gpt-4o") { OwnedBy = "openai" };
 
     public override string ToString() => ModelID;
 }

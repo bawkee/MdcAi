@@ -4,9 +4,7 @@
 
 ![WinUI3 Unpackaged](https://github.com/bawkee/mdcai/actions/workflows/dotnet-desktop.yml/badge.svg?event=push)
 
-Native Windows desktop GPT assistant app, which is your portal to the very powerful Open AI API.
-
-Harness the mighty prowess of the public OpenAI GPT-4 API with MDC AI, your sophisticated Windows desktop AI companion. Your privacy and security are safe in your hands, as there are no intermediary services involved.
+Native Windows desktop GPT agent app, which is your portal to the very powerful OpenAI API. This is a BYOK app (bring your own key). Privacy of your conversations is guaranteed, unlike with web agents. No intermediary services are involved, it's just you and the stateless API.
 
 <a href="https://apps.microsoft.com/detail/MDC%20AI/9NW24N9W33C9?launch=true&mode=mini">
 	<img src="https://get.microsoft.com/images/en-us%20dark.svg" width="200"/>
@@ -16,11 +14,24 @@ Click on the above Windows Store badge to install MDC AI. There is no direct/uno
 
 ![DarkWhiteModes](https://github.com/bawkee/MdcAi/assets/38323343/7c525d68-9910-4d74-a6f6-dbc3395df8e3)
 
-- Craft Your Own AI Genie: Customize AI personalities to your liking with our user-friendly settings. Why settle for a one-size-fits-some AI? With MDC AI, you get a digital assistant tuned to your whimsy. No grumbling, lazy, half-baked responses!
-- Easily select, copy, search and browse through the conversation thorugh powerful integrated Edge WebView2 renderer. Snappy, fast and powerful MDC AI UI allows you to quickly and easily find the message you are looking for in your history. Read AI messages, tables, programming codes and such in full width of the screen.
-- Effortlessly navigate your conversations with the robust Edge WebView2 renderer integrated into MDC AI. Our interface is designed for precision and speed, ensuring that locating a specific message in your history is a breeze. Experience the clarity of AI-generated messages, tables, programming code, and more — all displayed elegantly across the full width of the window.
-- Maintain discussion focus with Edit, steering conversations into new realms. Trim and direct dialogue with precision; MDC AI recalls your chosen forks, preserving context across sessions.
-- Cut down on AI expenses with flexible OpenAI API's pay-as-you-go approach, bypassing subscriptions. Delve into MDC AI's tips and guides to master GPT AI efficiencies and stretch your dollar further.
+## Planned Features
+- Vector database of all the conversations so that:
+	- Semantic search can be done to easily find past chats.
+ 	- New conversations can be augmented with past ones, if the user chooses.
+- Multimodality with image-to-text and text-to-image capabilities (DALL-E).
+- Custom tools, aka function calling, in a nutshell a possibility to describe a Python class or Powershell script that the LLM can run during a conversation. For example, define a Powershell script that deactivates an active directory user, so if that LLM determines that you wish to deactivate the user, it will ask you for required parameters (i.e. username) and execute the script, outputting results.
+- An automated retrieval-augmented generation pipeline to be implemented using local storage. This includes a vector knowledge database of locally stored documents (such as PDFs and Word files) in a specified folder, enabling users to easily ask questions about their documents. Being a desktop app gives it a huge benefit of not having to upload large documents or pay for remote vector storage, you could theoretically put an entire library in it.
+- Multimodality to be extended to use self-hosted Flux or Stable Diffusion for image-to-image generation, as well as inpainting and outpainting of existing images. Being a desktop app, it would have the potential to auto-install the entire desired AI pipeline.
+- Implementing other API endpoints such as Claude, DeepSeek and Mistral.
+- Ability to auto-install and use self-hosted LLMs, similar to other chat UIs.
+
+## Current Features
+- Custom personalities (assistants), each with different parameters, models and system prompts.
+- Integrated full-width Markdown renderer via WebView2. Unlike other desktop apps, where output is simple and unformatted (or barely formatted) text, this app formats source code, headings, paragraphs, bullet lists, etc. The output is fully selectable and snappy.
+- Advanced Edit functionality, the Edit button allows you to create infinite number of nested forks within a conversation, branching out in different directions. Unlike in other apps and web UIs, nested forks are supported, and the app remembers your current fork, allowing you to continue where you left off. Why forking? Because it can save massive amount of credits, reducing token usage by up to 95% - few people know, but every time you stack another message to previous ones, even when you say "forget past messages", the LLM, being stateless, will still re-evaluate the entire stack of messages and charge all the tokens regardless.
+- Full chat history that loads up instantly so you can scroll through hundreds of past chats and load them in an instant.
+- Privacy. Unlike with Chat GPT subscriptions, your prompts are not saved or stored anywhere other than your computer. With subscription-based agents, your prompts are used for training and stored on an external database, which is vulnerable to hacking. The API used by external agents is statless.
+- Costs and rate limits. OpenAI API pay-as-you-go approach, combined with the Edit functionality, can save you a lot of money in the long run. You are also free from standard rate limits when you need the LLM the most.
 
 ## Why Yet Another GPT Wrapper?
 
@@ -34,10 +45,11 @@ This is the only native, Windows desktop GPT App that:
 
 ## Is it free?
 
-Yes it is totally free and open-source. It asks nothing of you, _but_ you can certainly help by: 
+Yes, it is completely free and open source. While it asks nothing of you, you can help by: 
+- Rating it on the Microsoft store
+- Adding a star on this GitHub repo
 - Reporting issues and bugs
-- Suggesting new feaures and ideas
-- Submitting a review on the app store and adding a star on this GitHub repo
+- Suggesting new features and ideas
 - Contributing to the code base if you have dev experience
 - Spreading the word and promoting the app further
 

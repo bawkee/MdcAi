@@ -19,8 +19,7 @@
     <PublishSingleFile>False</PublishSingleFile>
     <ApplicationIcon>Assets\Icon.ico</ApplicationIcon>
     <PublishProfile>win10-$(Platform).pubxml</PublishProfile>
-    <PackageCertificateThumbprint>2BBD96CDF43B6F6A88092E09330B507911AC2FB3</PackageCertificateThumbprint>
-    <PackageCertificateKeyFile>MdcAi_TemporaryKey.pfx</PackageCertificateKeyFile>
+    <PackageCertificateThumbprint>DF463945E94380421CE239F13B5931AA7BA7199C</PackageCertificateThumbprint>
     <AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>
     <AssemblyVersion>1.0.2.0</AssemblyVersion>
   </PropertyGroup>

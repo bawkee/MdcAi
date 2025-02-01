@@ -244,8 +244,7 @@ public class ConversationVm : ActivatableViewModel
         });
 
         LoadModelsCmd.ObserveOnMainThread()
-                     .Do(models => Models = models.Where(m => m.ModelID.StartsWith("gpt"))
-                                                  .ToArray())
+                     .Do(models => Models = models.ToArray())
                      .SubscribeSafe();
 
         LoadModelsCmd.IsExecuting

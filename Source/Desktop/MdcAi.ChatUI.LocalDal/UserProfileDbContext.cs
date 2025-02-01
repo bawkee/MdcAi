@@ -96,7 +96,7 @@ public class UserProfileDbContext : DbContext
         new()
         {
             IdSettings = id,
-            Model = "gpt-4-1106-preview",
+            Model = "o1-mini",
             Streaming = true,
             FrequencyPenalty = 1,
             PresencePenalty = 1,

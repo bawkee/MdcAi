@@ -103,7 +103,7 @@ public class ChatSettingsVm : ViewModel
         });
 
         LoadModelsCmd.ObserveOnMainThread()
-                     .Do(models => Models = models.ToArray())
+                     .Do(models => Models = models.Where(m => m.IsGpt || m.IsReasoning).ToArray())
                      .SubscribeSafe();
 
         LoadModelsCmd.IsExecuting

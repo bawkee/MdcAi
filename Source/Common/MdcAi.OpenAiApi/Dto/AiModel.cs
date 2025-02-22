@@ -14,6 +14,7 @@
 namespace MdcAi.OpenAiApi;
 
 using Newtonsoft.Json.Converters;
+using System.Text.RegularExpressions;
 
 internal class AiModels
 {
@@ -42,6 +43,10 @@ public class AiModel
     public static AiModel Gpt4Turbo => new AiModel("gpt-4-1106-preview") { OwnedBy = "openai" };
     public static AiModel Gpt4 => new AiModel("gpt-4") { OwnedBy = "openai" };
     public static AiModel Gpt4o => new AiModel("gpt-4o") { OwnedBy = "openai" };
+    public static AiModel O1Mini => new AiModel("o1-mini") { OwnedBy = "openai" };
+
+    public bool IsGpt => ModelID.StartsWith("gpt");
+    public bool IsReasoning => new Regex(@"o\d.*").IsMatch(ModelID);
 
     public override string ToString() => ModelID;
 }

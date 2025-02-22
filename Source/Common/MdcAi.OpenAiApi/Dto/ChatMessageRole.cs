@@ -17,18 +17,10 @@ public class ChatMessageRole : IEquatable<ChatMessageRole>
 {
     private ChatMessageRole(string value) { Value = value; }
 
-    public static ChatMessageRole FromString(string roleName) =>
-        roleName switch
-        {
-            "system" => System,
-            "user" => User,
-            "assistant" => Assistant,
-            _ => null
-        };
-
     private string Value { get; }
 
-    public static ChatMessageRole System { get; } = new("system");
+    public static ChatMessageRole System { get; } = new("developer");
+    public static ChatMessageRole Developer { get; } = new("developer");
     public static ChatMessageRole User { get; } = new("user");
     public static ChatMessageRole Tool { get; } = new("tool");
     public static ChatMessageRole Assistant { get; } = new("assistant");

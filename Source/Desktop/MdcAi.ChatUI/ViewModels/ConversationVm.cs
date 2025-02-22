@@ -244,7 +244,7 @@ public class ConversationVm : ActivatableViewModel
         });
 
         LoadModelsCmd.ObserveOnMainThread()
-                     .Do(models => Models = models.ToArray())
+                     .Do(models => Models = models.Where(m => m.IsReasoning || m.IsGpt).ToArray())
                      .SubscribeSafe();
 
         LoadModelsCmd.IsExecuting

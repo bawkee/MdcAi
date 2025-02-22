@@ -75,7 +75,7 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationPreviewI
                         new[]
                         {                            
                             new ChatMessage(
-                                ChatMessageRole.System,
+                                ChatMessageRole.Developer,
                                 // This prompt doesn't really give the expected results with 3.5
                                 "Create a witty summary of the content with a maximum of 20 characters. Do not use " +
                                 "punctuation or line breaks. The names should be complete words or phrases, avoiding " +

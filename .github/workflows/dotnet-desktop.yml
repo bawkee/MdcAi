@@ -51,7 +51,7 @@ jobs:
 
     # Upload: https://github.com/marketplace/actions/upload-a-build-artifact
     - name: Upload build output
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: Build Output
         path: Source/Desktop/MdcAi/bin

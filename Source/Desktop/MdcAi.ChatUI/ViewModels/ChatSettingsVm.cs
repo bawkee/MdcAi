@@ -25,7 +25,7 @@ public class ChatSettingsVm : ViewModel
 #if DEBUG
         = AiModel.Gpt35Turbo;
 #else
-        = AiModel.GPT4Turbo;
+        = AiModel.Gpt4Turbo;
 #endif
     [Reactive] public string SelectedModel { get; set; } // Allows user to pick a different model
 

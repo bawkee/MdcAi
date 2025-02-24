@@ -6,7 +6,7 @@
 
 Native Windows desktop GPT agent app, which is your portal to the very powerful OpenAI API. This is a BYOK app (bring your own key). Privacy of your conversations is guaranteed, unlike with web agents. No intermediary services are involved, it's just you and the stateless API.
 
-⚠ NOTE: This app requires an OpenAI API Key to operate. However, due to Microsoft Store's demand to censor any mention of "OpenAI" (now a restricted trademark), it has been removed from the platform. I will create an unpackaged installer instead to replace it, soon enough.
+⚠ NOTE: This app requires an OpenAI API Key to operate. However, due to Microsoft Store's demand to censor any mention of "OpenAI" (now a restricted trademark), it has been pulled down. I am working with Microsoft to resolve this. Also, I will create an easier to use unpackaged installer as well.
 
 <a href="https://apps.microsoft.com/detail/MDC%20AI/9NW24N9W33C9?launch=true&mode=mini">
 	<img src="https://get.microsoft.com/images/en-us%20dark.svg" width="200"/>

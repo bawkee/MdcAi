@@ -30,8 +30,10 @@ public static class HttpClientExtensions
             result.RequestId = headers.GetValues("X-Request-ID").FirstOrDefault();
             result.ProcessingTime = TimeSpan.FromMilliseconds(int.Parse(headers.GetValues("Openai-Processing-Ms").First()));
             result.OpenaiVersion = headers.GetValues("Openai-Version").FirstOrDefault();
-            if (string.IsNullOrEmpty(result.Model))
-                result.Model = headers.GetValues("Openai-Model").FirstOrDefault();
+
+            // No longer supported...
+            //if (string.IsNullOrEmpty(result.Model))
+            //    result.Model = headers.GetValues("Openai-Model").FirstOrDefault();
         }
         catch (Exception ex)
         {

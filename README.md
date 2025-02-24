@@ -2,7 +2,7 @@
 
 # MDC Ai
 
-![WinUI3 Unpackaged](https://github.com/bawkee/mdcai/actions/workflows/dotnet-desktop.yml/badge.svg?event=push)
+[![WinUI3 Unpackaged](https://github.com/bawkee/mdcai/actions/workflows/dotnet-desktop.yml/badge.svg?event=push)](https://github.com/bawkee/mdcai/actions/workflows/dotnet-desktop.yml)
 
 Native Windows desktop GPT agent app, which is your portal to the very powerful OpenAI API. This is a BYOK app (bring your own key). Privacy of your conversations is guaranteed, unlike with web agents. No intermediary services are involved, it's just you and the stateless API.
 
@@ -12,7 +12,11 @@ Native Windows desktop GPT agent app, which is your portal to the very powerful 
 	<img src="https://get.microsoft.com/images/en-us%20dark.svg" width="200"/>
 </a>
 
-Click on the above Windows Store badge to install MDC AI. There is no direct/unofficial download yet.
+Click on the above Windows Store badge to install MDC AI. 
+
+To download an unpackaged version of the app (no Microsoft Store, no installation), you can either: 
+- Download the [latest stable release](https://github.com/bawkee/MdcAi/releases) or
+- Click on the build-passing badge, click to the latest workflow and scroll down to Artifacts section to download the output.
 
 ![DarkWhiteModes](https://github.com/bawkee/MdcAi/assets/38323343/7c525d68-9910-4d74-a6f6-dbc3395df8e3)
 

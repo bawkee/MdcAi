@@ -11,9 +11,9 @@
     <UseWinUI>True</UseWinUI>
     <ImplicitUsings>Enable</ImplicitUsings>
     <Nullable>Disable</Nullable>
-    <ErrorOnDuplicatePublishOutputFiles>False</ErrorOnDuplicatePublishOutputFiles>
-    <Packaged>False</Packaged>
+    <ErrorOnDuplicatePublishOutputFiles>False</ErrorOnDuplicatePublishOutputFiles>    
     <DebugType>portable</DebugType>
+    <Packaged>False</Packaged>
     <Packaged Condition="'$(Configuration)' == 'Debug' Or '$(Configuration)' == 'Release'">True</Packaged>
     <SingleProject>True</SingleProject>
     <PublishSingleFile>False</PublishSingleFile>
@@ -21,7 +21,7 @@
     <PublishProfile>win10-$(Platform).pubxml</PublishProfile>
     <PackageCertificateThumbprint>DF463945E94380421CE239F13B5931AA7BA7199C</PackageCertificateThumbprint>
     <AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>
-    <AssemblyVersion>1.0.2.0</AssemblyVersion>
+    <AssemblyVersion>1.0.2.0</AssemblyVersion>    
   </PropertyGroup>
 
   <Target Name="DebugLog" BeforeTargets="Build">
@@ -37,7 +37,7 @@
     <Message Text="DisableHasPackageAndPublishMenuAddedByProject: $(DisableHasPackageAndPublishMenuAddedByProject)" Importance="High" />
     <Message Text="DisableMsixProjectCapabilityAddedByProject: $(DisableMsixProjectCapabilityAddedByProject)" Importance="High" />
   </Target>
-
+  
   <PropertyGroup Condition="'$(Configuration)' == 'Debug' Or '$(Configuration)' == 'Debug-Unpackaged'">
     <Release>False</Release>
     <Optimized>False</Optimized>
@@ -50,14 +50,15 @@
 
   <!-- UNPACKAGED -->
   <PropertyGroup Condition="'$(Packaged)' != 'True'">
+    <DefineConstants>$(DefineConstants);UNPACKAGED</DefineConstants>
     <EnableMsixTooling>False</EnableMsixTooling>
     <WindowsPackageType>None</WindowsPackageType>
     <PublishReadyToRun>True</PublishReadyToRun>
     <!--https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/self-contained-deploy/deploy-self-contained-apps-->
-    <!--<WindowsAppSdkSelfContained>True</WindowsAppSdkSelfContained>-->
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <!--<PublishTrimmed>$(Optimized)</PublishTrimmed>-->
     <SelfContained Condition="'$(Configuration)' == 'Debug'">False</SelfContained>
-    <SelfContained Condition="'$(Configuration)' != 'Debug'">True</SelfContained>
+    <SelfContained Condition="'$(Configuration)' != 'Debug'">True</SelfContained>    
   </PropertyGroup>
 
   <!-- PACKAGED -->
@@ -172,6 +173,12 @@
 
   <ItemGroup>
     <Content Update="Assets\Icon.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Update="Assets\Licenses.md">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Update="Assets\PrivacyPolicy.md">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

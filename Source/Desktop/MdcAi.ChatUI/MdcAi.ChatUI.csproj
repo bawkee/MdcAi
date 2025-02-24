@@ -10,6 +10,10 @@
     <AssemblyVersion>1.0.2.0</AssemblyVersion>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Packaged)' != 'True'">
+    <DefineConstants>$(DefineConstants);UNPACKAGED</DefineConstants>    
+  </PropertyGroup>
+
   <ItemGroup>
     <None Remove="Assets\ChatListUI.zip" />
     <None Remove="Assets\Icons.json" />
@@ -24,6 +28,15 @@
     <None Remove="Views\GettingStartedTips\Settings.xaml" />
     <None Remove="Views\OpenAISettingsPage.xaml" />
     <None Remove="Views\Settings.xaml" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(Packaged)' != 'True'">
+    <Content Update="Assets\ChatListUI.zip">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Update="Assets\Icons.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
@@ -109,4 +122,5 @@
   <ItemGroup>
     <Folder Include="Views\Settings\" />
   </ItemGroup>
+
 </Project>

@@ -39,8 +39,7 @@ public sealed partial class PrivacyInfoWindow : ILogging
 
     private async void PrivacyInfoWindow_OnActivated(object sender, WindowActivatedEventArgs args)
     {
-        var privacyMd = await StorageFile.GetFileFromApplicationUriAsync(
-            new("ms-appx:///Assets/PrivacyPolicy.md"));
+        var privacyMd = await AppServices.GetAppFile("PrivacyPolicy.md");
 
         MdTextBlock.Text = await FileIO.ReadTextAsync(privacyMd);
     }

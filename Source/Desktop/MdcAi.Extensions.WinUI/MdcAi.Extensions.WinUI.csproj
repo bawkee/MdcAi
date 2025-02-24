@@ -11,6 +11,10 @@
     <AssemblyVersion>1.0.1.0</AssemblyVersion>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Packaged)' != 'True'">
+    <DefineConstants>$(DefineConstants);UNPACKAGED</DefineConstants>
+  </PropertyGroup>
+  
   <ItemGroup>
     <None Remove="FodyWeavers.xml" />
     <None Remove="Theme.xaml" />

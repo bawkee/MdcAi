@@ -39,9 +39,7 @@ public sealed partial class LicensesWindow
 
     private async void Licenses_OnActivated(object sender, WindowActivatedEventArgs args)
     {
-        var privacyMd = await StorageFile.GetFileFromApplicationUriAsync(
-            new("ms-appx:///Assets/Licenses.md"));
-
+        var privacyMd = await AppServices.GetAppFile("Licenses.md");
         MdTextBlock.Text = await FileIO.ReadTextAsync(privacyMd);
     }
 

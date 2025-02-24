@@ -49,6 +49,9 @@ public partial class App : ILogging
     /// </summary>
     public App()
     {
+        if (!Directory.Exists(AppServices.GetLocalDataFolder()))        
+            Directory.CreateDirectory(AppServices.GetLocalDataFolder());        
+
         // The DI container
         AppServices.Install();
 
@@ -72,13 +75,17 @@ public partial class App : ILogging
 #endif
         });
 
+#if UNPACKAGED
+        Environment.SetEnvironmentVariable("WEBVIEW2_USER_DATA_FOLDER", AppServices.GetLocalDataFolder());
+#endif
+
         CastleServiceViewLocator.Register(AppServices.Container, typeof(Window));
 
         // Register Entity Framework database for user profile management (chat lists etc)
         AppServices.Container.Register(
             Component.For<UserProfileDbContext>()
                      .UsingFactoryMethod(
-                         _ => new UserProfileDbContext(Path.Combine(ApplicationData.Current.LocalFolder.Path, "Chats.db"))
+                         _ => new UserProfileDbContext(Path.Combine(AppServices.GetLocalDataFolder(), "Chats.db"))
                          {
                              Log = message =>
                              {
@@ -105,9 +112,11 @@ public partial class App : ILogging
         InitializeComponent();
     }
 
-    private void EnableAdditionalWebView2Optons((string name, string value)[] options) =>
+    private void EnableAdditionalWebView2Optons((string name, string value)[] options)
+    {
         Environment.SetEnvironmentVariable("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
                                            string.Join(' ', options.Select(t => $"--{t.name}={t.value}")));
+    }
 
     private bool _errorDialogOpen;
 
@@ -151,7 +160,8 @@ public partial class App : ILogging
     {
         // Note that with WinUI it will never, no matter what, distribute or embed pdbs by default. You have to copy them manually.
         var config = new LoggingConfiguration();
-        var dirPath = ApplicationData.Current.LocalFolder.Path;
+        
+        var dirPath = AppServices.GetLocalDataFolder();
 
         InternalLogger.LogFile = Path.Combine(dirPath, "nlog.log");
         InternalLogger.LogLevel = LogLevel.Warn;

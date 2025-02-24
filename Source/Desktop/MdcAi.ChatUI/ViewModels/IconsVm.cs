@@ -51,7 +51,7 @@ public class IconsVm : ViewModel
 
         LoadIcons = ReactiveCommand.CreateFromTask(async ct =>
         {
-            var file = await StorageFile.GetFileFromApplicationUriAsync(new Uri("ms-appx:///MdcAi.ChatUI/Assets/Icons.json"));
+            var file = await AppServices.GetAppFile("Icons.json");
             var json = await FileIO.ReadTextAsync(file);
             var data = JsonConvert.DeserializeObject<IEnumerable<IconVm>>(json);
 

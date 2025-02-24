@@ -1,6 +1,7 @@
 $platforms = @('x64', 'x86', 'ARM64')
 $name = "MdcAi"
-$msbuild = "C:\Program Files\Microsoft Visual Studio\2022\Professional\MSBuild\Current\Bin\MSBuild.exe"
+$vstudio = "Community" # IMPORTANT: If you use VS Professional put 'Professional' here
+$msbuild = "C:\Program Files\Microsoft Visual Studio\2022\${vstudio}\MSBuild\Current\Bin\MSBuild.exe"
 
 [xml]$manifest = Get-Content -Path '.\Package.appxmanifest'
 $namespaceManager = New-Object System.Xml.XmlNamespaceManager($manifest.NameTable)

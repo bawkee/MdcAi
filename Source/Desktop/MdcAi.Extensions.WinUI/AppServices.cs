@@ -17,8 +17,9 @@ using Castle.MicroKernel.ModelBuilder.Inspectors;
 using Castle.MicroKernel.Resolvers.SpecializedResolvers;
 using Castle.Windsor;
 using ChatUI.LocalDal;
-using Microsoft.EntityFrameworkCore.Storage;
-using System.Reactive.Disposables;
+using System.IO.Compression;
+using Windows.Foundation;
+using Windows.Storage;
 
 public static class AppServices
 {
@@ -52,20 +53,23 @@ public static class AppServices
     /// Gets the ef context and encapsulates it with a transaction.
     /// </summary>   
     public static UserProfileDbContextWithTrans GetUserProfileDbTrans() => Container.Resolve<UserProfileDbContextWithTrans>();
-}
 
-public class UserProfileDbContextWithTrans : IDisposable
-{
-    private readonly CompositeDisposable _cd;
-    public IDbContextTransaction Trans { get; }
-    public UserProfileDbContext Ctx { get; }
-
-    public UserProfileDbContextWithTrans(UserProfileDbContext ctx)
+    public static string GetLocalDataFolder()
     {
-        Ctx = ctx;
-        Trans = Ctx.Database.BeginTransaction();
-        _cd = new(Trans, Ctx);
+#if UNPACKAGED
+        return $"{Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)}\\MDCAI";
+#else
+        return ApplicationData.Current.LocalFolder.Path;
+#endif
     }
 
-    public void Dispose() => _cd.Dispose();
+    public static IAsyncOperation<StorageFile> GetAppFile(string path)
+    {
+#if UNPACKAGED                
+        return StorageFile.GetFileFromPathAsync(Path.Combine(AppContext.BaseDirectory, "Assets", path));
+#else
+        return StorageFile.GetFileFromApplicationUriAsync(new Uri($"ms-appx:///MdcAi.ChatUI/Assets/{path}"));
+#endif
+
+    }
 }

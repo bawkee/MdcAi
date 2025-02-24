@@ -300,7 +300,7 @@ public sealed partial class Conversation : ILogging
         // Using statement will take care of all return paths so no worries.
         using var deferral = e.GetDeferral();
 
-        var zipFile = await StorageFile.GetFileFromApplicationUriAsync(new Uri("ms-appx:///MdcAi.ChatUI/Assets/ChatListUI.zip"));
+        var zipFile = await AppServices.GetAppFile("ChatListUI.zip");
         await using var zipStream = await zipFile.OpenStreamForReadAsync();
 
         var path = sourceUri.AbsolutePath[1..];

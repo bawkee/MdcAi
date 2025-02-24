@@ -1,8 +1,9 @@
 name: WinUI 3 Unpackaged
 
 on:
-  push:
-  pull_request:
+  #push:
+  #pull_request:  
+  workflow_dispatch:
 
 jobs:
 
@@ -10,7 +11,7 @@ jobs:
 
     strategy:
       matrix:
-        configuration: [Release]
+        configuration: [Release-Unpackaged]
         platform: [x64]
 
     runs-on: windows-latest  
@@ -44,7 +45,7 @@ jobs:
 
     # Build
     - name: Build the app
-      run: msbuild $env:Solution_Name /p:Configuration=$env:Configuration /p:Platform=$env:Platform /p:Packaged=False /t:Publish /p:PublishReadyToRun=False
+      run: msbuild $env:Solution_Name /p:Configuration=$env:Configuration /p:Platform=$env:Platform /t:Publish /p:PublishReadyToRun=False
       env:
         Configuration: ${{ matrix.configuration }}
         Platform: ${{ matrix.platform }}

@@ -195,20 +195,23 @@ public class ChatMessageVm : ViewModel, ILogging
             currentParent = currentParent.Previous;
         }
 
-        // This is the spice, hard coded, because not including this could lead to trouble such as various md syntax
-        // bugs and the AI mistakenly thinking it's on the OpenAI's chat bot. I left room to answer whatever it wants
-        // or is instructed to previously, but still make it aware that it's inside this app nonetheless.
-        const string premiseSpice =
-            " Use md syntax and be sure to specify language for code blocks. SIDE NOTE: " +
-            "For your awareness (and if asked), you are an AI used inside MDC AI which is " +
-            "a Windows desktop app.";
+        if (!new AiModel(Conversation.Settings.Model).IsReasoning)
+        {
+            // This is the spice, hard coded, because not including this could lead to trouble such as various md syntax
+            // bugs and the AI mistakenly thinking it's on the OpenAI's chat bot. I left room to answer whatever it wants
+            // or is instructed to previously, but still make it aware that it's inside this app nonetheless.
+            const string premiseSpice =
+                " Use md syntax and be sure to specify language for code blocks. SIDE NOTE: " +
+                "For your awareness (and if asked), you are an AI used inside MDC AI which is " +
+                "a Windows desktop app.";
 
-        messages.Insert(0,
-                        new()
-                        {
-                            Role = ChatMessageRole.System,
-                            Content = Conversation.Settings.Premise + premiseSpice
-                        });
+            messages.Insert(0,
+                            new()
+                            {
+                                Role = ChatMessageRole.System,
+                                Content = Conversation.Settings.Premise + premiseSpice
+                            });
+        }
 
         var req = new ChatRequest
         {

@@ -28,6 +28,7 @@ public class ChatSettingsVm : ViewModel
         = AiModel.Gpt4Turbo;
 #endif
     [Reactive] public string SelectedModel { get; set; } // Allows user to pick a different model
+    [Reactive] public bool IsReasoningModel { get; set; }
 
     [Reactive] public bool Streaming { get; set; } = true;
     [Reactive] public decimal Temperature { get; set; } = 1m;
@@ -78,6 +79,13 @@ public class ChatSettingsVm : ViewModel
                       changes.Clean();
                   })
                   .SubscribeSafe();
+        
+        this.WhenAnyValue(vm => vm.SelectedModel)
+            .WhereNotNull()
+            .Select(m => new AiModel(m).IsReasoning)
+            .ObserveOnMainThread()
+            .Do(v => IsReasoningModel = v)
+            .SubscribeSafe();
 
         LoadCmd.ObserveOnMainThread()
                .Select(_ => TrackRelevantChanges())
@@ -103,7 +111,7 @@ public class ChatSettingsVm : ViewModel
         });
 
         LoadModelsCmd.ObserveOnMainThread()
-                     .Do(models => Models = models.ToArray())
+                     .Do(models => Models = models.Where(m => m.IsConversational || m.IsReasoning).ToArray())
                      .SubscribeSafe();
 
         LoadModelsCmd.IsExecuting

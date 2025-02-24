@@ -43,5 +43,9 @@ public class AiModel
     public static AiModel Gpt4 => new AiModel("gpt-4") { OwnedBy = "openai" };
     public static AiModel Gpt4o => new AiModel("gpt-4o") { OwnedBy = "openai" };
 
+    public bool IsConversational => ModelID.StartsWith("gpt");
+
+    public bool IsReasoning => ModelID.StartsWith("o1") || ModelID.StartsWith("o3");
+
     public override string ToString() => ModelID;
 }

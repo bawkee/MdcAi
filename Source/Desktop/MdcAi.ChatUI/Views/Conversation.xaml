@@ -18,7 +18,7 @@
 
   <UserControl.Resources>
     <ResourceDictionary>
-      <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+      <converters:BoolToVisibilityConverter x:Key="boolToVis" />
       <salaConverters:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
       <extensions:BindingTypeConverter x:Key="TypeConverter" />
       <extensions:BindingFormatConverter x:Key="StringFormatConverter" />
@@ -76,16 +76,16 @@
       </AppBarButton>
 
       <AppBarSeparator
-        Visibility="{x:Bind extensions:Debugging.Enabled, Converter={StaticResource BoolToVisibilityConverter}}" />
+        Visibility="{x:Bind extensions:Debugging.Enabled, Converter={StaticResource boolToVis}}" />
       <AppBarButton Icon="Add"
                     Label="Add"
                     Command="{x:Bind ViewModel.DebugGeneratePromptCmd, Mode=OneWay}"
-                    Visibility="{x:Bind extensions:Debugging.Enabled, Converter={StaticResource BoolToVisibilityConverter}}" />
+                    Visibility="{x:Bind extensions:Debugging.Enabled, Converter={StaticResource boolToVis}}" />
 
       <AppBarButton Icon="Favorite"
                     Label="Test"
                     Command="{x:Bind ViewModel.DebugCmd, Mode=OneWay}"
-                    Visibility="{x:Bind extensions:Debugging.Enabled, Converter={StaticResource BoolToVisibilityConverter}}" />
+                    Visibility="{x:Bind extensions:Debugging.Enabled, Converter={StaticResource boolToVis}}" />
     </CommandBar>
 
     <c:DockPanel>
@@ -115,7 +115,7 @@
           <!-- Override Settings button content depending on whether it is overriden -->
           <ContentControl ContentTemplate="{StaticResource OverrideSettingsBtnTemplate}"
                           Content="{x:Bind ViewModel, Mode=OneWay}"
-                          Visibility="{x:Bind ViewModel.SettingsOverriden, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+                          Visibility="{x:Bind ViewModel.SettingsOverriden, Converter={StaticResource boolToVis}, Mode=OneWay}">
             <ContentControl.Resources>
               <SolidColorBrush x:Key="ButtonBackground" Color="{StaticResource ImportantTransButtonBackground}" />
               <SolidColorBrush x:Key="ButtonBackgroundPointerOver"
@@ -129,14 +129,14 @@
 
           <ContentControl ContentTemplate="{StaticResource OverrideSettingsBtnTemplate}"
                           Content="{x:Bind ViewModel, Mode=OneWay}"
-                          Visibility="{x:Bind ViewModel.SettingsOverriden, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=True, Mode=OneWay}" />
+                          Visibility="{x:Bind ViewModel.SettingsOverriden, Converter={StaticResource boolToVis}, ConverterParameter=True, Mode=OneWay}" />
         </StackPanel>
 
         <StackPanel>
           <!-- Read only notice -->
           <StackPanel Margin="10,10,10,0"
                       Orientation="Horizontal"
-                      Visibility="{x:Bind ViewModel.ShowReadOnlyNotice, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+                      Visibility="{x:Bind ViewModel.ShowReadOnlyNotice, Converter={StaticResource boolToVis}, Mode=OneWay}">
             <TextBlock FontSize="12"
                        Foreground="{ThemeResource AccentTextFillColorSecondaryBrush}">
               <Run>⚠️</Run>
@@ -192,7 +192,7 @@
         <Grid VerticalAlignment="Bottom"
               HorizontalAlignment="Right"
               Margin="0,0,30,20"
-              Visibility="{x:Bind ViewModel.Tail.Message.IsCompleting, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, FallbackValue=Collapsed}">
+              Visibility="{x:Bind ViewModel.Tail.Message.IsCompleting, Mode=OneWay, Converter={StaticResource boolToVis}, FallbackValue=Collapsed}">
           <Button Content="Stop Generating"
                   Padding="10,5,10,8"
                   Command="{x:Bind ViewModel.Tail.Message.StopCompletionCmd, Mode=OneWay}">
@@ -211,7 +211,7 @@
 
         <!-- Welcome notice -->
         <UserControl
-          Visibility="{x:Bind ViewModel.ShowGettingStartedTips, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+          Visibility="{x:Bind ViewModel.ShowGettingStartedTips, Converter={StaticResource boolToVis}, Mode=OneWay}">
 
           <Grid>
             <VisualStateManager.VisualStateGroups>
@@ -273,7 +273,7 @@
 
                         <!-- Welcoming notice, when AI is not ready -->
                         <Grid
-                          Visibility="{x:Bind ViewModel.IsAIReady, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=True, Mode=OneWay}"
+                          Visibility="{x:Bind ViewModel.IsAIReady, Converter={StaticResource boolToVis}, ConverterParameter=True, Mode=OneWay}"
                           Padding="15">
                           <StackPanel Spacing="10">
                             <TextBlock Style="{ThemeResource TitleTextBlockStyle}">Welcome to MDC AI 👋</TextBlock>
@@ -303,7 +303,7 @@
 
                         <!-- Getting started tips -->
                         <c:DockPanel
-                          Visibility="{x:Bind ViewModel.IsAIReady, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+                          Visibility="{x:Bind ViewModel.IsAIReady, Converter={StaticResource boolToVis}, Mode=OneWay}">
                           <StackPanel Margin="2">
                             <TextBlock Style="{ThemeResource TitleTextBlockStyle}" Margin="15,5,15,5">
                               Getting Started Tips
@@ -438,12 +438,18 @@
               </StackPanel>
             </PivotItem>
             <PivotItem Header="Premise">
-              <TextBox TextWrapping="Wrap"
-                       Text="{x:Bind ViewModel.Settings.Premise, Mode=TwoWay}"
-                       Margin="0,15,0,0"
-                       MaxHeight="200"
-                       AcceptsReturn="True"
-                       ScrollViewer.VerticalScrollBarVisibility="Auto" />
+              <c:DockPanel Margin="0,15,0,0">
+                <Border c:DockPanel.Dock="Top" Visibility="{x:Bind ViewModel.Settings.IsReasoningModel, Converter={StaticResource boolToVis}, Mode=OneWay}">
+                  <TextBlock TextWrapping="WrapWholeWords" Text="⚠️ WARNING: Premise is ignored in reasoning models such as o1-* and o3-*" Padding="0" />
+                </Border>
+
+                <TextBox TextWrapping="Wrap"
+                         Text="{x:Bind ViewModel.Settings.Premise, Mode=TwoWay}"
+                         Margin="0,10,0,0"
+                         MaxHeight="200"
+                         AcceptsReturn="True"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto" />
+              </c:DockPanel>
             </PivotItem>
           </Pivot>
         </ContentDialog>

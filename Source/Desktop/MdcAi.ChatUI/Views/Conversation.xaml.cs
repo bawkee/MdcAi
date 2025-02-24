@@ -195,15 +195,15 @@ public sealed partial class Conversation : ILogging
                              {
                                  var prompt = new ContentDialog
                                  {
-                                     Content = "gpt-4-1106-preview ➡️\U0001faf0💲💲⚡⚡🚀🚀 (cheap, powerful, fast)\r" +
-                                               "gpt-4 ➡️⚡⚡⚡ (powerful, very slow)\r" +
-                                               "gpt-3.5-turbo-1106 ➡️\U0001faf0💲💲💲💲⚡🚀🚀🚀🚀 (very cheap, very fast)\r\r" +
-                                               "You may experiment with other models but price is the same as above 3 and capabilities " +
-                                               "are either same, lower, or don't make a difference in the context of this app (at this moment).\r\r" +
-                                               "The first model, GPT4-Turbo, is a clear winner so it's a great general purpose model.\r\r" +
-                                               "Use GPT-3 for mundane tasks such as translation, data conversion, log analysis, fast summaries, etc.",
+                                     Content = "gpt-4-1106-preview ➡️ aka Gpt-4 Turbo, this is the model used by Chat GPT free tier. \r" +
+                                               "gpt-4o ➡️ Better reasoning than the turbo model, used by Chat GPT Plus tier. \r" +
+                                               "gpt-4o-mini ➡️ Solid reasoning model, much faster and much cheaper than above. \r" +
+                                               "o1-mini ➡️ Great and very affordable reasoning model. \r" +
+                                               "o1 ➡️ The advanced reasoning model. \r" +
+                                               "o3-* ➡️ Most advanced reasoning models, available to upper tiers of API users. \r\r" +
+                                               "Pricing is subject to change and sometimes OpenAI has lower prices for more advanced models so stay up to date.",                                               
                                      XamlRoot = XamlRoot,
-                                     Title = "Explanation of GPT models as of January 2024",
+                                     Title = "Explanation of GPT models as of February 2025",
                                      CloseButtonText = "OK",
                                  };
                                  await prompt.ShowAsync();

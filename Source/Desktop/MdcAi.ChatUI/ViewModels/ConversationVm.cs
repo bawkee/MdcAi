@@ -170,7 +170,7 @@ public class ConversationVm : ActivatableViewModel
 
         Observable.CombineLatest(
                       this.WhenAnyValue(vm => vm.SelectedMessage)
-                          .Select(m => m?.Message.Role == ChatMessageRole.System && m == Tail),
+                          .Select(m => m?.Message.Role == ChatMessageRole.Assistant && m == Tail),
                       this.WhenAnyValue(vm => vm.IsAIReady))
                   .Do(v => CanRegenerate = v.All(x => x))
                   .SubscribeSafe();
@@ -244,7 +244,7 @@ public class ConversationVm : ActivatableViewModel
         });
 
         LoadModelsCmd.ObserveOnMainThread()
-                     .Do(models => Models = models.ToArray())
+                     .Do(models => Models = models.Where(m => m.IsConversational || m.IsReasoning).ToArray())
                      .SubscribeSafe();
 
         LoadModelsCmd.IsExecuting
@@ -429,7 +429,7 @@ public class ConversationVm : ActivatableViewModel
                 }));
 
         this.WhenAnyValue(vm => vm.Tail)
-            .Where(t => t?.Message?.Role == ChatMessageRole.System)
+            .Where(t => t?.Message?.Role == ChatMessageRole.Assistant)
             .Select(t => t.Message.CompleteCmd
                           .Select(_ => t.Message.WhenAnyValue(m => m.IsCompleting))
                           .Switch())
@@ -546,7 +546,7 @@ public class ConversationVm : ActivatableViewModel
                 .Select(t => new
                 {
                     Tail = t,
-                    Completion = new ChatMessageVm(this, ChatMessageRole.System)
+                    Completion = new ChatMessageVm(this, ChatMessageRole.Assistant)
                     {
                         Previous = t.Message
                     }
@@ -586,7 +586,7 @@ public class ConversationVm : ActivatableViewModel
                 .Select(_ => this.WhenAnyValue(vm => vm.Messages)
                                  .Skip(1)
                                  .Take(1)
-                                 .Where(m => m.Count > 0 && m.Last().Role == ChatMessageRole.System))
+                                 .Where(m => m.Count > 0 && m.Last().Role == ChatMessageRole.Assistant))
                 .Switch()
                 .Do(m => SelectedMessage = m.Last().Selector)
                 .SubscribeSafe()

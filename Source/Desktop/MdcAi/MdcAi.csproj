@@ -21,7 +21,7 @@
     <PublishProfile>win10-$(Platform).pubxml</PublishProfile>
     <PackageCertificateThumbprint>DF463945E94380421CE239F13B5931AA7BA7199C</PackageCertificateThumbprint>
     <AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>
-    <AssemblyVersion>1.0.2.0</AssemblyVersion>    
+    <AssemblyVersion>1.0.3.0</AssemblyVersion>    
   </PropertyGroup>
 
   <Target Name="DebugLog" BeforeTargets="Build">

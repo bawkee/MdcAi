@@ -7,7 +7,7 @@
     <Platforms>x86;x64;ARM64</Platforms>
     <UseWinUI>True</UseWinUI>
     <EnableMsixTooling>True</EnableMsixTooling>
-    <AssemblyVersion>1.0.2.0</AssemblyVersion>
+    <AssemblyVersion>1.0.3.0</AssemblyVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Packaged)' != 'True'">

@@ -206,10 +206,10 @@ public partial class App : ILogging
                                                 .Instance(api)
                                                 .LifeStyle.Singleton);
 
-        settings.WhenAnyValue(vm => vm.OpenAi.CurrentApiKey,
+        settings.WhenAnyValue(vm => vm.OpenAi.ApiKey,
                               vm => vm.OpenAi.OrganisationName)
-                .Where(_ => !string.IsNullOrEmpty(settings.OpenAi.CurrentApiKey))
-                .Do(_ => api.SetCredentials(settings.OpenAi.CurrentApiKey, settings.OpenAi.OrganisationName))
+                .Where(_ => !string.IsNullOrEmpty(settings.OpenAi.ApiKey))
+                .Do(_ => api.SetCredentials(settings.OpenAi.ApiKey, settings.OpenAi.OrganisationName))
                 .SubscribeSafe();
     }
 

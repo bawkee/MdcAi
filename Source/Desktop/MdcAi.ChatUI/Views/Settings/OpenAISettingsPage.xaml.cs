@@ -30,12 +30,12 @@ public sealed partial class OpenAISettingsPage
 
         this.WhenActivated(disposables =>
         {
-            if (string.IsNullOrEmpty(ViewModel.ApiKeys))
+            if (string.IsNullOrEmpty(ViewModel.ApiKey))
                 ApiExpander.IsExpanded = true;
         });
     }
 
-    private async void ButtonBase_OnClick(object sender, RoutedEventArgs e) 
+    private async void RemoveKey_OnClick(object sender, RoutedEventArgs e) 
     {
         var dialog = new ContentDialog
         {
@@ -47,7 +47,7 @@ public sealed partial class OpenAISettingsPage
         };
 
         if (await dialog.ShowAsync() == ContentDialogResult.Primary)
-            ViewModel.ApiKeys = null;
+            ViewModel.ApiKey = null;
     }
 }
 

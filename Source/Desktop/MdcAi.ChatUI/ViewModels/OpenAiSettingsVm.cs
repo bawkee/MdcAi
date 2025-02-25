@@ -15,16 +15,25 @@ namespace MdcAi.ChatUI.ViewModels;
 
 public class OpenAiSettingsVm : ActivatableViewModel
 {
-    [Reactive] public string ApiKeys { get; set; }
-    [Reactive] public string CurrentApiKey { get; private set; }
+    private string _apiKey;
+
+    public string ApiKey
+    {
+        get => _apiKey;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _apiKey, value.Trim());
+        }
+    }
+
     [Reactive] public string OrganisationName { get; set; }
 
     public OpenAiSettingsVm()
     {
-        ApiKeys = AppCredsManager.GetValue("ApiKeys");
+        ApiKey = AppCredsManager.GetValue("ApiKeys");
         OrganisationName = AppCredsManager.GetValue("OrganisationName");
 
-        this.WhenAnyValue(vm => vm.ApiKeys)
+        this.WhenAnyValue(vm => vm.ApiKey)
             .Skip(1)
             .ObserveOnMainThread()
             .Do(v => AppCredsManager.SetValue("ApiKeys", v))
@@ -34,17 +43,6 @@ public class OpenAiSettingsVm : ActivatableViewModel
             .Skip(1)
             .ObserveOnMainThread()
             .Do(v => AppCredsManager.SetValue("OrganisationName", v))
-            .SubscribeSafe();
-
-        this.WhenAnyValue(vm => vm.ApiKeys)
-            .Do(keys =>
-            {
-                if (string.IsNullOrEmpty(keys))
-                    CurrentApiKey = null;
-                else
-                    CurrentApiKey = keys.Split("\r\n")
-                                        .FirstOrDefault();
-            })
             .SubscribeSafe();
     }
 }

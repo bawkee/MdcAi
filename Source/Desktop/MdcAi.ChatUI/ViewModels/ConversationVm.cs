@@ -452,7 +452,7 @@ public class ConversationVm : ActivatableViewModel
                   .InvokeCommand(SaveCmd);
 
         this.WhenAnyValue(vm => vm.GlobalSettings)
-            .Select(s => s.WhenAnyValue(x => x.OpenAi.ApiKeys))
+            .Select(s => s.WhenAnyValue(x => x.OpenAi.ApiKey))
             .Switch()
             .Select(s => s != null && !string.IsNullOrEmpty(s))
             .ObserveOnMainThread()

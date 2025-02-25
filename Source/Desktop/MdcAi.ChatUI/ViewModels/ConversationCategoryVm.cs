@@ -69,7 +69,7 @@ public class ConversationCategoryVm : ActivatableViewModel
                .SubscribeSafe();
 
         Activator.Activated.Take(1)
-                 .Select(_ => globalSettings.WhenAnyValue(vm => vm.OpenAi.CurrentApiKey)
+                 .Select(_ => globalSettings.WhenAnyValue(vm => vm.OpenAi.ApiKey)
                                             .Where(v => !string.IsNullOrEmpty(v))
                                             .Select(_ => Unit.Default))
                  .Switch()

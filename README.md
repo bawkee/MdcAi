@@ -10,7 +10,7 @@ Native Windows desktop GPT agent app, which is your portal to the very powerful 
 	<img src="https://get.microsoft.com/images/en-us%20dark.svg" width="200"/>
 </a>
 
-Click on the above Windows Store badge to install MDC AI. 
+Click on the above Windows Store badge to install MDC AI v1.0.2.0. 
 
 To download an unpackaged version of the app (no Microsoft Store, no installation), you can either: 
 - Download the [latest stable release](https://github.com/bawkee/MdcAi/releases) or
@@ -60,15 +60,15 @@ Yes, it is completely free and open source. While it asks nothing of you, you ca
 - Contributing to the code base if you have dev experience
 - Spreading the word and promoting the app further
 
-## Version 1.0.2 is out 👇
+## Version 1.0.3 is out 👇
 
-- Fixed a bug where only the first two messages get saved with new conversations.
-- Fixed a bug where selecting message versions without doing anything else would not remember the current version.
-- Settings pane is now involved in the Back button (top left) logic.
-- Fixed a bug where app could hang when long conversations are selected first after starting the app.
-- Deleted categories will no longer magically reappear after restart.
-- Fixed a few odd markdown rendering errors that would otherwise require app restart.
-- When completion generation error happens, a friendlier message will show up and user will be able to retry.
+This version introduces the possibility to use reasoning models and run the app outside of Microsoft Store
+- #13 API key can now have leading/trailing white space and won't complain about it any more
+- gpt-4o is now the default model
+- #11 Reasoning models now work
+- #12 Unpackaged deployment support
+
+To run the app outside of the store, just download the [relevant package](https://github.com/bawkee/MdcAi/releases/tag/v1.0.3) and run the executable directly.
 
 ## Screenshots
 

@@ -22,7 +22,7 @@ public class OpenAiSettingsVm : ActivatableViewModel
         get => _apiKey;
         set
         {
-            this.RaiseAndSetIfChanged(ref _apiKey, value.Trim());
+            this.RaiseAndSetIfChanged(ref _apiKey, value?.Trim());
         }
     }
 

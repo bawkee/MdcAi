@@ -16,7 +16,6 @@ namespace MdcAi.Views;
 using System;
 using ViewModels;
 using ReactiveMarbles.ObservableEvents;
-using WinRT.Interop;
 
 /// <summary>
 /// An empty window that can be used on its own or navigated to within a Frame.
@@ -31,7 +30,7 @@ public sealed partial class MainWindow
 
         InitializeComponent();
 
-        SetIcon("Assets\\Icon.ico");
+        SetIcon("Assets/Icon.ico");
 
         Title = "MDC AI";
 
@@ -63,14 +62,11 @@ public sealed partial class MainWindow
 
     private void SetIcon(string iconName)
     {
-        var hwnd = WindowNative.GetWindowHandle(this);
-        var hIcon = PInvoke.User32.LoadImage(
-            IntPtr.Zero,
-            iconName,
-            PInvoke.User32.ImageType.IMAGE_ICON,
-            16,
-            16,
-            PInvoke.User32.LoadImageFlags.LR_LOADFROMFILE);
-        PInvoke.User32.SendMessage(hwnd, PInvoke.User32.WindowMessage.WM_SETICON, (IntPtr)0, hIcon);
+        string path = AppContext.BaseDirectory;
+        //string path = Package.Current.InstalledPath;
+        string iconPath = Path.Combine(path, iconName);
+        if (File.Exists(iconPath))
+            AppWindow.SetIcon(iconPath);
     }
+
 }

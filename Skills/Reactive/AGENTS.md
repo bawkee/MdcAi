@@ -1,9 +1,6 @@
 # Skill: Reactive & MVVM (ReactiveUI / Rx / RxUIExt)
 
-The single most important thing to understand before modifying any `ViewModel`, `View`, or
-reactive data model in this app. The whole app is **data-flow over Rx** on top of **ReactiveUI**,
-wired by **Castle Windsor** and using the **author's `RxUIExt` helper packages** for the base VM
-classes and view hosting.
+The single most important thing to understand before modifying any `ViewModel`, `View`, or reactive data model in this app. The whole app is **data-flow over Rx** on top of **ReactiveUI**, wired by **Castle Windsor** and using the **author's `RxUIExt` helper packages** for the base VM classes and view hosting.
 
 ---
 
@@ -21,25 +18,17 @@ classes and view hosting.
 | **RxUIExt.WinUI** (author) | WinUI `ViewHost` control, `ReactivePage`/`ReactiveUserControl` for WinUI |
 | **SalaTools.Core** (author) | `Logical` helpers for `ILogging`, `SafeHttpClient`(used by API lib), memoize. brings `GetLogger()` |
 
-These packages are in the NuGet cache (not the repo). Reference locations for study:
-`%USERPROFILE%\.nuget\packages\{rxext,rxuiext,rxuiext.windsor,rxuiext.winui,salatools.core}`.
+These packages are in the NuGet cache (not the repo). Reference locations for study: `%USERPROFILE%\.nuget\packages\{rxext,rxuiext,rxuiext.windsor,rxuiext.winui,salatools.core}`.
 
 ---
 
 ## Base classes you'll literally subclass
 
-- **`ViewModel`** (`RxUIExt.ViewModel : ReactiveObject`) — plain bindable VM base. Has
-  `RaiseAndSetIfChanged` from ReactiveUI, plus `TrackChanges(...)` for dirty tracking.
-- **`ActivatableViewModel`** (`RxUIExt.ActivatableViewModel : ViewModel, IActivatableViewModel`)
-  — adds an `Activator` object so a view can subscribe/dispose on activation
-  (`viewModel.Activator.Activated` / `viewModel.WhenActivated(...)`). Use when the VM needs
-  to know when the UI shows it.
-- Views likely subclass a Reactive base over their VM, e.g.
-  `[DoNotRegister] class ConversationBase : ReactiveUserControl<ConversationVm>` and the sealed
-  partial `public sealed partial class Conversation : ConversationBase`.
+- **`ViewModel`** (`RxUIExt.ViewModel : ReactiveObject`) — plain bindable VM base. Has `RaiseAndSetIfChanged` from ReactiveUI, plus `TrackChanges(...)` for dirty tracking.
+- **`ActivatableViewModel`** (`RxUIExt.ActivatableViewModel : ViewModel, IActivatableViewModel`) — adds an `Activator` object so a view can subscribe/dispose on activation (`viewModel.Activator.Activated` / `viewModel.WhenActivated(...)`). Use when the VM needs to know when the UI shows it.
+- Views likely subclass a Reactive base over their VM, e.g. `[DoNotRegister] class ConversationBase : ReactiveUserControl<ConversationVm>` and the sealed partial `public sealed partial class Conversation : ConversationBase`.
 
-> `MainVm`, `SettingsVm` are `[Singleton]` (Castle). Conversation, Category, previews are resolved
-> transient per item (services within app).
+> `MainVm`, `SettingsVm` are `[Singleton]` (Castle). Conversation, Category, previews are resolved transient per item (services within app).
 
 ---
 
@@ -52,9 +41,7 @@ Mark any bindable VM property with `[Reactive]` (namespace `ReactiveUI.Fody.Help
 [Reactive] public string Content { get; set; }
 ```
 
-Fody rewrites these into proper `RaisePropertyChanged`-backed properties at compile time. You
-simply read/write them. There's no `[ObservableAsProperty]` usage here (that's a different,
-command-driven pattern not used in this codebase).
+Fody rewrites these into proper `RaisePropertyChanged`-backed properties at compile time. You simply read/write them. There's no `[ObservableAsProperty]` usage here (that's a different, command-driven pattern not used in this codebase).
 
 In XAML: `{x:Bind ViewModel.SomeProp, Mode=OneWay}` (compiled bindings) or classic `{Binding Path=..., Mode=TwoWay}`.
 
@@ -62,10 +49,8 @@ In XAML: `{x:Bind ViewModel.SomeProp, Mode=OneWay}` (compiled bindings) or class
 
 ## Commands
 
-- `ReactiveCommand<Unit, TResult>` — create with `ReactiveCommand.CreateFromObservable`,
-  `ReactiveCommand.CreateFromTask`, or `ReactiveCommand.Create`.
-- Optional can-execute stream as the **last** argument (an `IObservable<bool>`). The VM computes
-  guard bools reactively and lets the command observe them:
+- `ReactiveCommand<Unit, TResult>` — create with `ReactiveCommand.CreateFromObservable`, `ReactiveCommand.CreateFromTask`, or `ReactiveCommand.Create`.
+- Optional can-execute stream as the **last** argument (an `IObservable<bool>`). The VM computes guard bools reactively and lets the command observe them:
 
 ```csharp
 SendPromptCmd = ReactiveCommand.CreateFromObservable(
@@ -73,13 +58,9 @@ SendPromptCmd = ReactiveCommand.CreateFromObservable(
     this.WhenAnyValue(vm => vm.CanSendPrompt));   // enable/disable
 ```
 
-- Execute from UI via `<Button Command="{x:Bind ViewModel.SaveCmd}"/>` or in code with
-  `.InvokeCommand(vm.Cmd)` on an observable / `.Execute()`.
-- Observe command state: `cmd.IsExecuting` streams a bool; `cmd.WhenExecuting()` emits on the
-  main thread when the command starts (used heavily e.g. in ConversationVm). `cmd.ThrownExceptions`
-  for errors — but the app also routes unhandled errors to `RxApp.DefaultExceptionHandler`.
-- **Observable-returning commands** end with `.ObserveOnMainThread()` and are subscribed so GUI
-  side-effects happen on the UI thread.
+- Execute from UI via `<Button Command="{x:Bind ViewModel.SaveCmd}"/>` or in code with `.InvokeCommand(vm.Cmd)` on an observable / `.Execute()`.
+- Observe command state: `cmd.IsExecuting` streams a bool; `cmd.WhenExecuting()` emits on the main thread when the command starts (used heavily e.g. in ConversationVm). `cmd.ThrownExceptions` for errors — but the app also routes unhandled errors to `RxApp.DefaultExceptionHandler`.
+- **Observable-returning commands** end with `.ObserveOnMainThread()` and are subscribed so GUI side-effects happen on the UI thread.
 
 ---
 
@@ -92,9 +73,7 @@ PromptField.Events().PreviewKeyDown
     .Select(...)
 ```
 
-`Events()` is produced by the `ReactiveMarbles.ObservableEvents` source generator (transforms the
-event `X` into an `IObservable<EventPattern<XEventArgs>>`). It is used throughout the views
-(`Conversation.xaml.cs`, `RootPage.xaml.cs`: `NavigationViewControl.Events().BackRequested`, etc.).
+`Events()` is produced by the `ReactiveMarbles.ObservableEvents` source generator (transforms the event `X` into an `IObservable<EventPattern<XEventArgs>>`). It is used throughout the views (`Conversation.xaml.cs`, `RootPage.xaml.cs`: `NavigationViewControl.Events().BackRequested`, etc.).
 
 ---
 
@@ -134,31 +113,23 @@ Observable.Merge(...)
 Activator.Activated.Take(1).InvokeCommand(LoadModelsCmd);
 ```
 
-- `.SubscribeSafe()` is the project's way of `Subscribe(...)` while routing exceptions through a
-  default UNHANDLED-error sink instead of crashing. Use it for every terminal subscription.
-- `.ObserveOnMainThread()` is provided by the app (`RxUIExt`) and used after the blocking work to get
-  back to the UI thread.
-- `WhenAnyValue` needs `[Reactive]` properties to actually raise change notifications; that's why
-  everything is `[Reactive]`.
+- `.SubscribeSafe()` is the project's way of `Subscribe(...)` while routing exceptions through a default UNHANDLED-error sink instead of crashing. Use it for every terminal subscription.
+- `.ObserveOnMainThread()` is provided by the app (`RxUIExt`) and used after the blocking work to get back to the UI thread.
+- `WhenAnyValue` needs `[Reactive]` properties to actually raise change notifications; that's why everything is `[Reactive]`.
 
 ---
 
 ## Activation lifecycle (`Activator`, `WhenActivated`)
 
-- `ActivatableViewModel.Activator` exposes `Activator.Activated` — an `IObservable<Unit>` you can
-  subscribe to for one-time setup (e.g. `Activator.Activated.Take(1).InvokeCommand(SomeCmd)`).
-- Views implement `WhenActivated((disposables, viewModel) => { ... })` where subscriptions are
-  registered with `.DisposeWith(disposables)` so they auto-unsubscribe when the view deactivates.
-- Previews / full items pair: when a `PreviewVm` becomes "the selected item", the parent
-  `ConversationsVm` calls `Activator.Activate()`/`Deactivate()` on the activated VM (see
-  `ConversationsVm.cs` `.PairWithPrevious()` block). This is standard reactive activation flow.
+- `ActivatableViewModel.Activator` exposes `Activator.Activated` — an `IObservable<Unit>` you can subscribe to for one-time setup (e.g. `Activator.Activated.Take(1).InvokeCommand(SomeCmd)`).
+- Views implement `WhenActivated((disposables, viewModel) => { ... })` where subscriptions are registered with `.DisposeWith(disposables)` so they auto-unsubscribe when the view deactivates.
+- Previews / full items pair: when a `PreviewVm` becomes "the selected item", the parent `ConversationsVm` calls `Activator.Activate()`/`Deactivate()` on the activated VM (see `ConversationsVm.cs` `.PairWithPrevious()` block). This is standard reactive activation flow.
 
 ---
 
 ## Dirty tracking (`ViewModelChangeTracker` / `TrackChanges`)
 
-`ViewModel` provides `TrackChanges(propertyNames...)` returning a `ViewModelChangeTracker`
-(observable + `.IsDirty()` + `.Clean()`). Used by `ChatSettingsVm` to know when settings changed:
+`ViewModel` provides `TrackChanges(propertyNames...)` returning a `ViewModelChangeTracker` (observable + `.IsDirty()` + `.Clean()`). Used by `ChatSettingsVm` to know when settings changed:
 
 ```csharp
 var changes = TrackChanges(nameof(Streaming), nameof(Temperature), /* ... */);
@@ -171,32 +142,15 @@ changes.Clean();  // after a save/load
 
 ## The forked conversation data model (critical to preserve)
 
-This is the most intricate reactive structure in the app. Understand it before touching anything
-chat-related. Files: `ChatMessageVm.cs`, `ChatMessageSelectorVm.cs`, `ChatMessageVmExt.cs`,
-`ConversationVm.cs`, `ConversationVmExt.cs`.
+This is the most intricate reactive structure in the app. Understand it before touching anything chat-related. Files: `ChatMessageVm.cs`, `ChatMessageSelectorVm.cs`, `ChatMessageVmExt.cs`, `ConversationVm.cs`, `ConversationVmExt.cs`.
 
-- **`ChatMessageVm`** is a node in a **doubly-linked list** (`Previous`, `Next`), each node *also*
-  has a `Selector` (`ChatMessageSelectorVm`).
-- **`ChatMessageSelectorVm`** holds **all versions** of a message at a given position. It has
-  `Versions` (an `ObservableCollection<ChatMessageVm>`), `Message` (current selected version),
-  `Version` (1-based), and `NextCmd`/`PrevCmd`/`DeleteCmd`.
-- **`ConversationVm.Head`** is the first *selector*; `.Tail` is the last selector. The linked list
-  is derived reactively: `TrackNext(head)` recurses through `.Next` and always emits the current
-  `.Tail` (see ConversationVm). `.Messages` is then a flat `ObservableCollection<ChatMessageVm>`
-  reconstructed from `Head` for rendering.
-- **Editing**: `EditSelectedCmd` copies the selected message's content into `Prompt`, user edits &
-  sends (`SendPromptCmd`), which **forks**: a new `ChatMessageVm` with a new selector is created,
-  or replaces `EditMessage.Message` (adding a version). The flat `Messages` list and `Tail` update
-  reactively.
-- **Completion**: when the tail is a `User` role message, `ConversationVm.WhenActivated` observes
-  the tail and creates an `Assistant` completion message with `CompleteCmd` (streaming or not) →
-  `ChatMessageVm.CompleteCmd` runs `Conversation.Api.CreateChatCompletions[Stream]` and aggregates
-  SSE chunks into `Content`, throttled-renders `HTMLContent`.
+- **`ChatMessageVm`** is a node in a **doubly-linked list** (`Previous`, `Next`), each node *also* has a `Selector` (`ChatMessageSelectorVm`).
+- **`ChatMessageSelectorVm`** holds **all versions** of a message at a given position. It has `Versions` (an `ObservableCollection<ChatMessageVm>`), `Message` (current selected version), `Version` (1-based), and `NextCmd`/`PrevCmd`/`DeleteCmd`.
+- **`ConversationVm.Head`** is the first *selector*; `.Tail` is the last selector. The linked list is derived reactively: `TrackNext(head)` recurses through `.Next` and always emits the current `.Tail` (see ConversationVm). `.Messages` is then a flat `ObservableCollection<ChatMessageVm>` reconstructed from `Head` for rendering.
+- **Editing**: `EditSelectedCmd` copies the selected message's content into `Prompt`, user edits & sends (`SendPromptCmd`), which **forks**: a new `ChatMessageVm` with a new selector is created, or replaces `EditMessage.Message` (adding a version). The flat `Messages` list and `Tail` update reactively.
+- **Completion**: when the tail is a `User` role message, `ConversationVm.WhenActivated` observes the tail and creates an `Assistant` completion message with `CompleteCmd` (streaming or not) → `ChatMessageVm.CompleteCmd` runs `Conversation.Api.CreateChatCompletions[Stream]` and aggregates SSE chunks into `Content`, throttled-renders `HTMLContent`.
 
-> **Never break the doubly-linked `Previous/Next` + `Selector.Versions` + `Head/Tail` invariant**.
-> Persistence flattens and rebuilds it (`ToDbMessages` / `FromDbMessages` in `ChatMessageVmExt.cs`
-> + `ConversationVmExt.ToDbConversation`) — see `Skills/Db`. If you touch the tree, keep both the
-> in-memory and the db projections consistent.
+> **Never break the doubly-linked `Previous/Next` + `Selector.Versions` + `Head/Tail` invariant**. Persistence flattens and rebuilds it (`ToDbMessages` / `FromDbMessages` in `ChatMessageVmExt.cs` + `ConversationVmExt.ToDbConversation`) — see `Skills/Db`. If you touch the tree, keep both the in-memory and the db projections consistent.
 
 ---
 
@@ -205,25 +159,18 @@ chat-related. Files: `ChatMessageVm.cs`, `ChatMessageSelectorVm.cs`, `ChatMessag
 - `AppServices.Container` is the world-read ioc; access anywhere via `AppServices.Container.Resolve<X>()`.
 - **Constructor injection only**; "property injection" removed in `AppServices.Install()`.
 - **Collections resolution** enabled (`CollectionResolver`), so VMs can `IEnumerable<T>` of impls.
-- `App` calls `RegisterViewModelsAndViews("MdcAi.ChatUI")` + registers from the caller assembly —
-  meaning **you don't have to register VMs/Views manually**; they are discovered by an assembly
-  scan (the base class / partial shell is marked `[DoNotRegister]` so it isn't double-registered).
+- `App` calls `RegisterViewModelsAndViews("MdcAi.ChatUI")` + registers from the caller assembly — meaning **you don't have to register VMs/Views manually**; they are discovered by an assembly scan (the base class / partial shell is marked `[DoNotRegister]` so it isn't double-registered).
 - Lifetimes: `[Singleton]` on the VM marks singleton (`MainVm`, `SettingsVm`); default is transient.
-- Registration of the two EF contexts is manual in `App.xaml.cs` (`UserProfileDbContext`
-  transient with a log lambda; `UserProfileDbContextWithTrans` transient).
+- Registration of the two EF contexts is manual in `App.xaml.cs` (`UserProfileDbContext` transient with a log lambda; `UserProfileDbContextWithTrans` transient).
 
 ---
 
 ## Pitfalls & rules of thumb (expanded from experience)
 
-- Place `WhenActivated` subscription-registration, not lingering field subscriptions, for anything
-  that touches the visual tree.
+- Place `WhenActivated` subscription-registration, not lingering field subscriptions, for anything that touches the visual tree.
 - Prefer `.ObserveOnMainThread().Do(...).SubscribeSafe()` over manual `await`-in-subscriber.
-- When building nested "follow the current thing" logic, the `.Select(...)` returning an inner
-  Observable + `.Switch()` pattern is standard here; keep it — it both cancels the previous
-  tracking and avoids memory leaks.
-- The UI is **not** `await`-heavy; it's chain-heavy. Don't try to replace a reactive chain with a
-  big `async void` void in a VM — match the existing style.
+- When building nested "follow the current thing" logic, the `.Select(...)` returning an inner Observable + `.Switch()` pattern is standard here; keep it — it both cancels the previous tracking and avoids memory leaks.
+- The UI is **not** `await`-heavy; it's chain-heavy. Don't try to replace a reactive chain with a big `async void` void in a VM — match the existing style.
 - Test/debug in mocked mode (`Debugging`) rather than hitting the API — see root `AGENTS.md`.
 
 ---
@@ -232,3 +179,4 @@ chat-related. Files: `ChatMessageVm.cs`, `ChatMessageSelectorVm.cs`, `ChatMessag
 - `Skills/Db` — the flattened model + how the fork tree round-trips to SQLite.
 - `Skills/WebViewRenderer` — how the reactive `LastMessagesRequest` reaches the WebView.
 - `Skills/OpenAiApi` — the streaming data the chains consume.
+

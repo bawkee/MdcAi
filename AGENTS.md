@@ -1,44 +1,28 @@
 # AGENTS.md — MdcAi (MDC AI)
 
-An orientation document for AI coding agents (and humans) working on this repository.
-Read this first, then open the relevant `Skills/*` doc for the subsystem you are touching.
+An orientation document for AI coding agents (and humans) working on this repository. Read this first, then open the relevant `Skills/*` doc for the subsystem you are touching. If you're about to work on this repo, read this whole file before touching anything.
 
-> If you're about to work on this repo, read this whole file before touching anything.
+> **Documentation formatting:** These markdown docs are written for rich renderers (the harness GUI, Typora, GitHub, etc.) and are **not hard-wrapped to a line width** so maintain this rule for edits or new files..
 
 ---
 
 ## What is this project?
 
-**MDC AI** is a native **Windows desktop** GPT *chat agent* — a ChatGPT-style UI running as a
-WinUI 3 (Windows App SDK) app that talks directly to an LLM **Chat Completions** API. It is a
-**BYOK** ("bring your own key") app: the user supplies an OpenAI API key and chats directly
-with the (stateless) API. No proxy, no intermediate service.
+**MDC AI** is a native **Windows desktop** GPT *chat agent* — a ChatGPT-style UI running as a WinUI 3 (Windows App SDK) app that talks directly to an LLM **Chat Completions** API. It is a **BYOK** ("bring your own key") app: the user supplies an OpenAI API key and chats directly with the (stateless) API. No proxy, no intermediate service.
 
-It is **open-source** (Apache-2.0, © 2023 Bojan Sala) and lightweight. The project is ~2 years
-old and shipping version **1.0.3**, but it's mid-lifecycle: the codebase was recently updated
-from .NET 6 → **.NET 9** and EF Core was upgraded.
+It is **open-source** (Apache-2.0, © 2023 Bojan Sala) and lightweight. The project is ~2 years old and shipping version **1.0.3**, but it's mid-lifecycle: the codebase was recently updated from .NET 6 → **.NET 9** and EF Core was upgraded.
 
 ### Key capabilities (current v1.0.3)
 - Chat with GPT models, **streaming** token-by-token output rendered as rich **Markdown**.
-- **Custom personalities/Categories** — each conversation belongs to a *Category*; each category
-  (and each conversation, optionally overriding) has its own model + premise (system prompt) +
-  sampling parameters.
-- **Advanced Edit / forking**: you can edit a completion, which creates a *version* of a message
-  and *forks* the conversation tree. The app remembers the current fork (`Head` → `Tail`) and the
-  current selected version. (This is the app's most distinctive feature — see
-  `Skills/Reactive` and `Db`.)
+- **Custom personalities/Categories** — each conversation belongs to a *Category*; each category (and each conversation, optionally overriding) has its own model + premise (system prompt) + sampling parameters.
+- **Advanced Edit / forking**: you can edit a completion, which creates a *version* of a message and *forks* the conversation tree. The app remembers the current fork (`Head` → `Tail`) and the current selected version. (This is the app's most distinctive feature — see `Skills/Reactive` and `Db`.)
 - Full chat history persisted **locally** in SQLite.
 - Privacy: everything stays on disk under the local app-data folder.
-- A **React renderer inside a WebView2** control renders the messages with proper Markdown,
-  syntax highlighting, selection and copy — instead of a XAML chat list.
+- A **React renderer inside a WebView2** control renders the messages with proper Markdown, syntax highlighting, selection and copy — instead of a XAML chat list.
 
 ### Where this project is going (author's stated direction)
-- **Multi-provider**: today it talks only to OpenAI, but the APIs are mostly OpenAI-compatible,
-  so the plan is to support **OpenRouter** and (ideally) a regular ChatGPT subscription, the way
-  **opencode** does. Work here should treat the OpenAI client as `OpenAiApi`-compatible rather
-  than OpenAI-exclusive. See `Skills/OpenAiApi`.
-- Vector/semantic search over conversations; multimodal (image-in/out); custom tools / function
-  calling; self-hosted local LLMs. These are all "Planned" — not implemented.
+- **Multi-provider**: today it talks only to OpenAI, but the APIs are mostly OpenAI-compatible, so the plan is to support **OpenRouter** and (ideally) a regular ChatGPT subscription, the way **opencode** does. Work here should treat the OpenAI client as `OpenAiApi`-compatible rather than OpenAI-exclusive. See `Skills/OpenAiApi`.
+- Vector/semantic search over conversations; multimodal (image-in/out); custom tools / function calling; self-hosted local LLMs. These are all "Planned" — not implemented.
 
 ---
 
@@ -75,34 +59,21 @@ MdcAi (exe, shell)
         └── MdcAi.OpenAiApi  (API client, common)           [plain net9]
 ```
 
-- `MdcAi.ChatUI` is the **heart**: all ViewModels, all Views, WebView2 bridge, and the reactive
-  "fork tree" data model live there. `MdcAi` is just the MSIX shell + app bootstrap.
-- `MdcAi.OpenAiApi` and `MdcAi.ChatUI.LocalDal` are **plain .NET 9** class libraries usable
-  outside WinUI.
+- `MdcAi.ChatUI` is the **heart**: all ViewModels, all Views, WebView2 bridge, and the reactive "fork tree" data model live there. `MdcAi` is just the MSIX shell + app bootstrap.
+- `MdcAi.OpenAiApi` and `MdcAi.ChatUI.LocalDal` are **plain .NET 9** class libraries usable outside WinUI.
 
 ---
 
 ## Solution / project facts
 
-Solution: `Source/MdcAi.sln`. Five projects: `MdcAi`, `MdcAi.ChatUI`, `MdcAi.Extensions.WinUI`
-(WinUI, `net9.0-windows10.0.19041.0`) plus `MdcAi.ChatUI.LocalDal` and `MdcAi.OpenAiApi`
-(plain `net9.0`).
-Target platform min version `10.0.17763.0`. Platforms: `x86;x64;ARM64`. Assembly version `1.0.3.0`.
+Solution: `Source/MdcAi.sln`. Five projects: `MdcAi`, `MdcAi.ChatUI`, `MdcAi.Extensions.WinUI` (WinUI, `net9.0-windows10.0.19041.0`) plus `MdcAi.ChatUI.LocalDal` and `MdcAi.OpenAiApi` (plain `net9.0`). Target platform min version `10.0.17763.0`. Platforms: `x86;x64;ARM64`. Assembly version `1.0.3.0`.
 
-- **MdcAi** (`Source/Desktop/MdcAi`): `OutputType=WinExe`, `TargetFramework=net9.0-windows10.0.19041.0`,
-  `UseWinUI=true`, `Nullable=disable`. Primary deps: `Microsoft.WindowsAppSDK`, `ReactiveUI.Fody`,
-  `Castle.Windsor`, `NLog`, `PInvoke.User32`, `Microsoft.EntityFrameworkCore.Design`.
+- **MdcAi** (`Source/Desktop/MdcAi`): `OutputType=WinExe`, `TargetFramework=net9.0-windows10.0.19041.0`, `UseWinUI=true`, `Nullable=disable`. Primary deps: `Microsoft.WindowsAppSDK`, `ReactiveUI.Fody`, `Castle.Windsor`, `NLog`, `PInvoke.User32`, `Microsoft.EntityFrameworkCore.Design`.
 - **MdcAi.ChatUI**: the VMs + Views. Deps: `Markdig`, `ReactiveUI.Fody`, `ReactiveMarbles.ObservableEvents.SourceGenerator`.
-- **MdcAi.ChatUI.LocalDal**: EF Core + SQLite. Deps: `Microsoft.EntityFrameworkCore.Sqlite`,
-  `FlexLabs.EntityFrameworkCore.Upsert`, EF tools. **Ships a copy of `Chats.db` as an embedded resource.**
-- **MdcAi.Extensions.WinUI**: `Castle.Windsor` (DI), `ReactiveUI.WinUI`, `CommunityToolkit.WinUI*`,
-  `Mapster`, `RxExt`, `RxUIExt.*`, `LinqMini`, `SalaTools.Core`.
+- **MdcAi.ChatUI.LocalDal**: EF Core + SQLite. Deps: `Microsoft.EntityFrameworkCore.Sqlite`, `FlexLabs.EntityFrameworkCore.Upsert`, EF tools. **Ships a copy of `Chats.db` as an embedded resource.**
+- **MdcAi.Extensions.WinUI**: `Castle.Windsor` (DI), `ReactiveUI.WinUI`, `CommunityToolkit.WinUI*`, `Mapster`, `RxExt`, `RxUIExt.*`, `LinqMini`, `SalaTools.Core`.
 
-> There is a **circular-ish but intended** pairing: the biggest DI/`ViewModel` primitives the app relies on
-> (`ViewModel`, `ActivatableViewModel`, `[Reactive]`, `[Singleton]`, `SerialReactiveCommand`) come from the
-> **author's own NuGet packages** — `RxExt`, `RxUIExt`, `RxUIExt.Windsor`, `RxUIExt.WinUI`, `SalaTools.Core`,
-> `LinqMini`. These live in the NuGet cache under `%USERPROFILE%\.nuget\packages\`. They are **not**
-> in this repo; the app just references them. Understand them through the `Skills/Reactive` doc.
+> There is a **circular-ish but intended** pairing: the biggest DI/`ViewModel` primitives the app relies on (`ViewModel`, `ActivatableViewModel`, `[Reactive]`, `[Singleton]`, `SerialReactiveCommand`) come from the **author's own NuGet packages** — `RxExt`, `RxUIExt`, `RxUIExt.Windsor`, `RxUIExt.WinUI`, `SalaTools.Core`, `LinqMini`. These live in the NuGet cache under `%USERPROFILE%\.nuget\packages\`. They are **not** in this repo; the app just references them. Understand them through the `Skills/Reactive` doc.
 
 ---
 
@@ -152,13 +123,7 @@ C# side consumes `WebMessageReceived`, drives selection / scrolling
 ```
 
 ### The fork-tree / message model (core concept — read carefully)
-The chat is **not a flat list in memory**: it is a **doubly-linked list of `ChatMessageVm`** where
-each message points to `Previous`/`Next`, and each position can hold **multiple `Version`s** (a
-`ChatMessageSelectorVm`). `ConversationVm.Head` → selector → `TrackNext(...)` walks to the current
-`Tail`. Persisting it flattens the tree into `DbMessage` rows with `IdMessageParent`, `Version`,
-`IsCurrentVersion` (see `Skills/Db`). This is what powers the Edit/fork feature. **Study**
-`ChatMessageVm`, `ChatMessageSelectorVm`, `ChatMessageVmExt` (flatten/reconstruct), and
-`ConversationVm`, but note these are defined in the `Reactive` skill too.
+The chat is **not a flat list in memory**: it is a **doubly-linked list of `ChatMessageVm`** where each message points to `Previous`/`Next`, and each position can hold **multiple `Version`s** (a `ChatMessageSelectorVm`). `ConversationVm.Head` → selector → `TrackNext(...)` walks to the current `Tail`. Persisting it flattens the tree into `DbMessage` rows with `IdMessageParent`, `Version`, `IsCurrentVersion` (see `Skills/Db`). This is what powers the Edit/fork feature. **Study** `ChatMessageVm`, `ChatMessageSelectorVm`, `ChatMessageVmExt` (flatten/reconstruct), and `ConversationVm`, but note these are defined in the `Reactive` skill too.
 
 ---
 
@@ -166,43 +131,20 @@ each message points to `Previous`/`Next`, and each position can hold **multiple 
 
 ### Bootstrap / DI (`App.xaml.cs`, `AppServices.cs`)
 - `App` (in `MdcAi`) is `partial : ReactiveUI`'s `Application` + `ILogging`.
-- On construction: creates the local-data folder, **builds `AppServices.WindsorContainer`**
-  (`Install()`), configures NLog, sets `RxApp.DefaultExceptionHandler`, hooks `UnhandledException`,
-  registers the EF `UserProfileDbContext` (transient) and `UserProfileDbContextWithTrans`,
-  runs `database.MigrateAsync()` on startup, registers all VMs + Views, and `RegisterApi()` sets up
-  the OpenAI client + wiring on settings.
-- **`AppServices`** (`MdcAi.Extensions.WinUI/AppServices.cs`) is the *service-locator antipattern*
-  used everywhere: `AppServices.Container.Resolve<X>()`, `AppServices.GetUserProfileDb()`,
-  `GetUserProfileDbTrans()`, `GetLocalDataFolder()`, `GetAppFile(path)`. It calls
-  `AppServices.Install()` which **removes Castle's property-injection inspector and adds a
-  collection resolver** — so only **constructor injection** is used, and VMs can receive
-  collections of implementations.
+- On construction: creates the local-data folder, **builds `AppServices.WindsorContainer`** (`Install()`), configures NLog, sets `RxApp.DefaultExceptionHandler`, hooks `UnhandledException`, registers the EF `UserProfileDbContext` (transient) and `UserProfileDbContextWithTrans`, runs `database.MigrateAsync()` on startup, registers all VMs + Views, and `RegisterApi()` sets up the OpenAI client + wiring on settings.
+- **`AppServices`** (`MdcAi.Extensions.WinUI/AppServices.cs`) is the *service-locator antipattern* used everywhere: `AppServices.Container.Resolve<X>()`, `AppServices.GetUserProfileDb()`, `GetUserProfileDbTrans()`, `GetLocalDataFolder()`, `GetAppFile(path)`. It calls `AppServices.Install()` which **removes Castle's property-injection inspector and adds a collection resolver** — so only **constructor injection** is used, and VMs can receive collections of implementations.
 
 ### ViewModel / View naming & registration
 - VMs are classes named `*Vm`.
-- DI register everything with `AppServices.Container.RegisterViewModelsAndViews("MdcAi.ChatUI")`
-  (from `RxUIExt.Windsor`). Because the DI convention matches a VM to a view, the **view classes are
-  named after the selector pattern** `[XxxVm → XxxView]` and the partial class is the VM-named
-  `Xxx` view. **You almost always have `[DoNotRegister] class XxxViewBase : ReactivePage<XxxVm>`
-  as the XAML `x:Class` root and `public sealed partial class XxxView` code-behind.**
-  This avoids the DI auto-registering base classes twice. See `Views/Conversation.xaml.cs`,
-  `Views/RootPage.xaml.cs`.
+- DI register everything with `AppServices.Container.RegisterViewModelsAndViews("MdcAi.ChatUI")` (from `RxUIExt.Windsor`). Because the DI convention matches a VM to a view, the **view classes are named after the selector pattern** `[XxxVm → XxxView]` and the partial class is the VM-named `Xxx` view. **You almost always have `[DoNotRegister] class XxxViewBase : ReactivePage<XxxVm>` as the XAML `x:Class` root and `public sealed partial class XxxView` code-behind.** This avoids the DI auto-registering base classes twice. See `Views/Conversation.xaml.cs`, `Views/RootPage.xaml.cs`.
 - Views mount content through `RxUIExt.WinUI`'s `<winUi:ViewHost ViewModel="{x:Bind ...}" />`.
 
 ### Reactive: `ViewModel` vs `ActivatableViewModel`, `[Reactive]`, commands
-- Base types (defined in `RxUIExt`):
-  `ViewModel : ReactiveObject` (plain), `ActivatableViewModel : ViewModel, IActivatableViewModel`
-  (has `Activator` + `WhenActivated` support).
-- Every bindable VM property is marked `[Reactive]` (from `ReactiveUI.Fody`). The Fody weaver
-  (`FodyWeavers.xml` → `<ReactiveUI/>`) rewrites `[Reactive]` properties into reactive backing
-  fields that raise change notifications. In XAML, bind with `Mode=OneWay/TwoWay`.
-- Commands: `ReactiveCommand<Unit, TResult>`. Created via `ReactiveCommand.CreateFromObservable(...)`,
-  `.CreateFromTask(...)`, often with an `observeOnMainThread` scheduler and a **can-execute**
-  observable as last argument (e.g. `this.WhenAnyValue(vm => vm.CanSendPrompt)`).
-- **The entire logic is reactive chains**: `this.WhenAnyValue(vm => vm.X)`, `.Where(...)`, `.Select(...)`,
-  `.ObserveOnMainThread()`, `.Subscribe()`. Always end a chain with `.SubscribeSafe()`.
-- `RxUIExt` also provides `SerialReactiveCommand` (a command not blocked by "double-tap guards") —
-  for commands you want to allow re-entrancy on.
+- Base types (defined in `RxUIExt`): `ViewModel : ReactiveObject` (plain), `ActivatableViewModel : ViewModel, IActivatableViewModel` (has `Activator` + `WhenActivated` support).
+- Every bindable VM property is marked `[Reactive]` (from `ReactiveUI.Fody`). The Fody weaver (`FodyWeavers.xml` → `<ReactiveUI/>`) rewrites `[Reactive]` properties into reactive backing fields that raise change notifications. In XAML, bind with `Mode=OneWay/TwoWay`.
+- Commands: `ReactiveCommand<Unit, TResult>`. Created via `ReactiveCommand.CreateFromObservable(...)`, `.CreateFromTask(...)`, often with an `observeOnMainThread` scheduler and a **can-execute** observable as last argument (e.g. `this.WhenAnyValue(vm => vm.CanSendPrompt)`).
+- **The entire logic is reactive chains**: `this.WhenAnyValue(vm => vm.X)`, `.Where(...)`, `.Select(...)`, `.ObserveOnMainThread()`, `.Subscribe()`. Always end a chain with `.SubscribeSafe()`.
+- `RxUIExt` also provides `SerialReactiveCommand` (a command not blocked by "double-tap guards") — for commands you want to allow re-entrancy on.
 
 > Full reactive detail → `Skills/Reactive`.
 
@@ -228,11 +170,8 @@ Route: `MainVm`↔`ConversationsVm`↔`SettingsVm`. `MainVm` is `[Singleton]`.
 
 WinUI 3 needs:
 
-- **Visual Studio 2022** (17.x) with the **Windows App SDK / WinUI 3** workload. MsBuild
-  (`msbuild.exe`) is the build driver, not just `dotnet build`.
-- The repo builds for `x86/x64/ARM64` in four configs each: `Debug`, `Debug-Unpackaged`,
-  `Release`, `Release-Unpackaged`. The `Packaged` flag (set from the config suffix) toggles MSIX
-  vs unpackaged output.
+- **Visual Studio 2022** (17.x) with the **Windows App SDK / WinUI 3** workload. MsBuild (`msbuild.exe`) is the build driver, not just `dotnet build`.
+- The repo builds for `x86/x64/ARM64` in four configs each: `Debug`, `Debug-Unpackaged`, `Release`, `Release-Unpackaged`. The `Packaged` flag (set from the config suffix) toggles MSIX vs unpackaged output.
 - The CI (`Source/.github/workflows/dotnet-desktop.yml`) runs `Release-Unpackaged x64`.
 
 Follow `Skills/BuildPackaging` for packing/unpackaging, signing, and where the `.pfx`/certs live.
@@ -241,10 +180,7 @@ Follow `Skills/BuildPackaging` for packing/unpackaging, signing, and where the `
 
 ## Testing / debugging conveniences
 - **NLog** writes a per-process date-stamped log file in the local-appdata dir; level can be raised.
-- The app has **mock mode** toggles in `Debugging` (in `MdcExtensions.WinUI/Debugging.cs`):
-  `Debugging.Enabled`, `MockMessages`, `MockModels`, `NumberedMessages`, `AutoSendFirstMessage`,
-  `NpmRenderer` (serve React from a local dev server on port 3000), `LogSql`.
-  Flipping these to `true` lets you run the UI fully offline (no API).
+- The app has **mock mode** toggles in `Debugging` (in `MdcExtensions.WinUI/Debugging.cs`): `Debugging.Enabled`, `MockMessages`, `MockModels`, `NumberedMessages`, `AutoSendFirstMessage`, `NpmRenderer` (serve React from a local dev server on port 3000), `LogSql`. Flipping these to `true` lets you run the UI fully offline (no API).
 - **ReactiveUI error dialog**: `RxApp.DefaultExceptionHandler` shows a "Something Broke 😳" ContentDialog.
 
 ---
@@ -253,19 +189,11 @@ Follow `Skills/BuildPackaging` for packing/unpackaging, signing, and where the `
 
 - **Service locator everywhere.** Don't "fix" it into pure DI without a big refactor; match the codebase.
 - **Nullable is disabled** in all projects (`<Nullable>disable</Nullable>`). Code relies on null freely.
-- **WebView2 contract is stringly-typed JSON** via `WebViewRequestDto { Name, Data }`. Adding a rendered
-  feature means adding a new `Name`. See `Skills/WebViewRenderer`.
-- **Don't break the fork/DbVersion invariant** — the conversation tree <-> `DbMessage`(with
-  Version/IsCurrentVersion/IdMessageParent) round-trip is subtle. When changing message storage, keep
-  both sides consistent.
-- **Evals/EF migrations**: the shipped `Chats.db` embedded resource must match current schema. To add
-  a schema change, run EF migrations (see `Skills/Db`) and update the embedded db copy.
-- **Name-matching between View and VM** is done by convention through DI. If you add a new VM you
-  usually add a new matching view; if you add a VM-only (dialog), fine.
-- **Comments/code style**: casual, first-person, sometimes with profanity/sarcasm ("Fuck. Me. WinUI").
-  Match this tone loosely; it's OK to be informal. 4-space indent, `file-scoped` namespaces,
-  `using` directives **after** the namespace, trailing commas in multi-line object initializers,
-  `// TODO:` comments where relevant. There's a `.editorconfig` + ReSharper conventions for alignment.
+- **WebView2 contract is stringly-typed JSON** via `WebViewRequestDto { Name, Data }`. Adding a rendered feature means adding a new `Name`. See `Skills/WebViewRenderer`.
+- **Don't break the fork/DbVersion invariant** — the conversation tree <-> `DbMessage`(with Version/IsCurrentVersion/IdMessageParent) round-trip is subtle. When changing message storage, keep both sides consistent.
+- **Evals/EF migrations**: the shipped `Chats.db` embedded resource must match current schema. To add a schema change, run EF migrations (see `Skills/Db`) and update the embedded db copy.
+- **Name-matching between View and VM** is done by convention through DI. If you add a new VM you usually add a new matching view; if you add a VM-only (dialog), fine.
+- **Comments/code style**: casual, first-person, sometimes with profanity/sarcasm ("Fuck. Me. WinUI"). Match this tone loosely; it's OK to be informal. 4-space indent, `file-scoped` namespaces, `using` directives **after** the namespace, trailing commas in multi-line object initializers, `// TODO:` comments where relevant. There's a `.editorconfig` + ReSharper conventions for alignment.
 
 ---
 
@@ -281,3 +209,4 @@ Follow `Skills/BuildPackaging` for packing/unpackaging, signing, and where the `
 | extend any VM/View, add a dialog, bind data | **`Skills/Reactive`** |
 
 > Each `Skills/<Sub>/AGENTS.md` is self-contained. Start here, drill down there.
+

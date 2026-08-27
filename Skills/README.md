@@ -1,8 +1,6 @@
 # Skills — agent subsystem guides
 
-Each subfolder is a self-contained, deep-dive guide an AI agent (or human) should read **before**
-working in that subsystem. The root `AGENTS.md` is the orientation/onboarding document; drill down
-here for detail.
+Each subfolder is a self-contained, deep-dive guide an AI agent (or human) should read **before** working in that subsystem. The root `AGENTS.md` is the orientation/onboarding document; drill down here for detail.
 
 ## Index
 
@@ -16,8 +14,7 @@ here for detail.
 
 ## How the pieces fit
 
-The app is a **reactive MVVM WinUI 3 shell** that renders chat in a **WebView2 React viewer**, and
-persists conversations to **SQLite** while calling an **LLM API**:
+The app is a **reactive MVVM WinUI 3 shell** that renders chat in a **WebView2 React viewer**, and persists conversations to **SQLite** while calling an **LLM API**:
 
 ```
 +---------------- normalized by ReactiveViewModel
@@ -27,5 +24,5 @@ persists conversations to **SQLite** while calling an **LLM API**:
                               └─▶ LocalDal (SQLite)  ──▶ ChatList render in WebView2
 ```
 
-Keep the root `AGENTS.md` (orientation + conventions) and the relevant skill open together; they
-are meant to be read as a pair.
+Keep the root `AGENTS.md` (orientation + conventions) and the relevant skill open together; they are meant to be read as a pair.
+

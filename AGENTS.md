@@ -8,21 +8,21 @@ An orientation document for AI coding agents (and humans) working on this reposi
 
 ## What is this project?
 
-**MDC AI** is a native **Windows desktop** GPT *chat agent* — a ChatGPT-style UI running as a WinUI 3 (Windows App SDK) app that talks directly to an LLM **Chat Completions** API. It is a **BYOK** ("bring your own key") app: the user supplies an OpenAI API key and chats directly with the (stateless) API. No proxy, no intermediate service.
+**MDC AI** is a native **Windows desktop** GPT *chat agent* — a ChatGPT-style UI running as a WinUI 3 (Windows App SDK) app that talks directly to an LLM **Chat Completions** API. It is a **BYOK** ("bring your own key") app: the user supplies an API key and chats directly with the (stateless) API. No proxy, no intermediate service.
 
-It is **open-source** (Apache-2.0, © 2023 Bojan Sala) and lightweight. The project is ~2 years old and shipping version **1.0.3**, but it's mid-lifecycle: the codebase was recently updated from .NET 6 → **.NET 9** and EF Core was upgraded.
+It is **open-source** (Apache-2.0, © 2023 Bojan Sala) and lightweight. The project is shipping version **1.0.3**, mid-lifecycle: the codebase was recently updated from .NET 6 → **.NET 9**, EF Core upgraded, and — most recently — **multi-provider support landed** (OpenAI + OpenRouter via a provider registry + router).
 
 ### Key capabilities (current v1.0.3)
-- Chat with GPT models, **streaming** token-by-token output rendered as rich **Markdown**.
-- **Custom personalities/Categories** — each conversation belongs to a *Category*; each category (and each conversation, optionally overriding) has its own model + premise (system prompt) + sampling parameters.
+- Chat with GPT models (OpenAI) or any OpenRouter-routed model (Claude, DeepSeek, Llama, Gemini, ...), **streaming** token-by-token output rendered as rich **Markdown**.
+- **Custom personalities/Categories** — each conversation belongs to a *Category*; each category (and each conversation, optionally overriding) has its own model + premise (system prompt) + sampling parameters. **Model pickers are grouped by provider/author** so the OpenRouter catalog never shows as a 400-item flat list.
 - **Advanced Edit / forking**: you can edit a completion, which creates a *version* of a message and *forks* the conversation tree. The app remembers the current fork (`Head` → `Tail`) and the current selected version. (This is the app's most distinctive feature — see `Skills/Reactive` and `Db`.)
-- Full chat history persisted **locally** in SQLite.
+- Full chat history persisted **locally** in SQLite. API keys live in the Windows **PasswordVault** per provider.
 - Privacy: everything stays on disk under the local app-data folder.
 - A **React renderer inside a WebView2** control renders the messages with proper Markdown, syntax highlighting, selection and copy — instead of a XAML chat list.
 
 ### Where this project is going (author's stated direction)
-- **Multi-provider**: today it talks only to OpenAI, but the APIs are mostly OpenAI-compatible, so the plan is to support **OpenRouter** and (ideally) a regular ChatGPT subscription, the way **opencode** does. Work here should treat the OpenAI client as `OpenAiApi`-compatible rather than OpenAI-exclusive. See `Skills/OpenAiApi`.
-- Vector/semantic search over conversations; multimodal (image-in/out); custom tools / function calling; self-hosted local LLMs. These are all "Planned" — not implemented.
+- **Multi-provider (done for OpenAI + OpenRouter)**: the OpenAI-compatible client + `ChatApiRouter` now routes by model id; adding another provider = one more descriptor in `Skills/OpenAiApi`. A regular ChatGPT subscription would be a second `IOpenAiApi` implementation behind the same seam.
+- Vector/semantic search over conversations; multimodal (image-in/out); custom tools / function calling (tool+calls + reasoning-effort plumbing is the next phase per the willingness to extend `ChatRequest`); self-hosted local LLMs. These are all "Planned" — not implemented.
 
 ---
 
@@ -38,13 +38,16 @@ C:\Source\MdcAi\
 └─ Source\
    ├─ .editorconfig
    ├─ Common\
-   │  └─ MdcAi.OpenAiApi\        ← LLM API client library (pure .NET, no UI). OpenAI-focused.
+   │  ├─ MdcAi.OpenAiApi\        ← LLM API client library (pure .NET, no UI). OpenAI + OpenRouter via AiProviders/ChatApiRouter.
+   │  ├─ MdcAi.OpenAiApi.Tests\  ← unit tests (no network)
+   │  └─ MdcAi.OpenAiApi.IntegrationTests\ ← live smoke tests; keys via user secrets
    ├─ React Chat Renderer\
    │  └─ RendererApp\            ← the React app that renders chat inside the WebView2
    └─ Desktop\
-      ├─ MdcAi.sln               ← solution (5 projects)
+      ├─ MdcAi.sln               ← solution (5 app projects + 3 test projects, tests opt-in)
       ├─ MdcAi\                  ← THE WinUI3 app shell (entry point, MainWindow, RootPage)
       ├─ MdcAi.ChatUI\           ← Views + ViewModels + WebView2 host (most of the UI logic)
+      ├─ MdcAi.ChatUI.Tests\     ← ViewModel unit tests (OpenAiSettingsVm, OpenRouterSettingsVm, SettingsVm, ChatSettingsVm, ConversationVm)
       ├─ MdcAi.ChatUI.LocalDal\  ← EF Core + SQLite "user profile" data access (chat lists)
       └─ MdcAi.Extensions.WinUI\ ← app-wide helper lib (services, converters, base VMs via RxUIExt)
 ```
@@ -91,7 +94,7 @@ Solution: `Source/MdcAi.sln`. Five projects: `MdcAi`, `MdcAi.ChatUI`, `MdcAi.Ext
 | Persistence helper | **Mapster** (object mapping) | VM→DbEntity / DbEntity→VM |
 | Markdown → HTML | **Markdig** | done in C#, before sending to the WebView |
 | Logging | **NLog 5** + `Microsoft.Extensions.Logging` | logs under app-data, one file per process+time |
-| App prefs | .NET `GlobalChatSettings` (settings designer) | tiny; custom app setting `ShowGettingStartedConvoTip` |
+| App prefs | .NET `GlobalChatSettings` (settings designer) | tiny; `ShowGettingStartedConvoTip` |
 
 ---
 
@@ -159,7 +162,8 @@ The chat is **not a flat list in memory**: it is a **doubly-linked list of `Chat
 | `ConversationCategory` | `ConversationCategoryVm` | category editor |
 | Getting-started tips pages | (static partial) | sub-navigator in Conversation |
 | `Settings` | `SettingsVm` | Settings pivot |
-| `OpenAISettingsPage` | `OpenAiSettingsVm` | inside Settings |
+| `OpenAISettingsPage` | `OpenAiSettingsVm` (per-provider section, base `ProviderSettingsVm`) | inside Settings |
+| `OpenRouterSettingsPage` | `OpenRouterSettingsVm` (per-provider section, base `ProviderSettingsVm`) | inside Settings |
 | `AboutPage`, `PrivacyInfoWindow`, `LicensesWindow` | (dialogs) | about/privacy/licenses |
 
 Route: `MainVm`↔`ConversationsVm`↔`SettingsVm`. `MainVm` is `[Singleton]`.

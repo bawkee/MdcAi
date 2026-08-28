@@ -1,4 +1,4 @@
-﻿#region Copyright Notice
+#region Copyright Notice
 // Copyright (c) 2023 Bojan Sala
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -18,7 +18,8 @@ using Newtonsoft.Json.Linq;
 using SalaTools.Core;
 
 /// <summary>
-/// Http client wrapper specially made for OpenAi REST endpoints, their headers, return codes, errors, etc.
+/// Http client wrapper for OpenAI-compatible REST endpoints (OpenAI, OpenRouter, self-hosted, ...),
+/// their headers, return codes and SSE error shapes.
 /// </summary>
 public static class HttpClientExtensions
 {
@@ -26,18 +27,28 @@ public static class HttpClientExtensions
     {
         try
         {
-            result.Organization = headers.GetValues("Openai-Organization").FirstOrDefault();
-            result.RequestId = headers.GetValues("X-Request-ID").FirstOrDefault();
-            result.ProcessingTime = TimeSpan.FromMilliseconds(int.Parse(headers.GetValues("Openai-Processing-Ms").First()));
-            result.OpenaiVersion = headers.GetValues("Openai-Version").FirstOrDefault();
+            result.Organization = GetHeader(headers, "OpenAI-Organization");
+            result.RequestId = GetHeader(headers, "X-Request-ID") ?? GetHeader(headers, "X-Generation-Id");
+            result.OpenaiVersion = GetHeader(headers, "OpenAI-Version");
 
-            // No longer supported...
-            //if (string.IsNullOrEmpty(result.Model))
-            //    result.Model = headers.GetValues("Openai-Model").FirstOrDefault();
+            if (int.TryParse(GetHeader(headers, "OpenAI-Processing-Ms"), out var ms))
+                result.ProcessingTime = TimeSpan.FromMilliseconds(ms);
         }
         catch (Exception ex)
         {
             typeof(HttpClientExtensions).GetLogger()?.LogError(ex, "Parsing metadata of OpenAi Response");
+        }
+    }
+
+    private static string GetHeader(HttpResponseHeaders headers, string name)
+    {
+        try
+        {
+            return headers.TryGetValues(name, out var values) ? values.FirstOrDefault() : null;
+        }
+        catch
+        {
+            return null;
         }
     }
 
@@ -90,6 +101,8 @@ public static class HttpClientExtensions
             if (line == "[DONE]")
                 yield break;
 
+            // SSE keeps the connection alive with comment lines (OpenRouter sends
+            // ": OPENROUTER PROCESSING" between chunks) and blank lines - skip both.            
             if (string.IsNullOrWhiteSpace(line) || line.StartsWith(":"))
                 continue;
 
@@ -101,8 +114,41 @@ public static class HttpClientExtensions
             res.OpenaiVersion = headers.OpenaiVersion;
             res.Model ??= headers.Model;
 
+            // Mid-stream failure: OpenAI-compatible endpoints (incl. OpenRouter) can ship a 200
+            // with an error object once the stream has started - e.g. token-limit exceeded,
+            // provider 402/429. Surface it as a typed exception so callers stop aggregating.
+            if (res is { } apiResult && GetError(apiResult) is { } error)
+                throw ToApiException(error, HttpStatusCode.OK);
+
             yield return res;
         }
+    }
+
+    private static ApiError GetError(ApiResult result) => result switch
+    {
+        ChatResult chat => chat.Error,
+        _ => null
+    };
+
+    /// <summary>Wraps an <see cref="ApiError"/> into a typed exception by status/code.</summary>
+    internal static OpenAiApiException ToApiException(ApiError error, HttpStatusCode status)
+    {
+        var message = error?.Message ?? "The API returned an error.";
+
+        // OpenRouter ships mid-stream errors as a 200 with `code` in the error object, so we
+        // match on the provider error code as well as the HTTP status.
+        return (error?.Code, status) switch
+        {
+            ("invalid_api_key", _) => new OpenAiInvalidApiKeyException(message),
+            (_, HttpStatusCode.Unauthorized) => new OpenAiApiAuthException(
+                error?.Message ?? "The API rejected the authorization with the given API key."),
+            ("402", _) or ("429", _) or ("insufficient_quota", _) or (_, HttpStatusCode.PaymentRequired) or (_, HttpStatusCode.TooManyRequests) =>
+                new OpenAiApiQuotaException(
+                    error?.Message ?? "The API refused to process the request (rate limit or insufficient credits)."),
+            (_, HttpStatusCode.InternalServerError) => new OpenAiApiException(
+                error?.Message ?? "The API had an internal server error, which can happen occasionally. Please retry your request."),
+            _ => new OpenAiApiException(message)
+        };
     }
 
     public static async Task<HttpResponseMessage> RequestAsync(
@@ -156,26 +202,23 @@ public static class HttpClientExtensions
         }
         catch (Exception e)
         {
-            resultAsString = "Additionally, the following error was thrown when attemping to read the response content: " + e.Message;
+            resultAsString = "Additionally, the following error was thrown when attempting to read the response content: " + e.Message;
         }
 
         var telemetryMessage = GetErrorMessage(resultAsString, response, uri.ToString());
 
-        typeof(HttpClientExtensions).GetLogger().LogError(telemetryMessage);
-
-        if (parsedError is { Code: "invalid_api_key" })
-            throw new OpenAiInvalidApiKeyException(parsedError.Message);
-
-        throw response.StatusCode switch
+        // Logging may be uninitialized (e.g. in tests or when hosted without NLog) - never let
+        // a logging failure mask the real API error.
+        try
         {
-            HttpStatusCode.Unauthorized => new OpenAiApiAuthException(
-                parsedError?.Message ?? "OpenAI rejected the authorization with the given API key."),
-            HttpStatusCode.TooManyRequests => new OpenAiApiQuotaException(
-                parsedError?.Message ?? "OpenAI refused to process the request due to a rate limit."),
-            HttpStatusCode.InternalServerError => new OpenAiApiException(
-                parsedError?.Message ?? "OpenAI had an internal server error, which can happen occasionally. Please retry your request."),
-            _ => new HttpRequestException(GetErrorMessage(resultAsString, response, uri.ToString()))
-        };
+            typeof(HttpClientExtensions).GetLogger()?.LogError(telemetryMessage);
+        }
+        catch
+        {
+            // logging is best-effort
+        }
+
+        throw ToApiException(parsedError, response.StatusCode);
     }
 
     private static string GetErrorMessage(string resultAsString, HttpResponseMessage response, string name, string description = "") =>

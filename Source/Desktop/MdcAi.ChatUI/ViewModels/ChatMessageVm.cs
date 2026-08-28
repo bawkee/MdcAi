@@ -1,4 +1,4 @@
-﻿#region Copyright Notice
+#region Copyright Notice
 
 // Copyright (c) 2023 Bojan Sala
 //   Licensed under the Apache License, Version 2.0 (the "License");
@@ -195,7 +195,11 @@ public class ChatMessageVm : ViewModel, ILogging
             currentParent = currentParent.Previous;
         }
 
-        if (!new AiModel(Conversation.Settings.Model).IsReasoning)
+        var modelId = Conversation.Settings.SelectedModel;
+        var isReasoning = Conversation.Settings.Models?.FirstOrDefault(m => m.ModelID == modelId)?.IsReasoning
+                          ?? new AiModel(modelId).IsReasoning;
+
+        if (!isReasoning)
         {
             // This is the spice, hard coded, because not including this could lead to trouble such as various md syntax
             // bugs and the AI mistakenly thinking it's on the OpenAI's chat bot. I left room to answer whatever it wants

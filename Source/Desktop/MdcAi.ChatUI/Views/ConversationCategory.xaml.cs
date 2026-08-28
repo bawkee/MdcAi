@@ -34,24 +34,35 @@ public sealed partial class ConversationCategory
 
         this.WhenActivated((disposables, viewModel) =>
         {
-            viewModel.WhenAnyValue(vm => vm.Settings.Models)
-                     .WhereNotNull()
-                     .Do(models =>
-                     {
-                         ChatSettingModelDropdown.ClearValue(Selector.SelectedValueProperty);
-                         ChatSettingModelDropdown.ItemsSource = models;
-                         ChatSettingModelDropdown.SelectedValuePath = nameof(AiModel.ModelID);
-                         BindingOperations.SetBinding(
-                             ChatSettingModelDropdown,
-                             Selector.SelectedValueProperty,
-                             new Binding
-                             {
-                                 Path = new("Settings.Model"),
-                                 Mode = BindingMode.TwoWay
-                             });
-                     })
-                     .SubscribeSafe()
-                     .DisposeWith(disposables);
+            // Provider-grouped model dropdown. Selecting persists the category default.
+            viewModel.Settings.WhenAnyValue(vm => vm.Models)
+                              .WhereNotNull()
+                              .Do(models =>
+                              {
+                                  var selectedId = viewModel.Settings.Model;
+                                  var selectedModel = models.FirstOrDefault(m => m.ModelID == selectedId);
+                                  ChatSettingModelDropdown.Content = ModelMenuFactory.LabelFor(selectedModel);
+                                  var flyout = new MenuFlyout();
+                                  foreach (var item in ModelMenuFactory.BuildProviderGroupedMenu(models, m =>
+                                  {
+                                      viewModel.Settings.Model = m.ModelID;
+                                      ChatSettingModelDropdown.Content = ModelMenuFactory.LabelFor(m);
+                                  }))
+                                      flyout.Items.Add(item);
+                                  ChatSettingModelDropdown.Flyout = flyout;
+                              })
+                              .SubscribeSafe()
+                              .DisposeWith(disposables);
+
+            viewModel.Settings.WhenAnyValue(vm => vm.Model)
+                              .WhereNotNull()
+                              .Do(m =>
+                              {
+                                  if (viewModel.Settings.Models?.FirstOrDefault(x => x.ModelID == m) is { } model)
+                                      ChatSettingModelDropdown.Content = ModelMenuFactory.LabelFor(model);
+                              })
+                              .SubscribeSafe()
+                              .DisposeWith(disposables);
 
             viewModel.RenameIntr.RegisterHandler(
                          async r =>

@@ -1,4 +1,4 @@
-﻿#region Copyright Notice
+#region Copyright Notice
 // Copyright (c) 2023 Bojan Sala
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -179,13 +179,14 @@ public sealed partial class Conversation : ILogging
                      .ObserveOnMainThread()
                      .Do(models =>
                      {
+                         // Provider-grouped model picker (OpenAI / OpenRouter submenus - a
+                         // 400+ model catalog never shows as a flat list, and it's always
+                         // clear which provider a model belongs to).
                          ModelsMenu.Items.Clear();
-                         ModelsMenu.Items.AddRange(models.Select(m => new MenuFlyoutItem()
-                         {
-                             Text = m.ModelID,
-                             Command = viewModel.SelectModelCmd,
-                             CommandParameter = (string)m
-                         }));
+                         foreach (var item in ModelMenuFactory.BuildProviderGroupedMenu(
+                                          models,
+                                          m => viewModel.SelectModelCmd.Execute(m.ModelID).Subscribe()))
+                             ModelsMenu.Items.Add(item);
 
                          ModelsMenu.Items.Add(new MenuFlyoutSeparator());
                          ModelsMenu.Items.Add(new MenuFlyoutItem()
@@ -255,22 +256,30 @@ public sealed partial class Conversation : ILogging
                      .WhereNotNull()
                      .Do(models =>
                      {
-                         // Setting combobox bindings in xaml will often, if not always, result in it clearing up the value. Only way to prevent it
-                         // is to make sure its items are loaded before binding its SelectedValue to anything. Tickets are open for this since 2008.
-                         ChatSettingModelDropdown.ClearValue(Selector.SelectedValueProperty);
-                         ChatSettingModelDropdown.ItemsSource = models;
-                         ChatSettingModelDropdown.SelectedValuePath = nameof(AiModel.ModelID);
-                         BindingOperations.SetBinding(
-                             ChatSettingModelDropdown,
-                             Selector.SelectedValueProperty,
-                             new Binding
-                             {
-                                 Path = new("Settings.Model"),
-                                 Mode = BindingMode.TwoWay
-                             });
+                         // Provider-grouped dropdown shown in the in-conversation settings dialog.
+                         var selectedModel = models.FirstOrDefault(m => m.ModelID == viewModel.Settings.Model);
+                         ChatSettingModelDropdown.Content = ModelMenuFactory.LabelFor(selectedModel);
+                         var flyout = new MenuFlyout();
+                         foreach (var item in ModelMenuFactory.BuildProviderGroupedMenu(models, m =>
+                         {
+                             viewModel.Settings.Model = m.ModelID;
+                             ChatSettingModelDropdown.Content = ModelMenuFactory.LabelFor(m);
+                         }))
+                             flyout.Items.Add(item);
+                         ChatSettingModelDropdown.Flyout = flyout;
                      })
                      .SubscribeSafe()
                      .DisposeWith(disposables);
+
+            viewModel.Settings.WhenAnyValue(vm => vm.Model)
+                              .WhereNotNull()
+                              .Do(m =>
+                              {
+                                  if (viewModel.Models?.FirstOrDefault(x => x.ModelID == m) is { } model)
+                                      ChatSettingModelDropdown.Content = ModelMenuFactory.LabelFor(model);
+                              })
+                              .SubscribeSafe()
+                              .DisposeWith(disposables);
 
             ViewModel.EditSettingsCmd
                      .ObserveOnMainThread()

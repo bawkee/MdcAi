@@ -432,7 +432,7 @@
 
                 <c:UniformGrid Columns="2">
                   <TextBlock Text="Default Model" Margin="0,5" />
-                  <ComboBox x:Name="ChatSettingModelDropdown" HorizontalAlignment="Stretch" />
+                  <DropDownButton x:Name="ChatSettingModelDropdown" HorizontalAlignment="Stretch" Content="Select model" />
                 </c:UniformGrid>
 
               </StackPanel>

@@ -1,4 +1,4 @@
-﻿#region Copyright Notice
+#region Copyright Notice
 // Copyright (c) 2023 Bojan Sala
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -68,10 +68,19 @@ public class ConversationCategoryVm : ActivatableViewModel
                .Switch()
                .SubscribeSafe();
 
+        // Load this category's settings' model list when the editor opens, and reload whenever any
+        // provider's key changes (which changes which models are available).
         Activator.Activated.Take(1)
-                 .Select(_ => globalSettings.WhenAnyValue(vm => vm.OpenAi.ApiKey)
-                                            .Where(v => !string.IsNullOrEmpty(v))
-                                            .Select(_ => Unit.Default))
+                 .Select(_ => Observable.Merge(
+                                   Observable.Return(Unit.Default),
+                                   globalSettings.OpenAi.WhenAnyValue(vm => vm.ApiKey)
+                                       .Skip(1)
+                                       .Throttle(TimeSpan.FromMilliseconds(400))
+                                       .Select(_ => Unit.Default),
+                                   globalSettings.OpenRouter.WhenAnyValue(vm => vm.ApiKey)
+                                       .Skip(1)
+                                       .Throttle(TimeSpan.FromMilliseconds(400))
+                                       .Select(_ => Unit.Default)))
                  .Switch()
                  .InvokeCommand(Settings.LoadModelsCmd);        
 

@@ -173,7 +173,7 @@
 
             <c:SettingsCard Header="Default Model"
                                    Description="Defines which AI model to use, its version and extra features such as higher token limit.">
-              <ComboBox x:Name="ChatSettingModelDropdown" MinWidth="150" />
+              <DropDownButton x:Name="ChatSettingModelDropdown" MinWidth="150" Content="Select model" />
             </c:SettingsCard>
           </c:SettingsExpander.Items>
         </c:SettingsExpander>

@@ -1,4 +1,4 @@
-﻿#region Copyright Notice
+#region Copyright Notice
 // Copyright (c) 2023 Bojan Sala
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -13,36 +13,27 @@
 
 namespace MdcAi.ChatUI.ViewModels;
 
-public class OpenAiSettingsVm : ActivatableViewModel
-{
-    private string _apiKey;
+using OpenAiApi;
 
-    public string ApiKey
-    {
-        get => _apiKey;
-        set
-        {
-            this.RaiseAndSetIfChanged(ref _apiKey, value?.Trim());
-        }
-    }
+/// <summary>
+/// OpenAI API-access settings. Shown as its own section in Settings; coexists with the other
+/// providers' sections (no "current provider" selection).
+/// </summary>
+public class OpenAiSettingsVm : ProviderSettingsVm
+{
+    public override AiProvider Provider => AiProviders.OpenAi;
 
     [Reactive] public string OrganisationName { get; set; }
 
-    public OpenAiSettingsVm()
+    public OpenAiSettingsVm(ICredsStore creds)
+        : base(creds)
     {
-        ApiKey = AppCredsManager.GetValue("ApiKeys");
-        OrganisationName = AppCredsManager.GetValue("OrganisationName");
-
-        this.WhenAnyValue(vm => vm.ApiKey)
-            .Skip(1)
-            .ObserveOnMainThread()
-            .Do(v => AppCredsManager.SetValue("ApiKeys", v))
-            .SubscribeSafe();
+        OrganisationName = GetCredential(ProviderCreds.OrganisationName);
 
         this.WhenAnyValue(vm => vm.OrganisationName)
             .Skip(1)
             .ObserveOnMainThread()
-            .Do(v => AppCredsManager.SetValue("OrganisationName", v))
+            .Do(v => SaveCredential(ProviderCreds.OrganisationName, v))
             .SubscribeSafe();
     }
 }

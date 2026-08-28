@@ -1,4 +1,4 @@
-﻿#region Copyright Notice
+#region Copyright Notice
 // Copyright (c) 2023 Bojan Sala
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -199,18 +199,40 @@ public partial class App : ILogging
 
     private void RegisterApi()
     {
+        // ICredsStore must be registered BEFORE anything that resolves SettingsVm, since the
+        // provider settings VMs depend on it and Castle resolves lazily at first use.
+        AppServices.Container.Register(
+            Component.For<ICredsStore>()
+                     .Instance(AppCredsManager.Store)
+                     .LifeStyle.Singleton);
+
+        // First-run migration of the legacy single-provider OpenAI key.
+        ProviderCreds.MigrateLegacyOpenAiKey(AppCredsManager.Store);
+
         var settings = AppServices.Container.Resolve<SettingsVm>();
-        var api = new OpenAiClient();
 
-        AppServices.Container.Register(Component.For<IOpenAiApi>()
-                                                .Instance(api)
-                                                .LifeStyle.Singleton);
+        var api = new ChatApiRouter(provider => ProviderCreds.Build(AppCredsManager.Store, provider));
 
-        settings.WhenAnyValue(vm => vm.OpenAi.ApiKey,
-                              vm => vm.OpenAi.OrganisationName)
-                .Where(_ => !string.IsNullOrEmpty(settings.OpenAi.ApiKey))
-                .Do(_ => api.SetCredentials(settings.OpenAi.ApiKey, settings.OpenAi.OrganisationName))
-                .SubscribeSafe();
+        AppServices.Container.Register(
+            Component.For<IOpenAiApi>()
+                     .Instance(api)
+                     .LifeStyle.Singleton);
+
+        // When any credential changes, drop the cached provider clients so the next request
+        // picks up fresh credentials.
+        Observable.Merge(
+                      settings.OpenAi.WhenAnyValue(vm => vm.ApiKey),
+                      settings.OpenAi.WhenAnyValue(vm => vm.OrganisationName),
+                      settings.OpenRouter.WhenAnyValue(vm => vm.ApiKey),
+                      settings.OpenRouter.WhenAnyValue(vm => vm.RefererUrl),
+                      settings.OpenRouter.WhenAnyValue(vm => vm.AppTitle))
+                  .Throttle(TimeSpan.FromMilliseconds(300))
+                  .Do(_ => api.RefreshCredentials())
+                  .SubscribeSafe();
+
+        // The router's "active provider" is only a default for direct GetModels() calls; real
+        // requests route by the model id. Default to OpenAI for fresh installs.
+        api.SetActiveProvider(AiProviders.Default);
     }
 
     /// <summary>

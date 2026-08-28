@@ -1,4 +1,4 @@
-﻿#region Copyright Notice
+#region Copyright Notice
 // Copyright (c) 2023 Bojan Sala
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -107,11 +107,26 @@ public class ChatSettingsVm : ViewModel
         {
             if (Debugging.Enabled && Debugging.MockModels)
                 return MockModels;
-            return await api.GetModels();
+            return await api.GetAllModels();
         });
 
         LoadModelsCmd.ObserveOnMainThread()
-                     .Do(models => Models = models.Where(m => m.IsConversational || m.IsReasoning).ToArray())
+                     .Do(models =>
+                     {
+                         Models = models.Where(m => m.IsConversational || m.IsReasoning).ToArray();
+
+                         // If the stored model isn't in any configured provider's catalog (e.g.
+                         // its provider has no key), fall back to a default. Prefer the default
+                         // of the provider the stored id belongs to when that provider IS
+                         // available, otherwise the first usable model in the catalog.
+                         if (Models.Length > 0 && !Models.Any(m => m.ModelID == Model))
+                         {
+                             var provider = AiProviders.GetProviderForModelId(Model);
+                             Model = Models.Any(m => m.ProviderKey == provider.Key)
+                                 ? provider.DefaultModel
+                                 : Models[0].ModelID;
+                         }
+                     })
                      .SubscribeSafe();
 
         LoadModelsCmd.IsExecuting

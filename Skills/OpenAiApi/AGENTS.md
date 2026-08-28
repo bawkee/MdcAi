@@ -1,6 +1,6 @@
-# Skill: LLM API client (`MdcAi.OpenAiApi`) & multi-provider direction
+# Skill: LLM API client (`MdcAi.OpenAiApi`) & multi-provider support
 
-How this app calls the LLM — and the **single most important area to touch for the planned OpenRouter / provider-agnostic / ChatGPT-subscription work**. Read this before changing anything under `Source/Common/MdcAi.OpenAiApi/` or the credential/settings flow.
+How this app calls the LLM — and where the **OpenRouter / provider-agnostic work** lives. Read this before changing anything under `Source/Common/MdcAi.OpenAiApi/` or the credential/settings flow.
 
 ---
 
@@ -11,89 +11,94 @@ How this app calls the LLM — and the **single most important area to touch for
 - Deps: `Newtonsoft.Json` 13.0.3, `SalaTools.Core` 1.0.1 (author's package → `SafeHttpClient`, `RelativeUri`, `ArgumentBasedMemoize`, `GetLogger()`).
 - **`Nullable` disabled**, platforms `AnyCPU;x86;x64;ARM64`, net9.0.
 
-> The package **is named/namespaced `OpenAiApi`** and everything in it is OpenAI-shaped. It is *currently* OpenAI-only, but the goal is to make it treat *any* OpenAI-compatible endpoint (OpenRouter, self-hosted OpenAI-compatible servers) — and eventually ChatGPT-Chat (non-API) too. Treat it as "an OpenAI-compatible chat client", NOT "OpenAI-only".
+> The package **is named/namespaced `OpenAiApi`** and everything in it is OpenAI-shaped. It is an "OpenAI-compatible chat client" that talks to **any** OpenAI-compatible endpoint: OpenAI, OpenRouter, and (with a descriptor) any self-hosted server.
 
 ## Public surface
 
-The main entry is the **`IOpenAiApi`** interface (in `OpenAiClient.cs`) and its default implementation `OpenAiClient` (a `partial` class split across `OpenAiClient.cs` and `OpenAiClientCompletions.cs`).
+The main entry is the **`IOpenAiApi`** interface (in `OpenAiClient.cs`). The app registers one
+implementation — normally the **`ChatApiRouter`** — as the singleton `IOpenAiApi`.
 
 ```csharp
 public interface IOpenAiApi {
-    string ApiKey { get; }
-    string Organisation { get; }
-    string ApiVersion { get; }
-    Task<AiModel[]> GetModels();
+    AiProvider ActiveProvider { get; }
+    IReadOnlyList<AiProvider> Providers { get; }
+    bool HasCredentials(string providerKey);
+    Task<AiModel[]> GetModels();          // active provider only
+    Task<AiModel[]> GetAllModels();       // every provider that has a key (grouped pickers)
     Task<ChatResult> CreateChatCompletions(ChatRequest request);
     IAsyncEnumerable<ChatResult> CreateChatCompletionsStream(ChatRequest request);
 }
 ```
 
-- Constructing `OpenAiClient(apiKey, organisation="", apiVersion="v1", client=null)`.
-- `SetCredentials(apiKey, organisation)` — sets `Bearer` auth + `Api-Key` + `OpenAI-Organization` default headers and clears the memo cache.
-- `GetModels()` memoized GET to `RelativeUri("models")`.
-- The DI wiring that feeds creds lives in **`App.xaml.cs` → `RegisterApi()`**: it resolves the `SettingsVm`, creates an `OpenAiClient` singleton, registers it as `IOpenAiApi`, and subscribes to `settings.OpenAi.ApiKey`/`OrganisationName` changes to call `SetCredentials`.
+- `OpenAiClient(provider, credentials, client=null)` — one OpenAI-compatible endpoint. Everything provider-specific (base url, auth/attribution headers, model classification, default model) comes from the **`AiProvider` descriptor**.
+- `ChatApiRouter(credentialsProvider, clientFactory=null)` — owns one `OpenAiClient` **per provider**, lazily created. **Routing is derived from the model id**: ids containing `/` (e.g. `anthropic/claude-...`) go to OpenRouter, everything else to OpenAI. `SetActiveProvider()` picks the default, `RefreshCredentials()` drops cached clients after credential edits.
+- The DI wiring feeding creds lives in **`App.xaml.cs` → `RegisterApi()`**: registers `ICredsStore` (PasswordVault), creates the `ChatApiRouter` with a per-provider credentials resolver (`ProviderCreds.Build`), subscribes to provider/key changes.
+
+## Providers (`Providers\`)
+
+| Type | Role |
+|---|---|
+| `AiProvider` | descriptor: `Key`, `DisplayName`, `BaseUrl`, `DefaultModel`, classification + grouping funcs, `ConfigureDefaultHeaders`. |
+| `AiProviders` | the catalog: `OpenAi` (`https://api.openai.com/v1/`), `OpenRouter` (`https://openrouter.ai/api/v1/`), `Get(key)`, `GetProviderForModelId(id)`. |
+| `AiProviderCredentials` | `ApiKey`, `Organisation`, `RefererUrl`, `AppTitle` (OpenRouter attribution). |
+
+Adding a provider = adding one descriptor to `AiProviders.All`. The legacy OpenAI-only `OpenAiClient(apiKey, organisation, apiVersion, client)` ctor was replaced by the descriptor ctor.
 
 ## DTOs (all in `Dto\`)
 
 | Type | Role |
 |---|---|
-| `ApiResult` | base: `created`, `model`, plus non-serialized `Organization`, `ProcessingTime`, `RequestId`, `OpenaiVersion`. |
-| `ChatResult : ApiResult` | `id`, `Choices` (IReadOnlyList<ChatChoice>), `Usage` (ChatUsage). |
-| `ChatChoice` | `Index`, `Message` (full, non-stream), `FinishReason`, `Delta` (streaming). |
+| `ApiResult` | base: `created`, `model`, optional mid-stream `error` (`ApiError`), response metadata (`Organization`, `ProcessingTime`, `RequestId` — reads `X-Generation-Id` too, `OpenaiVersion`). |
+| `ChatResult : ApiResult` | `id`, `Choices` (defaults to empty, never null), `Usage`. |
+| `ChatChoice` | `Index`, `Message`, `FinishReason`, `Delta`. |
 | `ChatMessage` | `Role`, `Content`, `Name`, `ToolCalls`, `ToolCallId`, copy-ctor. |
-| `ChatMessageRole` | smart string-value wrapper with `System/User/Assistant/Tool` statics. |
-| `ChatRequest` | `Model`, `Messages`, `Temperature`, `TopP`, `n`, `Streaming` (internal set), `MaxTokens`, penalties, `LogitBias`, `User`, `Tools`. `CompiledStop` handles single-or-array `stop`. |
-| `AiModel` | `ModelID`, `OwnedBy`, `Object`, `Created`, `Permission`; presets `Gpt35Turbo/Gpt4Turbo/Gpt4/Gpt4o`; `IsConversational` (id starts `gpt`) & `IsReasoning` (id starts `o1|o3`). |
-| `Permissions` | model-ownership flags. |
-| `ApiResult`/`ApiResult` | response metadata. |
-
-The `Role`, `ChatMessageRole` uses a "smart-string" pattern (string wrapper with statics + `FromString` + implicit conversions + `IEquatable`). Note `IsUser` reads `Value != "user"` (appears inverted — handle with care; check the file before depending on it).
+| `ChatMessageRole` | smart string wrapper (`System/User/Assistant/Tool`, implicit conversions). |
+| `ChatRequest` | `Model`, `Messages`, `Temperature`, `TopP`, `n`, `Streaming` (internal set), `MaxTokens`, penalties, `LogitBias`, `User`, `Tools`, `CompiledStop`. Unsupported params are ignored by OpenRouter, safe to send. |
+| `AiModel` | `ModelID`, `OwnedBy`, plus OpenRouter extras (`Name`, `ContextLength`, `Pricing` per-token USD → per-M parse helpers, `Reasoning`). Stamped after fetch: `ProviderKey`, `GroupKey`; `IsConversational`/`IsReasoning` are **provider-aware** (fall back to id heuristics when unstamped). |
+| `Permissions`, `ChatUsage` | usage + OpenRouter cost (`Cost`, `IsByok`, token details). |
 
 ## Streaming
 
-- `CreateChatCompletions` (non-stream): sets `request.Streaming=false` → wraps a `ChatResult`.
-- `CreateChatCompletionsStream` (streaming): sets `request.Streaming=true` → returns an **`IAsyncEnumerable<ChatResult>`** where each `ChatChoice.Delta.Content` is an incremental token (or the leading `role` chunk).
-- **Aggregation is the CALLER's job** — the library yields individual SSE chunks, not an aggregated message. The app aggregates them in `ChatMessageVm.CompleteCmd` (see `Skills/Reactive`) by scanning the deltas (`Scan("", (a,b)=>a+b)` when streaming).
-- The HTTP client side: `HttpClientExtensions.RequestAsync` (non-stream) and `RequestStreamingAsync<T>` (SSE parse). `RequestStreamingAsync` reads header metadata once, streams lines, strips `data:`, `yield break`s on `[DONE]`, and deserializes each chunk.
+- `CreateChatCompletionsStream` returns an **`IAsyncEnumerable<ChatResult>`** of SSE deltas; aggregation is the caller's job (ChatMessageVm's `Scan("", (a,b)=>a+b)`).
+- SSE parsing is hardened for OpenRouter:
+  - skips `: OPENROUTER PROCESSING` comment lines + blanks,
+  - **mid-stream errors** (HTTP 200 + top-level `error`, `finish_reason:"error"`) are detected per chunk and thrown as typed exceptions,
+  - **final usage chunk with an empty `choices` array** parses fine (default empty choices),
+  - supports `[DONE]`.
 
 ## HTTP details & error handling (`HttpClientExtensions.cs`)
 
-- `RequestAsync(uri, verb, postData, streaming)` serializes `postData` (null-ignored) to JSON and uses `HttpCompletionOption.ResponseHeadersRead` when streaming.
-- On non-success it parses an `ApiError` from the response `error` object, logs it, and throws a typed exception:
-  - `OpenAiInvalidApiKeyException` (error code `invalid_api_key`)
-  - `OpenAiApiAuthException` (401)
-  - `OpenAiApiQuotaException` (429 — rate limit / quota)
-  - `OpenAiApiException` (500)
-  - else `HttpRequestException`.
-- It also reads response headers (`OpenAI-Organization`, `X-Request-ID`, `OpenAI-Processing-Ms`, `OpenAI-Version`) into the result metadata.
+- `RequestAsync<T>` / `RequestAsync` / `RequestStreamingAsync<T>` are generic over OpenAI-compatible endpoints.
+- Errors are typed via `ToApiException(error, status)` matching on **both** the HTTP status and the provider error code —
+  - `invalid_api_key` code → `OpenAiInvalidApiKeyException`
+  - 401 / 402 / 429 → `OpenAiApiAuthException` / `OpenAiApiQuotaException`
+  - 500 → `OpenAiApiException`, anything else → `OpenAiApiException`
+- Logging calls are **null-safe** — the library must not crash when no logger factory exists (e.g. in unit tests).
 
 ## How credentials reach the API (important)
 
-- `AppCredsManager` (`MdcAi.ChatUI/ViewModels/AppCredsManager.cs`) — **not here** — stores the API key + org name in the Windows **PasswordVault** (secret), keyed off `ResourceName = "MdcAi"`, names `"ApiKeys"` / `"OrganisationName"`.
-- `OpenAiSettingsVm` loads them on init and mirrors changes back.
-- `RegisterApi()` (App) binds them to the client.
-
-So the API key never lives in the SQLite DB — it's in the OS credential vault.
+- `AppCredsManager` / `ICredsStore` (`MdcAi.ChatUI/ViewModels/AppCredsManager.cs`) stores per-provider secrets in the Windows **PasswordVault**, names like `"openai:ApiKey"`, `"openrouter:ApiKey"` (dsh-style key refs). `ProviderCreds` derives names, builds `AiProviderCredentials` (defaulting OpenRouter attribution for localhost + app title), and migrates the legacy `"ApiKeys"` slot.
+- **There is no "current provider"** — every provider's settings section is always visible in Settings. Each is its own VM sharing `ProviderSettingsVm` (base: common `ApiKey` + save-on-change into its own vault slots):
+  - `OpenAiSettingsVm` — key + organisation,
+  - `OpenRouterSettingsVm` — key + attribution (`RefererUrl`, `AppTitle`),
+  - `SettingsVm` exposes both (`OpenAi`, `OpenRouter`) and computes `IsAnyProviderConfigured` (the app is usable when ANY provider has a key).
+- `OpenAISettingsPage` / `OpenRouterSettingsPage` are the matching Settings sections, hosted side by side by `Settings.xaml`.
+- `App.xaml.cs → RegisterApi()` registers `ICredsStore`, runs the legacy-key migration, builds the `ChatApiRouter` with a per-provider credentials resolver (`ProviderCreds.Build`), and refreshes cached client credentials when any provider field changes.
 
 ---
 
-## ⚠️ What's OpenAI-specific / must change for OpenRouter & co. (actionable)
+## Testing (added with the multi-provider work)
 
-The following are wedded to OpenAI today and will need parameterizing to support OpenRouter, a ChatGPT subscription (via some other gateway), or self-hosted OpenAI-compatible servers:
+Three test projects, all in `Source\MdcAi.sln` (not built by the default sln configs — run via `dotnet test` on each project, arch matters for the WinUI one):
 
-1. **Base URL is hard-coded** in `OpenAiClient` ctor: `BaseAddress = new($"https://api.openai.com/{ApiVersion}/")`. OpenRouter = `https://openrouter.ai/api/v1` (among others); the app has no concept of "which endpoint" yet. Minimal change: make the base URL settable/configurable (ctor param or a settings-driven property), and stop assuming `ApiVersion` + openai domain.
-2. **Providers queued in the ctor / `SetCredentials`** — the headers "Bearer", "Api-Key", "OpenAI-Organization" are hard coded. OpenRouter accepts a `Bearer <your-openrouter-key>` with a different `Authorization` (and often an `HTTP-Referer`/`X-Title` for attribution). So the header set + auth scheme must become provider-configurable.
-3. **Response metadata parsing** in `ParseHeaders` reads OpenAI-specific header names (`OpenAI-Organization`, `OpenAI-Processing-Ms`, `OpenAI-Version`) — harmless if absent, but not general.
-4. **Model classification helpers** `AiModel.IsConversational`/`IsReasoning` use `StartsWith("gpt")` and `"o1"/"o3"`. OpenRouter exposes arbitrary model ids (e.g. `anthropic/claude-...`, `meta-llama/...`, `deepseek/deepseek-...`); these helpers would misclassify. Make classification a per-provider or per-model-string concern (a `model`→capability resolver).
-5. **Preset `AiModel`** constants (`Gpt35Turbo` etc.) are OpenAI ids → replace/augment with a generic catalog or keep as openai defaults but make the default-model per provider.
-6. **`invalid_api_key`** error code and the full exception class names/types are OpenAI-specific.
-7. **SSE parsing** is mostly fine — OpenAI-compatible endpoints (incl. OpenRouter) use the same `data: ...`/`[DONE]` framing — so `RequestStreamingAsync` largely carries over.
-8. **`ChatCompletionsUrl`** literal `"chat/completions"`; fine for OpenAI-compatible servers.
-
-### Suggested refactor direction (minimal, risk-averse)
-- Introduce a **provider descriptor** (name, base URL, auth scheme, header mapping, classify-model fn, default model). Have `OpenAiClient` accept it; `RegisterApi()` picks it from settings.
-- Keep `IOpenAiApi` the stable seam the Views/VMs already consume — do not change its shape unless you rewrite the whole pipeline.
-- For a **ChatGPT subscription** scenario (no API key, cookie/`chatgpt`-backend auth, no SSE, no / completions endpoint) the abstraction likely needs a **second implementation of `IOpenAiApi`** (a session/DTO-based gateway), not just endpoint config — the REST streaming + `GetModels` + key flows don't map 1:1. Plan it behind `IOpenAiApi` so the UI VMs don't care.
+1. **`Source/Common/MdcAi.OpenAiApi.Tests`** — plain net9 unit tests: provider registry/classification, DTO deserialization (incl. OpenRouter extensions), SSE parsing (comments, mid-stream errors, empty-choices usage chunk), error mapping, router routing/catalog aggregation, header configuration (via `FakeHttpMessageHandler`). ~54 tests, no network.
+2. **`Source/Desktop/MdcAi.ChatUI.Tests`** — WinUI-adjacent VM tests (`net9.0-windows`, x64). Covers the per-provider settings VMs (`OpenAiSettingsVm`, `OpenRouterSettingsVm` — creds, migration, trimming), `SettingsVm` (`IsAnyProviderConfigured` across both keys), `ChatSettingsVm` (model filtering, default-model fallback), `ConversationVm` (`IsAIReady` per any-key, model stamping). In-memory fakes: `InMemoryCredsStore`, `FakeOpenAiApi`. `TestRx.Init()` pins `RxApp.MainThreadScheduler` + exception handler.
+3. **`Source/Common/MdcAi.OpenAiApi.IntegrationTests`** — live-network smoke tests. Keys come from **user secrets**:
+   ```
+   dotnet user-secrets set "OpenRouter:ApiKey" "sk-or-..." --project "Source\Common\MdcAi.OpenAiApi.IntegrationTests\MdcAi.OpenAiApi.IntegrationTests.csproj"
+   dotnet user-secrets set "OpenAI:ApiKey"      "sk-..."    --project "Source\Common\MdcAi.OpenAiApi.IntegrationTests\MdcAi.OpenAiApi.IntegrationTests.csproj"
+   ```
+   Tests early-return when a provider's key isn't configured, so the suite stays green with one key. OpenRouter tests hit `/models` (stamps + groups) and run real non-stream + stream completions (also exercising the `: OPENROUTER PROCESSING` + usage-chunk paths).
 
 ---
 
@@ -103,7 +108,7 @@ The following are wedded to OpenAI today and will need parameterizing to support
 // non-streaming
 var completions = await api.CreateChatCompletions(new ChatRequest {
     Messages = /* list of ChatMessage */,
-    Model = /* AiModel or string */
+    Model = /* model id, e.g. "anthropic/claude-3-5-sonnet" or "gpt-4o" */
 });
 var text = completions.Choices.LastOrDefault()?.Message.Content;
 
@@ -113,15 +118,13 @@ api.CreateChatCompletionsStream(req)
    .Select(m => m.Choices.LastOrDefault()?.Delta.Content);
 ```
 
-The `IOpenAiApi` instance is reached in VMs via constructor injection (e.g. `ConversationVm(IOpenAiApi api, ...)`).
+The `IOpenAiApi` instance is reached in VMs via constructor injection (e.g. `ConversationVm(IOpenAiApi api, ...)`). The router picks the provider from the model id, so VMs never branch on provider.
 
 ---
 
 ## Debug / mock path
 
-`ChatSettingsVm` and `ConversationVm` call `Debugging.MockModels` short-circuit (`MockModels`) and return `MockModels` static list instead of `GetModels()` — so network isn't hit in mocked mode.
-
----
+`ChatSettingsVm` and `ConversationVm` call `Debugging.MockModels` short-circuit (`MockModels`) and return `MockModels` static list instead of hitting the network — so model loading is offline in mocked mode, and both providers' sections are mocked.
 
 Read next: `Skills/Reactive` (how the request/stream is consumed) and `Skills/Db` (message storage, which doesn't store provider).
 

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<local:OpenAiSettingsPageBase
-  x:Class="MdcAi.ChatUI.Views.OpenAISettingsPage"
+<local:OpenRouterSettingsPageBase
+  x:Class="MdcAi.ChatUI.Views.OpenRouterSettingsPage"
   xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
   xmlns:local="using:MdcAi.ChatUI.Views"
@@ -17,15 +17,15 @@
   </Page.Resources>
 
   <controls:SettingsExpander x:Name="ApiExpander"
-                             Header="OpenAI API Access"
+                             Header="OpenRouter API Access"
                              HeaderIcon="Permissions"
-                             Description="Your OpenAI API Credentials. These settings are saved to your account's Windows Credentials and only you can access them.">
+                             Description="OpenRouter is an OpenAI-compatible gateway to hundreds of models (Claude, DeepSeek, Llama, Gemini, ...). Your key is saved to your account's Windows Credentials and only you can access them.">
     <controls:SettingsExpander.Items>
       <controls:SettingsCard Header="API Key">
         <controls:SettingsCard.Description>
           <RichTextBlock>
             <Paragraph>
-              Enter your OpenAI API key here.
+              Enter your OpenRouter API key here. Keys start with <Run FontFamily="Consolas">sk-or-v1-</Run> and are created at <Hyperlink NavigateUri="https://openrouter.ai/keys">openrouter.ai/keys</Hyperlink>.
             </Paragraph>
           </RichTextBlock>
         </controls:SettingsCard.Description>
@@ -41,20 +41,33 @@
         </StackPanel>
       </controls:SettingsCard>
 
-      <controls:SettingsCard Header="Organisation Name">
+      <controls:SettingsCard Header="App URL (HTTP-Referer)">
         <controls:SettingsCard.Description>
           <RichTextBlock>
             <Paragraph>
-              Your or your organisation's name (optional), which will be sent as part of the request to OpenAI.
+              OpenRouter attribution so it can rank providers properly. Leave empty to use <Run FontFamily="Consolas">http://localhost:3431/</Run>.
             </Paragraph>
           </RichTextBlock>
         </controls:SettingsCard.Description>
         <TextBox MinWidth="400"
                  IsSpellCheckEnabled="False"
-                 Text="{x:Bind ViewModel.OrganisationName, Mode=TwoWay}" />
+                 Text="{x:Bind ViewModel.RefererUrl, Mode=TwoWay}" />
+      </controls:SettingsCard>
+
+      <controls:SettingsCard Header="App Title (X-OpenRouter-Title)">
+        <controls:SettingsCard.Description>
+          <RichTextBlock>
+            <Paragraph>
+              The app name sent to OpenRouter. Leave empty to use <Run FontFamily="Consolas">MDC AI</Run>.
+            </Paragraph>
+          </RichTextBlock>
+        </controls:SettingsCard.Description>
+        <TextBox MinWidth="400"
+                 IsSpellCheckEnabled="False"
+                 Text="{x:Bind ViewModel.AppTitle, Mode=TwoWay}" />
       </controls:SettingsCard>
 
     </controls:SettingsExpander.Items>
 
   </controls:SettingsExpander>
-</local:OpenAiSettingsPageBase>
+</local:OpenRouterSettingsPageBase>

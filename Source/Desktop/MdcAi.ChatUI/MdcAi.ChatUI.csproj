@@ -26,7 +26,8 @@
     <None Remove="Views\GettingStartedTips\Editing.xaml" />
     <None Remove="Views\GettingStartedTips\Premise.xaml" />
     <None Remove="Views\GettingStartedTips\Settings.xaml" />
-    <None Remove="Views\OpenAISettingsPage.xaml" />
+    <None Remove="Views\Settings\OpenAISettingsPage.xaml" />
+    <None Remove="Views\Settings\OpenRouterSettingsPage.xaml" />
     <None Remove="Views\Settings.xaml" />
   </ItemGroup>
 
@@ -105,7 +106,10 @@
     <Page Update="Views\ConversationCategory.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Update="Views\OpenAISettingsPage.xaml">
+    <Page Update="Views\Settings\OpenAISettingsPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Update="Views\Settings\OpenRouterSettingsPage.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Update="Views\Settings.xaml">

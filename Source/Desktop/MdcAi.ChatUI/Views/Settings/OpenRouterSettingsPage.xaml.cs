@@ -20,11 +20,11 @@ using System;
 using RxUIExt.Windsor;
 
 /// <summary>
-/// OpenAI API-access settings section.
+/// OpenRouter API-access settings section: key + optional attribution fields.
 /// </summary>
-public sealed partial class OpenAISettingsPage
+public sealed partial class OpenRouterSettingsPage
 {
-    public OpenAISettingsPage()
+    public OpenRouterSettingsPage()
     {
         InitializeComponent();
 
@@ -39,7 +39,7 @@ public sealed partial class OpenAISettingsPage
     {
         var dialog = new ContentDialog
         {
-            Content = "This will remove your OpenAI API key from this app! Make sure you have it saved somewhere else if this is the only place you used it.",
+            Content = "This will remove your OpenRouter API key from this app! Make sure you have it saved somewhere else if this is the only place you used it.",
             XamlRoot = XamlRoot,
             Title = "API Keys 🔑",
             PrimaryButtonText = "OK",
@@ -52,4 +52,4 @@ public sealed partial class OpenAISettingsPage
 }
 
 [DoNotRegister]
-public class OpenAiSettingsPageBase : ReactivePage<OpenAiSettingsVm> { }
+public class OpenRouterSettingsPageBase : ReactivePage<OpenRouterSettingsVm> { }

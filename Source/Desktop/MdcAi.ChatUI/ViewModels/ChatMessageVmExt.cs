@@ -1,4 +1,4 @@
-﻿#region Copyright Notice
+#region Copyright Notice
 // Copyright (c) 2023 Bojan Sala
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -14,6 +14,7 @@
 namespace MdcAi.ChatUI.ViewModels;
 
 using LocalDal;
+using OpenAiApi;
 
 public static class ChatMessageVmExt
 {
@@ -32,6 +33,12 @@ public static class ChatMessageVmExt
         if (m == null)
             return null;
 
+        // The model that (re)generated this message. The app runs one active model per
+        // conversation and every message is produced with it, so the conversation's
+        // current selection is the best provenance available here (persisted messages
+        // don't carry their own model id).
+        var modelId = m.Conversation?.Settings?.SelectedModel ?? m.Conversation?.Settings?.Model;
+
         return new()
         {
             Id = m.Id,
@@ -39,7 +46,9 @@ public static class ChatMessageVmExt
             Content = m.HTMLContent ?? $"<p>{m.Content}</p>",
             Version = m.Selector.Version,
             VersionCount = m.Selector.Versions.Count,
-            CreatedTs = m.CreatedTs
+            CreatedTs = m.CreatedTs,
+            Model = modelId,
+            Provider = modelId == null ? null : AiProviders.GetProviderForModelId(modelId).DisplayName
         };
     }
 

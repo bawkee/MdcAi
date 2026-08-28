@@ -1,4 +1,4 @@
-﻿#region Copyright Notice
+#region Copyright Notice
 // Copyright (c) 2023 Bojan Sala
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -21,4 +21,10 @@ public class WebViewChatMessageDto
     public int Version { get; set; }
     public int VersionCount { get; set; }
     public DateTime? CreatedTs { get; set; }
+
+    /// <summary>Model id that produced this message ("gpt-4o", "anthropic/claude-3-5-sonnet", ...). Null on legacy/user messages.</summary>
+    public string Model { get; set; }
+
+    /// <summary>Display name of the provider that served the model ("OpenAI", "OpenRouter", ...). Null on legacy/user messages.</summary>
+    public string Provider { get; set; }
 }

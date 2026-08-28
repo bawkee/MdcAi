@@ -4,6 +4,7 @@ import CodeHighlighter from './components/highlighter';
 import AutoScrollComponent from './components/autoScroll';
 import DateTime from './components/dateTime';
 import { isElementFullyVisible } from './util';
+import { getAuthorLabel, getRoleClass } from './messageMeta';
 //import initialData from './sample1.json';
 
 function App() {
@@ -11,6 +12,12 @@ function App() {
   const [selectedChat, setSelectedChat] = useState(null);
   const [autoScroll, setAutoScroll] = useState(true);
   const chatItemRefs = useRef({});
+  const scrolledDownRef = useRef(true);
+  // Mirror of selectedChat kept in a ref so the (once-registered) webview message
+  // listener never sees a stale selection value.
+  const selectedChatRef = useRef(null);
+
+  useEffect(() => { selectedChatRef.current = selectedChat; }, [selectedChat]);
 
   useEffect(() => {
     const handleMessage = (e) => {
@@ -39,7 +46,7 @@ function App() {
       if (window.chrome.webview)
         window.chrome.webview.removeEventListener('message', handleMessage);
     };
-  });
+  }, []);
 
   const hideCaret = () => {
     document
@@ -48,7 +55,7 @@ function App() {
   }
 
   const onSelectedChat = (index, forward = true) => {
-    if (index === selectedChat)
+    if (index === selectedChatRef.current)
       return;
 
     setSelectedChat(index);
@@ -76,13 +83,11 @@ function App() {
     }
   };
 
-  let scrolledDown = true;
-
   useEffect(() => {
     const handleScroll = () => {
       let scrolledDownNew = (window.innerHeight + window.scrollY) >= document.documentElement.scrollHeight - 5;
-      let scrolledDownChanged = scrolledDown !== scrolledDownNew;
-      scrolledDown = scrolledDownNew;
+      let scrolledDownChanged = scrolledDownRef.current !== scrolledDownNew;
+      scrolledDownRef.current = scrolledDownNew;
 
       if (window.chrome.webview && scrolledDownChanged) {
         const scrollDownMsg = {
@@ -111,11 +116,11 @@ function App() {
               ref={el => chatItemRefs.current[index] = el}
               key={index}
               onClick={() => onSelectedChat(index)}
-              className={`chat-item ${item.Role.toLowerCase()} ${selectedChat === index ? 'active' : ''}`}>
+              className={`chat-item ${getRoleClass(item.Role)} ${selectedChat === index ? 'active' : ''}`}>
               <div className='chat-item-marque' />
               <div className='chat-item-info'>
                 <span className='chat-item-info-role'>
-                  {item.Role === 'system' ? 'System' : 'You'}
+                  {getAuthorLabel(item)}
                 </span>
                 <span className='chat-item-info-createdts'>
                   sent <DateTime date={new Date(item.CreatedTs)} />
@@ -123,7 +128,7 @@ function App() {
                 {item.VersionCount > 1 && (
                   <span
                     className='chat-item-info-version'
-                    Title='Version of the edited message'>{item.Version} / {item.VersionCount}</span>
+                    title='Version of the edited message'>{item.Version} / {item.VersionCount}</span>
                 )}
               </div>
               <div className='chat-item-content'>

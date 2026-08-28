@@ -10,11 +10,13 @@
         },
         {
             "Id": "2",
-            "Role": "system",
+            "Role": "assistant",
             "Content": "<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p> <code>printf(\"Hello, World!\");</code>",
             "Version": null,
             "VersionCount": null,
-            "CreatedTs": "2020-06-20T08:27:47"
+            "CreatedTs": "2020-06-20T08:27:47",
+            "Model": "gpt-4o",
+            "Provider": "OpenAI"
         },
         {
             "Id": "3",
@@ -26,11 +28,13 @@
         },
         {
             "Id": "4",
-            "Role": "system",
+            "Role": "assistant",
             "Content": "<p>Nulla facilisi. Integer eget sem non felis fermentum pharetra.</p> <code>int main() { return 0; }</code>",
             "Version": null,
             "VersionCount": null,
-            "CreatedTs": "2020-06-20T08:27:47"
+            "CreatedTs": "2020-06-20T08:27:47",
+            "Model": "anthropic/claude-3-5-sonnet",
+            "Provider": "OpenRouter"
         },
         {
             "Id": "5",

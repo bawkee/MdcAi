@@ -21,6 +21,15 @@ Set NpmRenderer in Debugging class to true in MDC AI so it uses the npm loopback
 Launches the test runner in the interactive watch mode.\
 See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
 
+### Test scaffolding
+
+- `src/mockData.js` — wire-shaped `SetMessages` payloads (including the `Model`/`Provider` fields), handy for manual poking (`App.js` has the commented `initialData` import).
+- `src/testUtils.js` — a fake `window.chrome.webview` + helpers to drive the renderer from tests.
+- `src/setupTests.js` — auto-installs the fake webview and jsdom scroll stubs before each suite.
+- `src/messageMeta.test.js`, `src/App.test.js` — pure-label unit tests + full App interaction tests (message rendering, selection, scrolling notifications, HideCaret).
+
+Run once: `npx react-scripts test --watchAll=false --ci`
+
 ### `npm run build`
 
 Builds the app for production to the `build` folder.\

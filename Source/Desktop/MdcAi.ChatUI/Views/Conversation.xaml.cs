@@ -312,7 +312,7 @@ public sealed partial class Conversation : ILogging
         var zipFile = await AppServices.GetAppFile("ChatListUI.zip");
         await using var zipStream = await zipFile.OpenStreamForReadAsync();
 
-        var path = sourceUri.AbsolutePath[1..];
+        var path = sourceUri.AbsolutePath[1..].Replace('\\', '/');
 
         using var archive = new ZipArchive(zipStream, ZipArchiveMode.Read);
 

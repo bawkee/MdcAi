@@ -19,6 +19,8 @@ using OpenAiApi;
 /// <summary>
 /// Covers the C# -> JS wire payload (WebViewChatMessageDto): the provider/model
 /// stamping added so the React renderer can show who produced each message.
+/// Model is per-message provenance (persisted on the message itself), not the
+/// conversation's current selection — legacy messages carry null.
 /// </summary>
 public class WebViewMessageDtoTests
 {
@@ -40,12 +42,12 @@ public class WebViewMessageDtoTests
     [InlineData("openai/gpt-4o-mini", "OpenRouter")]
     public void GetWebViewDto_stamps_model_and_provider(string modelId, string expectedProvider)
     {
-        var (convo, chatSettings) = Make();
-        chatSettings.SelectedModel = modelId;
+        var (convo, _) = Make();
 
         var msg = new ChatMessageVm(convo, ChatMessageRole.Assistant)
         {
-            Content = "Hello"
+            Content = "Hello",
+            Model = modelId
         };
 
         var dto = msg.GetWebViewDto();
@@ -56,45 +58,66 @@ public class WebViewMessageDtoTests
     }
 
     [Fact]
-    public void GetWebViewDto_falls_back_to_model_when_selected_is_null()
+    public void GetWebViewDto_uses_per_message_model_not_conversation_selection()
     {
-        var (convo, chatSettings) = Make();
-        chatSettings.SelectedModel = null;
-        chatSettings.Model = "gpt-4o";
+        var (convo, _) = Make();
+        convo.SelectedModel = "gpt-4o";
 
+        // The conversation picker says gpt-4o right now, but this message was produced
+        // by a different model — provenance comes from the message itself.
+        var msg = new ChatMessageVm(convo, ChatMessageRole.Assistant)
+        {
+            Content = "Hello",
+            Model = "anthropic/claude-3-5-sonnet"
+        };
+
+        var dto = msg.GetWebViewDto();
+
+        Assert.Equal("anthropic/claude-3-5-sonnet", dto.Model);
+        Assert.Equal("OpenRouter", dto.Provider);
+    }
+
+    [Fact]
+    public void GetWebViewDto_legacy_assistant_messages_carry_no_model_info()
+    {
+        var (convo, _) = Make();
+        convo.SelectedModel = "gpt-4o";
+
+        // No Model ever stamped on legacy rows: the renderer falls back to a generic label.
         var dto = new ChatMessageVm(convo, ChatMessageRole.Assistant).GetWebViewDto();
 
-        Assert.Equal("gpt-4o", dto.Model);
-        Assert.Equal("OpenAI", dto.Provider);
+        Assert.Null(dto.Model);
+        Assert.Null(dto.Provider);
     }
 
     [Fact]
     public void GetWebViewDto_user_messages_carry_no_model_info()
     {
-        var (convo, chatSettings) = Make();
-        chatSettings.SelectedModel = "gpt-4o";
+        var (convo, _) = Make();
+        convo.SelectedModel = "gpt-4o";
 
         var dto = new ChatMessageVm(convo, ChatMessageRole.User)
         {
             Content = "hi there"
         }.GetWebViewDto();
 
-        // The payload still carries the model stamp (it's the conversation's model),
-        // but the renderer ignores it for user role.
+        // User messages are never stamped with a model (only completions are); the
+        // renderer labels them "You" regardless.
         Assert.Equal("user", dto.Role);
-        Assert.Equal("gpt-4o", dto.Model);
-        Assert.Equal("OpenAI", dto.Provider);
+        Assert.Null(dto.Model);
+        Assert.Null(dto.Provider);
     }
 
     [Fact]
     public void GetWebViewDto_keeps_version_and_content_shape()
     {
-        var (convo, chatSettings) = Make();
-        chatSettings.SelectedModel = "gpt-4o";
+        var (convo, _) = Make();
+        convo.SelectedModel = "gpt-4o";
 
         var msg = new ChatMessageVm(convo, ChatMessageRole.Assistant)
         {
-            Content = "plain text"
+            Content = "plain text",
+            Model = "gpt-4o"
         };
 
         var dto = msg.GetWebViewDto();

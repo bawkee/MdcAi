@@ -33,11 +33,11 @@ public static class ChatMessageVmExt
         if (m == null)
             return null;
 
-        // The model that (re)generated this message. The app runs one active model per
-        // conversation and every message is produced with it, so the conversation's
-        // current selection is the best provenance available here (persisted messages
-        // don't carry their own model id).
-        var modelId = m.Conversation?.Settings?.SelectedModel ?? m.Conversation?.Settings?.Model;
+        // The model that (re)generated this message, persisted on it when the completion
+        // ran. User messages and legacy rows (persisted before per-message provenance
+        // existed) carry null here — the renderer shows a generic label for those.
+        var modelId = m.Model;
+        var provider = modelId == null ? null : AiProviders.GetProviderForModelId(modelId).DisplayName;
 
         return new()
         {
@@ -48,7 +48,7 @@ public static class ChatMessageVmExt
             VersionCount = m.Selector.Versions.Count,
             CreatedTs = m.CreatedTs,
             Model = modelId,
-            Provider = modelId == null ? null : AiProviders.GetProviderForModelId(modelId).DisplayName
+            Provider = provider
         };
     }
 
@@ -77,7 +77,8 @@ public static class ChatMessageVmExt
                 Content = m.Content,
                 Role = m.Role,
                 CreatedTs = m.CreatedTs,
-                Version = v + 1
+                Version = v + 1,
+                Model = m.Model
             };
 
             var children = m.Next?.ToDbMessages(idx + 1) ?? Enumerable.Empty<DbMessage>();
@@ -122,6 +123,7 @@ public static class ChatMessageVmExt
             message.CreatedTs = dbMessage.CreatedTs;
             message.Role = dbMessage.Role;
             message.Content = dbMessage.Content;
+            message.Model = dbMessage.Model;
 
             SetNext(message);
         }

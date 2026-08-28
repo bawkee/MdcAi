@@ -104,7 +104,7 @@
           <!-- Send prompt button -->
           <SplitButton Command="{x:Bind ViewModel.SendPromptCmd, Mode=OneWay}" Height="32" Padding="10,0">
             <StackPanel Orientation="Horizontal">
-              <TextBlock Text="{x:Bind ViewModel.Settings.SelectedModel, Mode=OneWay}" />
+              <TextBlock Text="{x:Bind ViewModel.SelectedModelLabel, Mode=OneWay}" />
               <SymbolIcon Symbol="Send" VerticalAlignment="Center" Margin="10,0,0,0" />
             </StackPanel>
             <SplitButton.Flyout>

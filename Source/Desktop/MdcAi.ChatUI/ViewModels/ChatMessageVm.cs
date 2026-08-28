@@ -30,6 +30,11 @@ public class ChatMessageVm : ViewModel, ILogging
     public ChatMessageSelectorVm Selector { get; }
     [Reactive] public string Content { get; set; }
     [Reactive] public string HTMLContent { get; set; }
+
+    /// <summary>Model id that (re)generated this message. Stamped when a completion starts
+    /// (streamed or not) so it survives pauses/edits; null on user messages.</summary>
+    [Reactive] public string Model { get; set; }
+
     public DateTime CreatedTs { get; set; }
     public ConversationVm Conversation { get; }
     public ChatMessageVm Previous { get; set; } // Previous item        
@@ -62,7 +67,11 @@ public class ChatMessageVm : ViewModel, ILogging
 
         CompleteCmd = ReactiveCommand.CreateFromObservable(
             () => Observable.Return(Unit.Default)
-                            .Do(_ => Content = null) // Just because there can be such a big delay when regenerating
+                            .Do(_ =>
+                            {
+                                Content = null; // Just because there can be such a big delay when regenerating
+                                Model = Conversation.SelectedModel; // Remember which model produced (this version of) this message
+                            })
                             .Select(_ => Conversation.Settings.Streaming ?
                                         CreateGenerationStream()
                                             .TakeUntil(StopCompletionCmd)
@@ -195,8 +204,8 @@ public class ChatMessageVm : ViewModel, ILogging
             currentParent = currentParent.Previous;
         }
 
-        var modelId = Conversation.Settings.SelectedModel;
-        var isReasoning = Conversation.Settings.Models?.FirstOrDefault(m => m.ModelID == modelId)?.IsReasoning
+        var modelId = Conversation.SelectedModel;
+        var isReasoning = Conversation.Models?.FirstOrDefault(m => m.ModelID == modelId)?.IsReasoning
                           ?? new AiModel(modelId).IsReasoning;
 
         if (!isReasoning)
@@ -220,7 +229,7 @@ public class ChatMessageVm : ViewModel, ILogging
         var req = new ChatRequest
         {
             Messages = messages,
-            Model = Conversation.Settings.SelectedModel
+            Model = Conversation.SelectedModel
         };
 
         return req;

@@ -18,7 +18,7 @@ using LocalDal;
 using Microsoft.EntityFrameworkCore;
 using OpenAiApi;
 
-public class ChatSettingsVm : ViewModel
+public class ChatSettingsVm : ViewModel, ILogging
 {
     [Reactive] public string IdSettings { get; set; }
     [Reactive] public string Model { get; set; }
@@ -27,7 +27,6 @@ public class ChatSettingsVm : ViewModel
 #else
         = AiModel.Gpt4Turbo;
 #endif
-    [Reactive] public string SelectedModel { get; set; } // Allows user to pick a different model
     [Reactive] public bool IsReasoningModel { get; set; }
 
     [Reactive] public bool Streaming { get; set; } = true;
@@ -71,16 +70,22 @@ public class ChatSettingsVm : ViewModel
                                      .ObserveOnMainThread()
                                      .Do(db => db.Adapt(this)));
 
-        Observable.Merge(SaveCmd, LoadCmd.Select(_ => Unit.Default))
-                  .ObserveOnMainThread()
-                  .Do(_ =>
-                  {
-                      SelectedModel = Model;
-                      changes.Clean();
-                  })
-                  .SubscribeSafe();
+        // The "model in use right now" is the conversation's business (ConversationVm.SelectedModel),
+        // not this persisted-settings object's - it intentionally has no transient selection state.
+        LoadCmd.Select(_ => Unit.Default)
+               .ObserveOnMainThread()
+               .Do(_ =>
+               {
+                   this.LogDebug("Settings loaded: IdSettings={Id}, Model={Model}", IdSettings, Model);
+                   changes.Clean();
+               })
+               .SubscribeSafe();
+
+        SaveCmd.ObserveOnMainThread()
+               .Do(_ => changes.Clean())
+               .SubscribeSafe();
         
-        this.WhenAnyValue(vm => vm.SelectedModel)
+        this.WhenAnyValue(vm => vm.Model)
             .WhereNotNull()
             .Select(m => new AiModel(m).IsReasoning)
             .ObserveOnMainThread()

@@ -107,13 +107,36 @@ public class ConversationVmTests
     }
 
     [Fact]
-    public async Task SelectModel_copies_into_settings_working_selection()
+    public async Task SelectModel_sets_working_selection()
     {
         var (convo, _, _, chatSettings) = Make(("openai:ApiKey", "sk-oa"), ("openrouter:ApiKey", "sk-or"));
 
-        convo.SelectModelCmd.Execute("gpt-4o").Subscribe();
+        // The working model is the conversation's business (independent of the persisted
+        // default living on chat settings).
+        await convo.LoadModelsCmd.Execute();
 
-        Assert.Equal("gpt-4o", chatSettings.SelectedModel);
+        convo.SelectModelCmd.Execute("anthropic/claude-3-5-sonnet").Subscribe();
+
+        Assert.Equal("anthropic/claude-3-5-sonnet", convo.SelectedModel);
+        Assert.Equal("OpenRouter · anthropic/claude-3-5-sonnet", convo.SelectedModelLabel);
+    }
+
+    [Fact]
+    public async Task SelectedModelLabel_prettifies_when_catalog_arrives()
+    {
+        var (convo, _, _, _) = Make(("openai:ApiKey", "sk-oa"), ("openrouter:ApiKey", "sk-or"));
+
+        // No catalog loaded yet: the label is honest, just not pretty.
+        convo.SelectedModel = "anthropic/claude-3-5-sonnet";
+        await Task.Yield();
+
+        Assert.Equal("anthropic/claude-3-5-sonnet", convo.SelectedModelLabel);
+
+        // Catalog arrives -> the same selection re-renders as provider · display name.
+        await convo.LoadModelsCmd.Execute();
+        await Task.Yield();
+
+        Assert.Equal("OpenRouter · anthropic/claude-3-5-sonnet", convo.SelectedModelLabel);
     }
 
     [Fact]
@@ -124,5 +147,79 @@ public class ConversationVmTests
         Assert.Equal(2, convo.Api.Providers.Count);
         Assert.Contains(convo.Api.Providers, p => p.Key == AiProviders.OpenAiKey);
         Assert.Contains(convo.Api.Providers, p => p.Key == AiProviders.OpenRouterKey);
+    }
+
+    [Theory]
+    [InlineData(null, "google/gemma-4-31b-it", null, false, "google/gemma-4-31b-it")] // legacy + loaded -> category default
+    [InlineData(null, "google/gemma-4-31b-it", "gpt-4o", false, "google/gemma-4-31b-it")] // legacy + loaded beats a provisional current
+    [InlineData(null, null, null, false, null)] // legacy + not loaded yet -> nothing (don't cache placeholders)
+    [InlineData("anthropic/claude-3-5-sonnet", "google/gemma-4-31b-it", null, false, "anthropic/claude-3-5-sonnet")] // last reply wins
+    [InlineData("anthropic/claude-3-5-sonnet", "google/gemma-4-31b-it", "gpt-4o", true, "gpt-4o")] // user pick never stomped
+    [InlineData(null, "google/gemma-4-31b-it", "gpt-4o", true, "gpt-4o")] // user pick wins over loaded default too
+    public void ResolveWorkingModel_covers_load_scenarios(
+        string lastReply, string categoryDefault, string current, bool userPicked, string expected)
+    {
+        Assert.Equal(expected, ConversationVm.ResolveWorkingModel(lastReply, categoryDefault, current, userPicked));
+    }
+
+    [Fact]
+    public async Task Legacy_conversation_defaults_to_category_model_once_loaded()
+    {
+        var (convo, _, _, chatSettings) = Make(("openai:ApiKey", "sk-oa"));
+        // Simulate the category's settings having loaded (alternatively the ctor placeholder
+        // would be cached - that was the "picks the first one" bug).
+        chatSettings.IdSettings = "general";
+        chatSettings.Model = "google/gemma-4-31b-it";
+
+        // Legacy: only a user message, no per-message model provenance anywhere.
+        var user = new ChatMessageVm(convo, ChatMessageRole.User) { Content = "hi" };
+        convo.Head = user.Selector;
+
+        await Task.Delay(200); // let the 50ms apply throttle fire
+
+        Assert.Equal("google/gemma-4-31b-it", convo.SelectedModel);
+        Assert.Equal("google/gemma-4-31b-it", convo.SelectedModelLabel);
+    }
+
+    [Fact]
+    public async Task Modern_conversation_defaults_to_last_reply_model()
+    {
+        var (convo, _, _, chatSettings) = Make(("openai:ApiKey", "sk-oa"));
+        chatSettings.IdSettings = "general";
+        chatSettings.Model = "google/gemma-4-31b-it"; // category default - must lose to the reply's model
+
+        var user = new ChatMessageVm(convo, ChatMessageRole.User) { Content = "hi" };
+        var assistant = new ChatMessageVm(convo, ChatMessageRole.Assistant)
+        {
+            Content = "hello",
+            Model = "anthropic/claude-3-5-sonnet", // per-message provenance
+            Previous = user
+        };
+        user.Next = assistant;
+        convo.Head = user.Selector;
+
+        await Task.Delay(200);
+
+        Assert.Equal("anthropic/claude-3-5-sonnet", convo.SelectedModel);
+    }
+
+    [Fact]
+    public async Task User_pick_is_never_overridden_by_load()
+    {
+        var (convo, _, _, chatSettings) = Make(("openai:ApiKey", "sk-oa"));
+        chatSettings.IdSettings = "general";
+        chatSettings.Model = "google/gemma-4-31b-it";
+
+        await convo.LoadModelsCmd.Execute(); // so the picker label can prettify
+
+        convo.SelectModelCmd.Execute("gpt-4o").Subscribe();
+
+        var user = new ChatMessageVm(convo, ChatMessageRole.User) { Content = "hi" };
+        convo.Head = user.Selector;
+
+        await Task.Delay(200);
+
+        Assert.Equal("gpt-4o", convo.SelectedModel);
+        Assert.Equal("OpenAI · gpt-4o", convo.SelectedModelLabel);
     }
 }

@@ -22,7 +22,7 @@ using Microsoft.EntityFrameworkCore;
 using Mapster;
 using Properties;
 
-public class ConversationVm : ActivatableViewModel
+public class ConversationVm : ActivatableViewModel, ILogging
 {
     public IOpenAiApi Api { get; }
     public SettingsVm GlobalSettings { get; }
@@ -42,6 +42,22 @@ public class ConversationVm : ActivatableViewModel
     [Reactive] public bool IsAIReady { get; private set; }
     [Reactive] public AiModel[] Models { get; private set; }
     [Reactive] public bool IsLoadingModels { get; private set; }
+
+    /// <summary>The model this conversation uses right now. Independent of the persisted
+    /// default (Settings.Model): the user can pick something transient, and loading a
+    /// conversation defaults it to the model that produced the last AI reply.
+    /// Deliberately lives on the conversation, NOT on ChatSettingsVm - the settings object
+    /// is shared/persisted/reloaded by too many paths for it to also own working state.</summary>
+    [Reactive] public string SelectedModel { get; set; }
+
+    /// <summary>Pretty label for the model picker ("OpenRouter · Google: Gemma 4 31B"),
+    /// recomputed whenever the selection or the catalog changes. Null selection -> "".</summary>
+    [Reactive] public string SelectedModelLabel { get; private set; }
+
+    /// <summary>True once the user explicitly picked a model for this conversation (via the
+    /// send-button picker). Auto-deriving on load never stomps a deliberate pick.</summary>
+    private bool _modelUserPicked;
+
     [Reactive] public bool IsTrash { get; set; }
     [Reactive] public bool CanSendPrompt { get; private set; }
     [Reactive] public bool CanEdit { get; private set; }
@@ -252,7 +268,39 @@ public class ConversationVm : ActivatableViewModel
                      .Do(i => IsLoadingModels = i)
                      .SubscribeSafe();
 
-        SelectModelCmd = ReactiveCommand.Create((string model) => { Settings.SelectedModel = model; });
+        // The picker label is a derived value of (working model, catalog) so it can't go
+        // stale: it re-renders when either the selection or the loaded catalog changes
+        // (e.g. raw id -> "Provider · Name" the moment models finish loading).
+        this.WhenAnyValue(vm => vm.SelectedModel, vm => vm.Models)
+            .Select(p => FormatModelLabel(p.Item1, p.Item2))
+            .ObserveOnMainThread()
+            .Do(l => SelectedModelLabel = l)
+            .SubscribeSafe();
+
+        // Trace who sets the working model and why (debug level, NLog app-*.log).
+        this.WhenAnyValue(vm => vm.SelectedModel)
+            .WhereNotNull()
+            .Do(m => this.LogDebug("Working model -> {Model}", m))
+            .SubscribeSafe();
+
+        SelectModelCmd = ReactiveCommand.Create((string model) =>
+        {
+            _modelUserPicked = true;
+            SelectedModel = model;
+            this.LogDebug("User picked model {Model}", model);
+        });
+
+        // New conversations start at the persisted default; reloads re-derive from the last
+        // reply when the conversation has one (per-message provenance) and else keep the
+        // current selection. Runs on settings (re)load and when the message tree arrives,
+        // so ordering never matters.
+        Observable.Merge(
+                      this.WhenAnyValue(vm => vm.Head).WhereNotNull().Select(_ => Unit.Default),
+                      Settings.LoadCmd.Select(_ => Unit.Default))
+                  .Throttle(TimeSpan.FromMilliseconds(50))
+                  .ObserveOnMainThread()
+                  .Do(_ => ApplySelectedModel())
+                  .SubscribeSafe();
 
         CancelEditCmd = ReactiveCommand.Create(
             () =>
@@ -319,7 +367,9 @@ public class ConversationVm : ActivatableViewModel
         Activator.Activated
                  .Skip(1)
                  .Where(_ => IdSettingsOverride == null)
-                 .InvokeCommand(Settings.ReloadCmd);
+                 .SelectMany(_ => Settings.ReloadCmd.Execute())
+                 .ObserveOnMainThread()
+                 .SubscribeSafe();
 
         // Save settings, or if convo is new then don't, it will be saved when saving the convo.
         SaveSettingsCmd = ReactiveCommand.CreateFromObservable(
@@ -604,6 +654,49 @@ public class ConversationVm : ActivatableViewModel
                 .SubscribeSafe()
                 .DisposeWith(disposables);
         });
+    }
+
+    // The conversation remembers the model of every AI reply on the message itself (per-message
+    // provenance). When the conversation loads (head arrives) or settings (re)load, point the
+    // working model at:
+    //   1. the model that produced the last assistant message (modern chats), else
+    //   2. the category's default, but only once this conversation's settings actually loaded
+    //      (IdSettings set) - before that Settings.Model is still the ctor placeholder, and
+    //      caching it would make the picker "pick the first/placeholder model" on legacy chats.
+    // A deliberate user pick is never stomped. SelectedModel is an OUTPUT here, never a source:
+    // treating it as a fallback was exactly why provisional values stuck around.
+    private void ApplySelectedModel()
+    {
+        var lastAiModel = Head?.Message.GetNextMessages()
+                               .LastOrDefault(m => m.Role == ChatMessageRole.Assistant && m.Model != null)
+                               ?.Model;
+
+        var categoryDefault = Settings.IdSettings != null ? Settings.Model : null;
+
+        var next = ResolveWorkingModel(lastAiModel, categoryDefault, SelectedModel, _modelUserPicked);
+
+        this.LogDebug("Applying working model (userPicked={UserPicked}): lastReply={LastReply ?? \"<none>\"}, " +
+                      "loaded={Loaded}, default={Default}, current={Current}, -> {Next}",
+                      _modelUserPicked, lastAiModel, Settings.IdSettings != null, Settings.Model, SelectedModel, next);
+
+        SelectedModel = next;
+    }
+
+    // Pure decision so the load-scenario matrix is trivially unit-testable.
+    internal static string ResolveWorkingModel(string lastReplyModel, string categoryDefault, string current, bool userPicked) =>
+        userPicked ? current : lastReplyModel ?? categoryDefault ?? current;
+
+    private static string FormatModelLabel(string modelId, AiModel[] models)
+    {
+        if (modelId == null)
+            return "";
+
+        var model = models?.FirstOrDefault(x => x.ModelID == modelId);
+
+        if (model == null)
+            return modelId;
+
+        return $"{AiProviders.Get(model.ProviderKey).DisplayName} · {model.DisplayLabel}";
     }
 
     // Allows you to track `Next` property of an item including all the subsequent items in the list. Always ticks the

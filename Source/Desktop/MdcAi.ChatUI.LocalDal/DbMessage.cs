@@ -25,6 +25,11 @@ public class DbMessage
     public DateTime CreatedTs { get; set; }
     public string Role { get; set; }
     public string Content { get; set; }
+
+    /// <summary>Model id that (re)generated this message ("gpt-4o", "anthropic/claude-3-5-sonnet", ...).
+    /// Null on user messages and on legacy rows that predate per-message provenance.</summary>
+    public string Model { get; set; }
+
     public bool IsTrash { get; set; }
 
     public DbConversation Conversation { get; set; }

@@ -76,6 +76,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="MdcAi.ChatUI.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Update="Properties\GlobalChatSettings.Designer.cs">
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
       <AutoGen>True</AutoGen>

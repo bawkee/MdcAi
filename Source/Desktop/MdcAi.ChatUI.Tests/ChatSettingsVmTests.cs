@@ -14,7 +14,9 @@
 namespace MdcAi.ChatUI.Tests;
 
 using MdcAi.ChatUI.ViewModels;
+using MdcAi.ChatUI.LocalDal;
 using OpenAiApi;
+using Microsoft.EntityFrameworkCore;
 
 public class ChatSettingsVmTests
 {
@@ -112,20 +114,66 @@ public class ChatSettingsVmTests
     }
 
     [Fact]
-    public async Task SelectedModel_marks_reasoning_flag_from_stamped_metadata()
+    public async Task Model_marks_reasoning_flag_from_stamped_metadata()
     {
         var api = new FakeOpenAiApi();
         var vm = new ChatSettingsVm(api);
 
-        vm.SelectedModel = "o1-mini";
+        vm.Model = "o1-mini";
         await Task.Yield(); // let the reactive chain tick
 
         Assert.True(vm.IsReasoningModel);
 
-        vm.SelectedModel = "gpt-4o";
+        vm.Model = "gpt-4o";
         await Task.Yield();
 
         Assert.False(vm.IsReasoningModel);
+    }
+
+    [Fact]
+    public async Task SaveCmd_persists_default_without_transient_state()
+    {
+        var api = new FakeOpenAiApi();
+        var vm = new ChatSettingsVm(api)
+        {
+            IdSettings = "test-settings", // always assigned before a save in the app
+            Model = "gpt-4o"
+        };
+        await Task.Yield(); // kick the dirty chain so SaveCmd can execute
+
+        var (ctx, path) = CreateTempDb();
+        try
+        {
+            await vm.SaveCmd.Execute(new ChatSettingsSaveOpts { Ctx = ctx });
+
+            // ChatSettingsVm owns the persisted default only - there is no transient
+            // selection to clobber anymore (that lives on ConversationVm.SelectedModel).
+            Assert.Equal("gpt-4o", vm.Model);
+            Assert.Equal("gpt-4o", ctx.ChatSettings.Single(s => s.IdSettings == "test-settings").Model);
+        }
+        finally
+        {
+            CleanupTempDb(ctx, path);
+        }
+    }
+
+    private static (UserProfileDbContext Ctx, string Path) CreateTempDb()
+    {
+        var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"mdcai-tests-{Guid.NewGuid():N}.db");
+        // Pre-create so the UserProfileDbContext ctor skips the embedded-resource copy.
+        System.IO.File.WriteAllBytes(path, Array.Empty<byte>());
+        var ctx = new UserProfileDbContext(path);
+        ctx.Database.EnsureCreated();
+        return (ctx, path);
+    }
+
+    private static void CleanupTempDb(UserProfileDbContext ctx, string path)
+    {
+        ctx.Database.CloseConnection();
+        foreach (var suffix in new[] { "", "-shm", "-wal" })
+        {
+            try { System.IO.File.Delete(path + suffix); } catch { /* best effort */ }
+        }
     }
 
     private static AiModel Stamped(string id, AiProvider provider)

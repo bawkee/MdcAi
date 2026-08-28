@@ -1,4 +1,4 @@
-﻿#region Copyright Notice
+#region Copyright Notice
 // Copyright (c) 2023 Bojan Sala
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -15,11 +15,21 @@ namespace MdcAi.OpenAiApi;
 
 using Newtonsoft.Json.Converters;
 
-internal class AiModels
+public class AiModels
 {
     [JsonProperty("data")] public AiModel[] Models { get; set; }
 }
 
+/// <summary>
+/// One model reported by a provider. The wire shapes differ per provider: OpenAI sends
+/// <c>owned_by</c>/<c>permission</c>, OpenRouter sends <c>name</c>/<c>context_length</c>/
+/// <c>pricing</c>/<c>reasoning</c>. All of those stay optional and null where absent.
+/// 
+/// <see cref="ProviderKey"/> and <see cref="GroupKey"/> are stamped by the client after
+/// fetching, using the active provider's descriptors - the UI groups and classifies against
+/// those. When no provider is set (e.g. `new AiModel("gpt-4o")` in app code) classification
+/// falls back to id heuristics so existing call sites keep working.
+/// </summary>
 public class AiModel
 {
     [JsonProperty("id")] public string ModelID { get; set; }
@@ -32,20 +42,102 @@ public class AiModel
 
     [JsonProperty("permission")] public Permissions[] Permission { get; set; }
 
+    // --- OpenRouter extensions (null/absent on OpenAI) ---
+    [JsonProperty("name")] public string Name { get; set; }
+    [JsonProperty("context_length")] public int? ContextLength { get; set; }
+    [JsonProperty("pricing")] public AiModelPricing Pricing { get; set; }
+    [JsonProperty("reasoning")] public AiModelReasoning Reasoning { get; set; }
+
+    /// <summary>Which provider found this model ("openai", "openrouter", ...). Stamped by the client.</summary>
+    [JsonIgnore] public string ProviderKey { get; set; }
+
+    /// <summary>Heading to group this model under in pickers (author for OpenRouter).</summary>
+    [JsonIgnore] public string GroupKey { get; set; }
+
     public static implicit operator string(AiModel model) => model?.ModelID;
     public static implicit operator AiModel(string name) => new(name);
 
+    public AiModel() { }
+
     public AiModel(string name) { ModelID = name; }
 
-    public static AiModel AdaTextEmbedding => new AiModel("text-embedding-ada-002") { OwnedBy = "openai" };
-    public static AiModel Gpt35Turbo => new AiModel("gpt-3.5-turbo-1106") { OwnedBy = "openai" };
-    public static AiModel Gpt4Turbo => new AiModel("gpt-4-1106-preview") { OwnedBy = "openai" };
-    public static AiModel Gpt4 => new AiModel("gpt-4") { OwnedBy = "openai" };
-    public static AiModel Gpt4o => new AiModel("gpt-4o") { OwnedBy = "openai" };
+    public AiModel(string name, string providerKey) { ModelID = name; ProviderKey = providerKey; }
 
-    public bool IsConversational => ModelID.StartsWith("gpt");
+    /// <summary>Author part of an OpenRouter id ("anthropic" from "anthropic/claude-..."), null otherwise.</summary>
+    public string Author =>
+        ModelID?.IndexOf('/') is { } i && i > 0 ? ModelID[..i] : null;
 
-    public bool IsReasoning => ModelID.StartsWith("o1") || ModelID.StartsWith("o3");
+    /// <summary>Nice label for pickers: OpenRouter display name when present, else the model id.</summary>
+    public string DisplayLabel =>
+        !string.IsNullOrEmpty(Name) && !string.Equals(Name, ModelID, StringComparison.OrdinalIgnoreCase)
+            ? $"{Name}"
+            : ModelID;
+
+    /// <summary>
+    /// Whether this is a chat-capable model. Provider-aware when stamped, id-heuristic otherwise.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsConversational =>
+        ProviderKey == null
+            ? AiProviders.IsConversationalId(ModelID)
+            : AiProviders.Get(ProviderKey).IsConversationalModel(this);
+
+    /// <summary>
+    /// Whether this is a reasoning model (premise is skipped for those, etc).
+    /// Provider-aware when stamped, id-heuristic otherwise.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsReasoning =>
+        ProviderKey == null
+            ? AiProviders.IsReasoningId(ModelID)
+            : AiProviders.Get(ProviderKey).IsReasoningModel(this);
+
+    public static AiModel AdaTextEmbedding => new("text-embedding-ada-002") { OwnedBy = "openai" };
+    public static AiModel Gpt35Turbo => new("gpt-3.5-turbo-1106") { OwnedBy = "openai" };
+    public static AiModel Gpt4Turbo => new("gpt-4-1106-preview") { OwnedBy = "openai" };
+    public static AiModel Gpt4 => new("gpt-4") { OwnedBy = "openai" };
+    public static AiModel Gpt4o => new("gpt-4o") { OwnedBy = "openai" };
 
     public override string ToString() => ModelID;
+}
+
+/// <summary>
+/// OpenRouter per-model pricing, in USD *per token* on the wire (e.g. "0.0000002574").
+/// Parsed helpers give per-million-token prices for display.
+/// </summary>
+public class AiModelPricing
+{
+    [JsonProperty("prompt")] public string Prompt { get; set; }
+    [JsonProperty("completion")] public string Completion { get; set; }
+    [JsonProperty("request")] public string Request { get; set; }
+    [JsonProperty("image")] public string Image { get; set; }
+    [JsonProperty("internal_reasoning")] public string InternalReasoning { get; set; }
+    [JsonProperty("input_cache_read")] public string InputCacheRead { get; set; }
+    [JsonProperty("input_cache_write")] public string InputCacheWrite { get; set; }
+
+    public decimal? PromptPerMTokens => ParsePerM(Prompt);
+    public decimal? CompletionPerMTokens => ParsePerM(Completion);
+    public decimal? RequestPerRequest => ParsePerM(Request);
+
+    private static decimal? ParsePerM(string perToken)
+    {
+        if (string.IsNullOrWhiteSpace(perToken))
+            return null;
+        return decimal.TryParse(perToken, System.Globalization.NumberStyles.Float,
+                                System.Globalization.CultureInfo.InvariantCulture, out var v)
+            ? v * 1_000_000m
+            : null;
+    }
+}
+
+/// <summary>
+/// OpenRouter `reasoning` object: presence + flags tell us a model emits reasoning tokens.
+/// </summary>
+public class AiModelReasoning
+{
+    [JsonProperty("supported_efforts")] public string[] SupportedEfforts { get; set; }
+    [JsonProperty("default_effort")] public string DefaultEffort { get; set; }
+    [JsonProperty("default_enabled")] public bool DefaultEnabled { get; set; }
+    [JsonProperty("mandatory")] public bool Mandatory { get; set; }
+    [JsonProperty("supports_max_tokens")] public bool SupportsMaxTokens { get; set; }
 }

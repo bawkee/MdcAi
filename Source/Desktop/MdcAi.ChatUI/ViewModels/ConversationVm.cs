@@ -1,4 +1,4 @@
-﻿#region Copyright Notice
+#region Copyright Notice
 
 // Copyright (c) 2023 Bojan Sala
 //   Licensed under the Apache License, Version 2.0 (the "License");
@@ -240,7 +240,7 @@ public class ConversationVm : ActivatableViewModel
         {
             if (Debugging.Enabled && Debugging.MockModels)
                 return ChatSettingsVm.MockModels;
-            return await api.GetModels();
+            return await api.GetAllModels();
         });
 
         LoadModelsCmd.ObserveOnMainThread()
@@ -451,10 +451,11 @@ public class ConversationVm : ActivatableViewModel
                   .Select(_ => Unit.Default)
                   .InvokeCommand(SaveCmd);
 
+        // The app is "AI ready" as soon as any provider has a usable key - the conversation's
+        // model decides which provider actually serves it.
         this.WhenAnyValue(vm => vm.GlobalSettings)
-            .Select(s => s.WhenAnyValue(x => x.OpenAi.ApiKey))
+            .Select(s => s.WhenAnyValue(x => x.IsAnyProviderConfigured))
             .Switch()
-            .Select(s => s != null && !string.IsNullOrEmpty(s))
             .ObserveOnMainThread()
             .Do(i => IsAIReady = i)
             .SubscribeSafe();
@@ -482,10 +483,21 @@ public class ConversationVm : ActivatableViewModel
                                           !IsAIReady)
             .SubscribeSafe();
 
+        // Load models once the app becomes usable, and reload whenever any provider's key changes
+        // (each provider has its own catalog, and adding/removing a key changes what's shown).
         Activator.Activated.Take(1)
-                 .Select(_ => this.WhenAnyValue(vm => vm.IsAIReady)
-                                  .Where(i => i)
-                                  .Select(_ => Unit.Default))
+                 .Select(_ => Observable.Merge(
+                                   this.WhenAnyValue(vm => vm.IsAIReady)
+                                       .Where(i => i)
+                                       .Select(_ => Unit.Default),
+                                   GlobalSettings.OpenAi.WhenAnyValue(vm => vm.ApiKey)
+                                       .Skip(1)
+                                       .Throttle(TimeSpan.FromMilliseconds(400))
+                                       .Select(_ => Unit.Default),
+                                   GlobalSettings.OpenRouter.WhenAnyValue(vm => vm.ApiKey)
+                                       .Skip(1)
+                                       .Throttle(TimeSpan.FromMilliseconds(400))
+                                       .Select(_ => Unit.Default)))
                  .Switch()
                  .InvokeCommand(LoadModelsCmd);
 

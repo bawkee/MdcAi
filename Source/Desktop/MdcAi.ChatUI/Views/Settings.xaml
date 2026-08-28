@@ -17,7 +17,9 @@
   </UserControl.Resources>
 
   <StackPanel Margin="20" Spacing="5">
+    <!-- Every provider's API-access section is always visible; no "current provider" picker. -->
     <winUi:ViewHost ViewModel="{x:Bind ViewModel.OpenAi}" />
+    <winUi:ViewHost ViewModel="{x:Bind ViewModel.OpenRouter}" />
 
     <controls:SettingsCard Header="Show Getting Started Tips">
       <controls:SettingsCard.Description>

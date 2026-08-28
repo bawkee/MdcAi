@@ -33,6 +33,7 @@ To download an unpackaged version of the app (no Microsoft Store, no installatio
 - Ability to auto-install and use self-hosted LLMs, similar to other chat UIs.
 
 ## Current Features
+- **Multi-provider support**: OpenAI **and** OpenRouter out of the box. Settings shows each provider's own API-access section (keys stored separately in Windows Credentials), so you can configure as many providers as you like — any chat can use any provider depending on which model it's using. Model pickers group by provider first (OpenAI / OpenRouter submenus, then author within OpenRouter) so the full 400-model catalog stays navigable and it's always obvious where a model comes from.
 - Custom personalities (assistants), each with different parameters, models and system prompts.
 - Integrated full-width Markdown renderer via WebView2. Unlike other desktop apps, where output is simple and unformatted (or barely formatted) text, this app formats source code, headings, paragraphs, bullet lists, etc. The output is fully selectable and snappy.
 - Advanced Edit functionality, the Edit button allows you to create infinite number of nested forks within a conversation, branching out in different directions. Unlike in other apps and web UIs, nested forks are supported, and the app remembers your current fork, allowing you to continue where you left off. Why forking? Because it can save massive amount of credits, reducing token usage by up to 95% - few people know, but every time you stack another message to previous ones, even when you say "forget past messages", the LLM, being stateless, will still re-evaluate the entire stack of messages and charge all the tokens regardless.
@@ -69,6 +70,11 @@ This version introduces the possibility to use reasoning models and run the app 
 - #12 Unpackaged deployment support
 
 To run the app outside of the store, just download the [relevant package](https://github.com/bawkee/MdcAi/releases/tag/v1.0.3) and run the executable directly.
+
+## Next up (in progress)
+
+- **OpenRouter + multi-provider** support landed in `main`: provider registry (`AiProviders`), a `ChatApiRouter` that routes by model id, per-provider keys in the Windows vault, and provider/author-grouped model pickers. Unit + integration tests cover the client and the VMs (see `Skills/OpenAiApi`).
+- Tool / function calling and reasoning-effort plumbing (extending `ChatRequest`) is the next phase.
 
 ## Screenshots
 

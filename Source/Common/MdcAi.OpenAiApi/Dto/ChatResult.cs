@@ -1,4 +1,4 @@
-﻿#region Copyright Notice
+#region Copyright Notice
 // Copyright (c) 2023 Bojan Sala
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@ namespace MdcAi.OpenAiApi;
 public class ChatResult : ApiResult
 {
     [JsonProperty("id")] public string Id { get; set; }
-    [JsonProperty("choices")] public IReadOnlyList<ChatChoice> Choices { get; set; }
+    [JsonProperty("choices")] public IReadOnlyList<ChatChoice> Choices { get; set; } = Array.Empty<ChatChoice>();
     [JsonProperty("usage")] public ChatUsage Usage { get; set; }
 
     public override string ToString() => Choices.FirstOrDefault()?.ToString();

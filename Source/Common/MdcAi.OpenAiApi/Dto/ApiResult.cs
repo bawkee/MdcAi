@@ -1,4 +1,4 @@
-﻿#region Copyright Notice
+#region Copyright Notice
 // Copyright (c) 2023 Bojan Sala
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -23,6 +23,13 @@ public class ApiResult
 
     [JsonProperty("model")] public string Model { get; set; }
     [JsonProperty("object")] public string Object { get; set; }
+
+    /// <summary>
+    /// Present on mid-stream SSE error events: OpenAI-compatible endpoints (incl. OpenRouter)
+    /// can ship a 200 with an error object once the stream has started.
+    /// </summary>
+    [JsonProperty("error")] public ApiError Error { get; set; }
+
     [JsonIgnore] public string Organization { get; internal set; }
     [JsonIgnore] public TimeSpan ProcessingTime { get; internal set; }
     [JsonIgnore] public string RequestId { get; internal set; }

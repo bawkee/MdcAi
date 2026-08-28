@@ -1,4 +1,4 @@
-﻿#region Copyright Notice
+#region Copyright Notice
 // Copyright (c) 2023 Bojan Sala
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -15,52 +15,82 @@ namespace MdcAi.OpenAiApi;
 
 using SalaTools.Core;
 
+/// <summary>
+/// The stable seam the UI consumes. Talks to whichever provider is currently active; the
+/// concrete implementation is either an <see cref="OpenAiClient"/> (single provider) or a
+/// <see cref="ChatApiRouter"/> (switches between providers at runtime).
+/// </summary>
 public interface IOpenAiApi
 {
-    string ApiKey { get; }
-    string Organisation { get; }
-    string ApiVersion { get; }
+    /// <summary>Provider the next request will actually go to.</summary>
+    AiProvider ActiveProvider { get; }
+
+    /// <summary>All providers this app knows about (for pickers).</summary>
+    IReadOnlyList<AiProvider> Providers { get; }
+
+    /// <summary>Whether the app currently has a usable key for the given provider key.</summary>
+    bool HasCredentials(string providerKey);
+
+    /// <summary>Fetch the active provider's model catalog.</summary>
     Task<AiModel[]> GetModels();
+
+    /// <summary>
+    /// Fetch every reachable provider's catalog (falling back to id heuristics per provider),
+    /// stamped with Provider/Group keys. Used by the grouped model pickers.
+    /// </summary>
+    Task<AiModel[]> GetAllModels();
+
     Task<ChatResult> CreateChatCompletions(ChatRequest request);
     IAsyncEnumerable<ChatResult> CreateChatCompletionsStream(ChatRequest request);
 }
 
+/// <summary>
+/// An OpenAI-compatible chat client configured for one provider. The endpoint, auth scheme and
+/// model classification all come from the provider descriptor, so the same class speaks to
+/// OpenAI, OpenRouter and any other OpenAI-compatible endpoint.
+/// </summary>
 public partial class OpenAiClient : IOpenAiApi, IDisposable
 {
+    public AiProvider Provider { get; }
+    public IReadOnlyList<AiProvider> Providers => new[] { Provider };
+    public AiProvider ActiveProvider => Provider;
+
+    public bool HasCredentials(string providerKey) =>
+        providerKey == Provider.Key && !string.IsNullOrEmpty(ApiKey);
+
     public string ApiKey { get; private set; }
     public string Organisation { get; private set; }
-    public string ApiVersion { get; }
+    public string ApiVersion => Provider.ApiVersion;
     public HttpClient Client { get; }
 
     private readonly ArgumentBasedMemoize _mem = new();
 
-    public OpenAiClient(string apiKey = null,
-                        string organisation = null,
-                        string apiVersion = "v1",
+    public OpenAiClient(AiProvider provider = null,
+                        AiProviderCredentials credentials = null,
                         HttpClient client = null)
     {
-        ApiVersion = apiVersion;
+        Provider = provider ?? AiProviders.Default;
 
         Client = client ?? new SafeHttpClient
         {
-            BaseAddress = new($"https://api.openai.com/{ApiVersion}/")
+            BaseAddress = Provider.BaseUrl
         };
 
-        SetCredentials(apiKey, organisation);
-
         Client.DefaultRequestHeaders.Add("User-Agent", "MdcAi");
+
+        SetCredentials(credentials ?? new AiProviderCredentials());
     }
 
-    public void SetCredentials(string apiKey, string organisation)
+    public void SetCredentials(AiProviderCredentials credentials)
     {
-        ApiKey = apiKey;
-        Organisation = organisation;
+        credentials ??= new AiProviderCredentials();
+
+        ApiKey = credentials.ApiKey;
+        Organisation = credentials.Organisation;
 
         _mem.Clear();
 
-        Client.DefaultRequestHeaders.Authorization = new("Bearer", ApiKey);
-        Client.AddOrUpdateDefaultHeader("Api-Key", ApiKey);
-        Client.AddOrUpdateDefaultHeader("OpenAI-Organization", Organisation);
+        Provider.ConfigureDefaultHeaders(Client, credentials);
     }
 
     public Task<AiModel[]> GetModels() =>
@@ -69,8 +99,24 @@ public partial class OpenAiClient : IOpenAiApi, IDisposable
             var response = await Client.RequestAsync(new RelativeUri("models"), HttpMethod.Get);
             var responseStr = await response.Content.ReadAsStringAsync();
             var res = JsonConvert.DeserializeObject<AiModels>(responseStr);
+
+            foreach (var model in res.Models)
+                StampModel(model);
+
             return res.Models;
         });
+
+    /// <summary>Single-provider clients just return their own catalog.</summary>
+    public Task<AiModel[]> GetAllModels() => GetModels();
+
+    /// <summary>
+    /// Applies the provider's classification + grouping metadata to a fetched model.
+    /// </summary>
+    internal void StampModel(AiModel model)
+    {
+        model.ProviderKey = Provider.Key;
+        model.GroupKey = Provider.ModelGroupKey(model);
+    }
 
     public void Dispose() { Client.Dispose(); }
 }

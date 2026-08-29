@@ -2,6 +2,29 @@
   font-family: Arial, sans-serif;
 }
 
+/* Version watermark, bottom-right, intentionally subtle */
+.renderer-version {
+  position: fixed;
+  right: 8px;
+  bottom: 4px;
+  padding: 2px 6px;
+  font-size: 7pt;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.5);
+  text-shadow: 0 0 2px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+  user-select: none;
+  z-index: 999;
+}
+
+/* Muted in light mode so it doesn't glare on white */
+@media (prefers-color-scheme: light) {
+  .renderer-version {
+    color: rgba(0, 0, 0, 0.4);
+    text-shadow: none;
+  }
+}
+
 /* Main host for the item */
 .chat-item {
   padding: 5px 5px 5px 10px;
@@ -80,6 +103,82 @@
 .chat-item-info-effort {
   margin: 0px 4px 0px 4px;
   font-style: italic;
+}
+
+/* Collapsible "thinking" block (dsh-style). One-liner label + blockquote-style body. */
+.thinking-block {
+  margin: 4px 0 6px 0;
+}
+
+.thinking-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  padding: 3px 6px;
+  border: 0;
+  background: transparent;
+  color: #777;
+  cursor: pointer;
+  font-size: 8pt;
+  font-weight: 600;
+  text-align: left;
+  user-select: none;
+}
+
+.thinking-toggle:hover {
+  color: #4a90d9;
+}
+
+.thinking-chevron {
+  display: inline-block;
+  font-size: 8px;
+  transition: transform 120ms ease-in-out;
+  line-height: 1;
+}
+
+.thinking-block.expanded .thinking-chevron {
+  transform: rotate(90deg);
+}
+
+.thinking-label {
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.thinking-preview {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 400;
+  color: #999;
+  flex: 1;
+  min-width: 0;
+}
+
+.thinking-body {
+  margin: 2px 0 6px 0;
+  padding: 4px 2px 4px 10px;
+  border-left: 2px solid #999;
+  color: #999;
+  background: transparent;
+  font-size: 8.5pt;
+  line-height: 1.5;
+  user-select: text;
+  /* No inner scrollbar - let the thinking block grow and the main chat scroll handle it. */
+}
+
+/* Reasoning body keeps the muted tone even for .markdown-body descendants. */
+.thinking-body .reasoning-body {
+  color: #999;
+}
+
+@media (prefers-color-scheme: dark) {
+  .thinking-toggle { color: #999; }
+  .thinking-toggle:hover { color: #66b0ff; }
+  .thinking-preview { color: #777; }
+  .thinking-body { border-left-color: #555; color: #aaa; }
+  .thinking-body .reasoning-body { color: #aaa; }
 }
 
 @keyframes blink {

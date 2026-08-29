@@ -44,6 +44,19 @@ export const mockMessages = [
         Provider: "OpenRouter"
     },
     {
+        Id: "ai-reason",
+        Role: "assistant",
+        Content: "<p>The actual answer to your riddle.</p>",
+        Version: 1,
+        VersionCount: 1,
+        CreatedTs: "2023-05-26T00:11:00",
+        Model: "deepseek/deepseek-reasoner",
+        Provider: "OpenRouter",
+        Effort: "high",
+        Reasoning: "<div class=\"reasoning-body\"><p>First I need to parse the riddle carefully.</p>\n<p>Then I weigh the two possible answers and pick the one that fits the clue best.</p>\n<p>The answer is the left door.</p></div>",
+        ReasoningPreview: "The answer is the left door."
+    },
+    {
         Id: "ai-3",
         Role: "assistant",
         Content: "<p>Payloads without a provider stamp should still render.</p>",

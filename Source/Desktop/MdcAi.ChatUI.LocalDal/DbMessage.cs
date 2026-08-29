@@ -35,6 +35,10 @@ public class DbMessage
     /// per-message effort provenance - same convention as <see cref="Model"/>.</summary>
     public string Effort { get; set; }
 
+    /// <summary>Raw reasoning/thinking text the model emitted before its answer
+    /// ("reasoning_content"). Null on user messages and on models that never think.</summary>
+    public string Reasoning { get; set; }
+
     public bool IsTrash { get; set; }
 
     public DbConversation Conversation { get; set; }

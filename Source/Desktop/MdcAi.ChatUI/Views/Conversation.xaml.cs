@@ -106,6 +106,26 @@ public sealed partial class Conversation : ILogging
                 .Do(m => isScrolledDown = (bool)m.Data)
                 .SubscribeSafe();
 
+        // Renderer diagnostics: surface the WebView's LogDebug/LogInfo/LogError posts into
+        // NLog (app-*.log) so we can pin down which renderer bundle is running and what it
+        // saw on the wire (e.g. reasoning deltas) without DevTools.
+        messages.Where(m => m.Name is "LogDebug" or "LogInfo" or "LogError")
+                .ObserveOnMainThread()
+                .Do(m =>
+                {
+                    var level = m.Name.Substring(3); // Debug / Info / Error
+                    var data = m.Data;
+                    var text = data is string s ? s : JsonConvert.SerializeObject(data ?? "null");
+
+                    switch (level)
+                    {
+                        case "Debug": this.LogDebug("renderer: {Text}", text); break;
+                        case "Info": this.LogInformation("renderer: {Text}", text); break;
+                        default: this.LogError("renderer: {Text}", text); break;
+                    }
+                })
+                .SubscribeSafe();
+
         Subject<Unit> scrollToBottom = new();
 
         scrollToBottom.Where(_ => isScrolledDown)

@@ -85,6 +85,15 @@ WinUI honors the OS theme (dark/light) automatically; the WebView picks up the s
 
 > When you change the React renderer you must **rebuild + re-zip into `ChatListUI.zip`** for the change to take effect in the packaged/unpackaged app. During development, set `Debugging.NpmRenderer = true` and run `npm start` so the WebView loads from `http://localhost:3000/` instead of the zip (also add `remote-debugging-port` in DEBUG to open DevTools).
 
+### Renderer versioning (do not skip)
+
+Every renderer change ships inside the opaque `ChatListUI.zip`, so the running bundle is invisible unless you declare it. The renderer stamps its version into the UI (bottom-right `v1.x` watermark) and logs it at init (`renderer vX initialized` → NLog `app-*.log`) — that's how we tell which bundle is actually running.
+
+- The version lives in **`src/version.js`** (`RENDERER_VERSION`). **Bump it in the same change that touches the renderer** — a mismatch between the version stamp and the real bundle defeats the whole point.
+- **Minor change → `.1`** (e.g. `1.0` → `1.1`): any behavioral tweak, styling, or fix.
+- **Major change → `+1`** (e.g. `1.1` → `2.0`): a rewrite, a breaking wire-shape change, or a feature that meaningfully changes what the renderer is.
+- The version label is how debugging starts: if the user reports a renderer bug, first ask for the `vX` in the corner / the `renderer vX initialized` log line, then bump to match the new bundle when fixing.
+
 ## Gotchas & guide
 
 - The WebView content is batteries-included: all HTML/markdown comes **already rendered** from C# (Markdig). The React side **does not parse markdown** — it only highlights code inside the `<code>` tags and styles the `.markdown-body`.

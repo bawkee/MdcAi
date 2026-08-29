@@ -30,4 +30,14 @@ public class WebViewChatMessageDto
 
     /// <summary>Reasoning effort that produced this message ("low"/"medium"/"high", ...). Null on legacy/user messages and effort-less models.</summary>
     public string Effort { get; set; }
+
+    /// <summary>Pre-rendered HTML of the model's thinking/reasoning ("reasoning_content"), what
+    /// the renderer shows inside the expanded thinking block. Null when the message has none.</summary>
+    public string Reasoning { get; set; }
+
+    /// <summary>One-liner collapsed label for the thinking block: derived from the reasoning
+    /// text's last line via <c>ChatMessageVm.ReasoningPreview</c> (recomputed while streaming,
+    /// on the same throttle as the reasoning HTML). Can be null transiently (fresh message);
+    /// the renderer falls back to a plain "Thinking" label in that case.</summary>
+    public string ReasoningPreview { get; set; }
 }

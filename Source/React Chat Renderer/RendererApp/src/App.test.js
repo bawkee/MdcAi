@@ -51,7 +51,7 @@ describe('rendering SetMessages', () => {
 
         // CSS role classes are applied for styling
         expect(document.querySelectorAll('.chat-item.user')).toHaveLength(2);
-        expect(document.querySelectorAll('.chat-item.assistant')).toHaveLength(3);
+        expect(document.querySelectorAll('.chat-item.assistant')).toHaveLength(4);
         expect(document.querySelector('.chat-item.system')).toBeTruthy();
     });
 
@@ -82,6 +82,66 @@ describe('rendering SetMessages', () => {
         // Single-version messages render no badge at all
         expect(screen.queryByText('1 / 1')).toBeNull();
         expect(screen.queryByText('1 / 2')).toBeNull();
+    });
+});
+
+describe('thinking block (reasoning rendering)', () => {
+    it('collapsed by default: shows the Thinking label + one-line preview, no body', () => {
+        render(<App />);
+        act(() => emitWebMessage(setMessagesPayload()));
+
+        // The reasoning-bearing message renders a Thinking toggle
+        const toggles = screen.getAllByText('Thinking');
+        expect(toggles.length).toBeGreaterThan(0);
+
+        // One-liner preview is visible; the full reasoning body is NOT
+        expect(screen.getByText('The answer is the left door.')).toBeInTheDocument();
+        expect(document.querySelector('.thinking-body')).toBeNull();
+    });
+
+    it('expands on click and collapses again', () => {
+        render(<App />);
+        act(() => emitWebMessage(setMessagesPayload()));
+
+        const toggle = screen.getByText('The answer is the left door.').closest('.thinking-toggle');
+        expect(toggle).toHaveAttribute('aria-expanded', 'false');
+
+        // Expand: the whole reasoning body appears (text lives in nested <p>s, so
+        // assert on the container's text content, not getByText)
+        fireEvent.click(toggle);
+        expect(toggle).toHaveAttribute('aria-expanded', 'true');
+        const body = document.querySelector('.thinking-block.expanded .thinking-body');
+        expect(body).toBeTruthy();
+        expect(body.textContent).toContain('First I need to parse the riddle carefully.');
+
+        // Collapse: body gone again, preview back
+        fireEvent.click(toggle);
+        expect(toggle).toHaveAttribute('aria-expanded', 'false');
+        expect(document.querySelector('.thinking-body')).toBeNull();
+    });
+
+    it('renders nothing when a message carries no reasoning', () => {
+        render(<App />);
+        act(() => emitWebMessage(setMessagesPayload([mockMessages[0], mockMessages[1]])));
+
+        // These two (user + plain assistant) have no Reasoning/ReasoningPreview
+        expect(screen.queryByText('Thinking')).toBeNull();
+    });
+
+    it('treats null preview gracefully (label only)', () => {
+        render(<App />);
+        act(() => emitWebMessage(setMessagesPayload([{
+            ...mockMessages[1],
+            Reasoning: '<p>just thinking...</p>',
+            ReasoningPreview: null
+        }])));
+
+        const toggle = screen.getByText('Thinking').closest('.thinking-toggle');
+        expect(toggle).toBeTruthy();
+        fireEvent.click(toggle);
+        const body = document.querySelector('.thinking-body');
+        expect(body).toBeTruthy();
+        expect(body.textContent).toContain('just thinking...');
     });
 });
 

@@ -49,7 +49,10 @@ public static class ChatMessageVmExt
             CreatedTs = m.CreatedTs,
             Model = modelId,
             Provider = provider,
-            Effort = m.Effort
+            Effort = m.Effort,
+            Reasoning = m.ReasoningHTMLContent ??
+                        (string.IsNullOrEmpty(m.ReasoningContent) ? null : $"<p>{m.ReasoningContent}</p>"),
+            ReasoningPreview = m.ReasoningPreview
         };
     }
 
@@ -80,7 +83,8 @@ public static class ChatMessageVmExt
                 CreatedTs = m.CreatedTs,
                 Version = v + 1,
                 Model = m.Model,
-                Effort = m.Effort
+                Effort = m.Effort,
+                Reasoning = m.ReasoningContent
             };
 
             var children = m.Next?.ToDbMessages(idx + 1) ?? Enumerable.Empty<DbMessage>();
@@ -127,6 +131,7 @@ public static class ChatMessageVmExt
             message.Content = dbMessage.Content;
             message.Model = dbMessage.Model;
             message.Effort = dbMessage.Effort;
+            message.ReasoningContent = dbMessage.Reasoning;
 
             SetNext(message);
         }

@@ -670,10 +670,16 @@ public class ConversationVm : ActivatableViewModel, ILogging
                 .Select(m =>
                 {
                     if (m.Count > 0)
-                        return m.Last()
-                                .WhenAnyValue(vm => vm.HTMLContent)
-                                .Throttle(TimeSpan.FromMilliseconds(50))
-                                .Select(_ => m);
+                    {
+                        // Repush when either the answer or the thinking block re-renders, so
+                        // the WebView gets reasoning deltas while the model is still thinking.
+                        var last = m.Last();
+                        return Observable.Merge(
+                                   last.WhenAnyValue(vm => vm.HTMLContent),
+                                   last.WhenAnyValue(vm => vm.ReasoningHTMLContent))
+                               .Throttle(TimeSpan.FromMilliseconds(50))
+                               .Select(_ => m);
+                    }
                     return Observable.Return(m);
                 })
                 .Switch()

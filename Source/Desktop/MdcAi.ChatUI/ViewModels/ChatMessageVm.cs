@@ -41,13 +41,27 @@ public class ChatMessageVm : ViewModel, ILogging
     /// reloads, exactly like Model does.</summary>
     [Reactive] public string Effort { get; set; }
 
+    /// <summary>Raw reasoning/thinking text the model emitted before its answer
+    /// ("reasoning_content" on the wire). Aggregated from stream deltas alongside
+    /// <see cref="Content"/>; null/empty on user messages and on models that never think.</summary>
+    [Reactive] public string ReasoningContent { get; set; }
+
+    /// <summary>Markdig-rendered HTML of <see cref="ReasoningContent"/> - what the renderer
+    /// expands to when the user opens the thinking block. Empty string when there's nothing
+    /// to show.</summary>
+    [Reactive] public string ReasoningHTMLContent { get; set; }
+
+    /// <summary>One-liner collapsed label for the reasoning block: the last non-empty line
+    /// of <see cref="ReasoningContent"/> (the model's most recent thought). Null when empty.</summary>
+    [Reactive] public string ReasoningPreview { get; private set; }
+
     public DateTime CreatedTs { get; set; }
     public ConversationVm Conversation { get; }
     public ChatMessageVm Previous { get; set; } // Previous item        
     [Reactive] public ChatMessageVm Next { get; set; } // Next item
     [Reactive] public bool IsCompleting { get; private set; } // Whether completion is in progress
 
-    public ReactiveCommand<Unit, string> CompleteCmd { get; }
+    public ReactiveCommand<Unit, (string Content, string Reasoning)> CompleteCmd { get; }
     public ReactiveCommand<Unit, Unit> StopCompletionCmd { get; }
 
     private static readonly MarkdownPipeline _mdPipeline;
@@ -76,20 +90,27 @@ public class ChatMessageVm : ViewModel, ILogging
                             .Do(_ =>
                             {
                                 Content = null; // Just because there can be such a big delay when regenerating
+                                ReasoningContent = null; // ... and the old reasoning is stale the moment we re-run
+                                ReasoningHTMLContent = null;
                                 Model = Conversation.SelectedModel; // Remember which model produced (this version of) this message
                                 Effort = Conversation.SelectedEffort; // ... and which effort level was in play
                             })
                             .Select(_ => Conversation.Settings.Streaming ?
                                         CreateGenerationStream()
                                             .TakeUntil(StopCompletionCmd)
-                                            .Scan("", (a, b) => a + b) :
+                                            .Scan((Content: "", Reasoning: ""),
+                                                  (acc, d) => (acc.Content + d.Content, acc.Reasoning + d.Reasoning)) :
                                         Observable.FromAsync(() => GenerateResponse())
                                                   .TakeUntil(StopCompletionCmd))
                             .Switch()
-                            .Catch((Exception ex) => Observable.Throw<string>(new CompletionException(ex))));
+                            .Catch((Exception ex) => Observable.Throw<(string, string)>(new CompletionException(ex))));
 
         CompleteCmd.ObserveOnMainThread()
-                   .Do(c => Content = c)
+                   .Do(c =>
+                   {
+                       Content = c.Content;
+                       ReasoningContent = c.Reasoning;
+                   })
                    .SubscribeSafe();
 
         StopCompletionCmd = ReactiveCommand.Create(() => { }, CompleteCmd.IsExecuting);
@@ -132,10 +153,31 @@ public class ChatMessageVm : ViewModel, ILogging
             .LogAndRetry(this)
             .SubscribeSafe();
 
+        // Reasoning renders into its own block (the renderer collapses it behind a one-liner);
+        // the preview is derived on the same throttle so both stay in step while streaming.
+        this.WhenAnyValue(vm => vm.ReasoningContent)
+            .Throttle(TimeSpan.FromMilliseconds(50))
+            .ObserveOnMainThread()
+            .Do(r =>
+            {
+                ReasoningPreview = GetLastLine(r);
+
+                ReasoningHTMLContent = string.IsNullOrEmpty(r)
+                    ? ""
+                    : $"<div class=\"reasoning-body\">{Markdown.ToHtml(r + (Next == null ? caretMd : ""), _mdPipeline).Replace(caretMd, caretHtml)}</div>";
+            })
+            .LogAndRetry(this)
+            .SubscribeSafe();
+
+        // Drop the streaming caret from both blocks a moment after the text settles.
         this.WhenAnyValue(vm => vm.Content)
             .Throttle(TimeSpan.FromMilliseconds(2000))
             .ObserveOnMainThread()
-            .Do(_ => HTMLContent = HTMLContent?.Replace(caretHtml, ""))
+            .Do(_ =>
+            {
+                HTMLContent = HTMLContent?.Replace(caretHtml, "");
+                ReasoningHTMLContent = ReasoningHTMLContent?.Replace(caretHtml, "");
+            })
             .SubscribeSafe();
 
         StopCompletionCmd.ObserveOnMainThread()
@@ -157,7 +199,11 @@ public class ChatMessageVm : ViewModel, ILogging
                    .Where(i => !i)
                    .Throttle(TimeSpan.FromMilliseconds(1000))
                    .ObserveOnMainThread()
-                   .Do(_ => HTMLContent = HTMLContent.Replace(caretHtml, ""))
+                   .Do(_ =>
+                   {
+                       HTMLContent = HTMLContent.Replace(caretHtml, "");
+                       ReasoningHTMLContent = ReasoningHTMLContent?.Replace(caretHtml, "");
+                   })
                    .SubscribeSafe();
     }
 
@@ -165,39 +211,69 @@ public class ChatMessageVm : ViewModel, ILogging
         HttpUtility.HtmlEncode(content)
                    .Replace("\r", "<br />");
 
-    private async Task<string> GenerateResponse()
+    /// <summary>Last non-empty line of the reasoning text, trimmed - the collapsed one-liner.
+    /// Null when there's nothing to show yet.</summary>
+    private static string GetLastLine(string reasoning) =>
+        string.IsNullOrWhiteSpace(reasoning)
+            ? null
+            : reasoning.Split('\n')
+                       .LastOrDefault(l => !string.IsNullOrWhiteSpace(l))
+                       ?.Trim();
+
+    private async Task<(string Content, string Reasoning)> GenerateResponse()
     {
         if (Debugging.Enabled && Debugging.MockMessages)
         {
             await Task.Delay(500);
 
             if (Debugging.NumberedMessages)
-                return $"Debug system {Debugging.SystemMessageCounter++}";
+                return ($"Debug system {Debugging.SystemMessageCounter++}",
+                        $"I am the {Debugging.SystemMessageCounter}th mock reply. Let me reason about how to answer...");
 
             var file = await StorageFile.GetFileFromApplicationUriAsync(new Uri("ms-appx:///Assets/Dbg/Test2.md"));
             var contents = await FileIO.ReadTextAsync(file);
-            return contents;
+            return (contents,
+                    "I should think about how to answer this helpful but cynical question.\nLet me check the docs first, that usually helps.");
         }
 
         var req = CreateRequest();
         var completions = await Conversation.Api.CreateChatCompletions(req);
-        return completions.Choices.LastOrDefault()?.Message.Content;
+        var choice = completions.Choices.LastOrDefault();
+        return (choice?.Message.Content, choice?.Message.ReasoningText);
     }
 
-    private IObservable<string> CreateGenerationStream()
+    private IObservable<(string Content, string Reasoning)> CreateGenerationStream()
     {
         if (Debugging.Enabled && Debugging.MockMessages)
             return Observable
                    .FromAsync(() => GenerateResponse())
-                   .SelectMany(c => c.Split(' ')
-                                     .ToObservable()
-                                     .Select(s => Observable.Timer(TimeSpan.FromMilliseconds(200))
-                                                            .Select(_ => s + ' '))
-                                     .Concat());
+                   .SelectMany(r => Observable.Concat(
+                       // Mock the "thinking first" ordering real reasoning models use
+                       (r.Reasoning == null ? Observable.Empty<(string, string)>() :
+                           r.Reasoning.Split(' ')
+                            .ToObservable()
+                            .Select(s => Observable.Timer(TimeSpan.FromMilliseconds(150))
+                                                         .Select(_ => ("", s + " ")))
+                            .Concat()),
+                       r.Content.Split(' ')
+                        .ToObservable()
+                        .Select(s => Observable.Timer(TimeSpan.FromMilliseconds(200))
+                                             .Select(_ => (s + " ", "")))
+                            .Concat()));
 
         return Conversation.Api.CreateChatCompletionsStream(CreateRequest())
                            .ToObservable()
-                           .Select(m => m.Choices.LastOrDefault()?.Delta.Content);
+                           .Select(m =>
+                           {
+                               // Real streams carry delta chunks; some fakes/tests return a full
+                               // message-shaped result instead, so read whichever is present.
+                               var delta = m.Choices.LastOrDefault()?.Delta;
+                               if (delta != null)
+                                   return (delta.Content ?? "", delta.ReasoningText ?? "");
+
+                               var msg = m.Choices.LastOrDefault()?.Message;
+                               return (msg?.Content ?? "", msg?.ReasoningText ?? "");
+                           });
     }
 
     private ChatRequest CreateRequest()

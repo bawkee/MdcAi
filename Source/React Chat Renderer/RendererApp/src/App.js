@@ -1,10 +1,13 @@
 import './App.css';
 import { useState, useEffect, useRef } from 'react';
 import CodeHighlighter from './components/highlighter';
+import ThinkingBlock from './components/thinkingBlock';
 import AutoScrollComponent from './components/autoScroll';
 import DateTime from './components/dateTime';
 import { isElementFullyVisible } from './util';
 import { getAuthorLabel, getEffortLabel, getRoleClass } from './messageMeta';
+import { logDebug, logInfo } from './logging';
+import { RENDERER_VERSION } from './version';
 //import initialData from './sample1.json';
 
 function App() {
@@ -31,9 +34,14 @@ function App() {
         obj = e.data;
       }
 
-      if (obj.Name === 'SetMessages')
+      if (obj.Name === 'SetMessages') {
         setData(obj.Data);
-      else if (obj.Name === 'HideCaret')
+        const withReasoning = (obj.Data?.Messages || []).filter(m => m.Reasoning);
+        if (withReasoning.length > 0)
+          logInfo(`SetMessages: ${withReasoning.length} message(s) carry reasoning`);
+        else
+          logDebug('SetMessages: no reasoning on any message');
+      } else if (obj.Name === 'HideCaret')
         setTimeout(hideCaret, 1000);
       else if (obj.Name === 'SetSelection')
         onSelectedChat(obj.Data, false);
@@ -137,12 +145,18 @@ function App() {
                 )}
               </div>
               <div className='chat-item-content'>
+                <ThinkingBlock
+                  reasonHtml={item.Reasoning}
+                  preview={item.ReasoningPreview} />
                 <CodeHighlighter code={item.Content} />
               </div>
             </div>
           ))}
         </div>
       </AutoScrollComponent>
+      <div className='renderer-version' title='Renderer version'>
+        v{RENDERER_VERSION}
+      </div>
     </div>
   );
 }
@@ -153,5 +167,7 @@ const readyPing = {
 
 if (window.chrome.webview)
   window.chrome.webview.postMessage(readyPing);
+
+logInfo(`renderer v${RENDERER_VERSION} initialized`);
 
 export default App;

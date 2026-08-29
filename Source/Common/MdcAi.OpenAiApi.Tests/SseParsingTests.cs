@@ -128,6 +128,59 @@ public class SseParsingTests
     }
 
     [Fact]
+    public async Task Captures_openrouter_reasoning_field_deltas()
+    {
+        // OpenRouter routes some hosts (e.g. Baidu-hosted DeepSeek) surface thinking in
+        // delta.reasoning (incremental string) instead of reasoning_content - exactly the
+        // shape seen on deepseek/deepseek-v4-flash-0731. Make sure ReasoningText picks it up.
+        var handler = FakeHttpMessageHandler.OkStream(
+            """data: {"id":"a","choices":[{"index":0,"delta":{"content":"","role":"assistant","reasoning":"The"}}]}""",
+            """data: {"id":"a","choices":[{"index":0,"delta":{"content":"","reasoning":" user instructed"}}]}""",
+            """data: {"id":"a","choices":[{"index":0,"delta":{"content":"","reasoning":" me"}}]}""",
+            """data: {"id":"a","choices":[{"index":0,"delta":{"content":"Apple."}}]}""",
+            "data: [DONE]");
+
+        using var client = handler.Client(BaseUri);
+
+        var chunks = await client.RequestStreamingAsync<ChatResult>(
+                          new Uri("chat/completions", UriKind.Relative),
+                          HttpMethod.Post).CollectAsync();
+
+        Assert.Equal(4, chunks.Count);
+        Assert.Equal("The", chunks[0].Choices[0].Delta.ReasoningText);
+        Assert.Equal(" user instructed", chunks[1].Choices[0].Delta.ReasoningText);
+        Assert.Equal(" me", chunks[2].Choices[0].Delta.ReasoningText);
+        Assert.Null(chunks[3].Choices[0].Delta.ReasoningText); // answer chunk carries none
+        Assert.Equal("Apple.", chunks[3].Choices[0].Delta.Content);
+    }
+
+    [Fact]
+    public async Task Captures_reasoning_content_deltas_alongside_content()
+    {
+        // DeepSeek-style thinking-mode streams interleave reasoning_content (before any
+        // answer text) with regular content deltas; the delta DTO must surface both.
+        var handler = FakeHttpMessageHandler.OkStream(
+            """data: {"id":"a","choices":[{"index":0,"delta":{"role":"assistant","content":null,"reasoning_content":""}}]}""",
+            """data: {"id":"a","choices":[{"index":0,"delta":{"reasoning_content":"Let"}}]}""",
+            """data: {"id":"a","choices":[{"index":0,"delta":{"reasoning_content":" me think"}}]}""",
+            """data: {"id":"a","choices":[{"index":0,"delta":{"content":"The answer"}}]}""",
+            "data: [DONE]");
+
+        using var client = handler.Client(BaseUri);
+
+        var chunks = await client.RequestStreamingAsync<ChatResult>(
+                          new Uri("chat/completions", UriKind.Relative),
+                          HttpMethod.Post).CollectAsync();
+
+        Assert.Equal(4, chunks.Count);
+        Assert.Equal("", chunks[0].Choices[0].Delta.ReasoningContent);
+        Assert.Equal("Let", chunks[1].Choices[0].Delta.ReasoningContent);
+        Assert.Equal(" me think", chunks[2].Choices[0].Delta.ReasoningContent);
+        Assert.Null(chunks[3].Choices[0].Delta.ReasoningContent); // answer chunk carries none
+        Assert.Equal("The answer", chunks[3].Choices[0].Delta.Content);
+    }
+
+    [Fact]
     public async Task Deserializes_full_non_streaming_chat_result()
     {
         var handler = FakeHttpMessageHandler.Ok("""

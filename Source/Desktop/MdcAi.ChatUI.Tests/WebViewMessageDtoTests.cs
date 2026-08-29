@@ -128,4 +128,64 @@ public class WebViewMessageDtoTests
         Assert.NotNull(dto.Id);
         Assert.NotNull(dto.CreatedTs);
     }
+
+    [Fact]
+    public void GetWebViewDto_carries_reasoning_round_trip()
+    {
+        var (convo, _) = Make();
+        convo.SelectedModel = "gpt-4o";
+
+        var msg = new ChatMessageVm(convo, ChatMessageRole.Assistant)
+        {
+            Content = "answer",
+            Model = "gpt-4o",
+            ReasoningContent = "Let me think about this.\nThe answer is 42."
+        };
+
+        var dto = msg.GetWebViewDto();
+
+        // ReasoningPreview is derived reactively on a 50ms throttle; in a headless test it
+        // usually hasn't fired yet, so only the rendered HTML is guaranteed here. A null
+        // preview is fine - the renderer falls back to a plain "Thinking" label.
+        Assert.NotNull(dto.Reasoning);
+        Assert.Contains("<p>", dto.Reasoning); // Markdig-rendered fallback when HTML isn't rendered yet
+        Assert.Contains("Let me think about this.", dto.Reasoning);
+    }
+
+    [Fact]
+    public void GetWebViewDto_reasoning_null_when_message_never_thought()
+    {
+        var (convo, _) = Make();
+        convo.SelectedModel = "gpt-4o";
+
+        var msg = new ChatMessageVm(convo, ChatMessageRole.Assistant)
+        {
+            Content = "answer",
+            Model = "gpt-4o"
+        };
+
+        var dto = msg.GetWebViewDto();
+
+        Assert.Null(dto.Reasoning);
+        Assert.Null(dto.ReasoningPreview);
+    }
+
+    [Fact]
+    public void GetWebViewDto_reasoning_uses_rendered_html_when_available()
+    {
+        var (convo, _) = Make();
+        convo.SelectedModel = "gpt-4o";
+
+        var msg = new ChatMessageVm(convo, ChatMessageRole.Assistant)
+        {
+            Content = "answer",
+            Model = "gpt-4o",
+            ReasoningContent = "Thinking...",
+            ReasoningHTMLContent = "<div class=\"reasoning-body\"><p>Thinking...</p></div>"
+        };
+
+        var dto = msg.GetWebViewDto();
+
+        Assert.Equal("<div class=\"reasoning-body\"><p>Thinking...</p></div>", dto.Reasoning);
+    }
 }

@@ -33,6 +33,32 @@ public class AiModelTests
     }
 
     [Fact]
+    public void DisplayLabel_strips_redundant_group_prefix()
+    {
+        // OpenRouter names come as "{Author}: {Model}" — the pickers already show the group,
+        // so the button reads "OpenRouter · DeepSeek V4" instead of "OpenRouter · DeepSeek: DeepSeek V4".
+        var stamped = new AiModel("deepseek/deepseek-v4") { Name = "DeepSeek: DeepSeek V4", ProviderKey = AiProviders.OpenRouterKey };
+        stamped.GroupKey = AiProviders.OpenRouter.ModelGroupKey(stamped);
+        Assert.Equal("DeepSeek V4", stamped.DisplayLabel);
+
+        // Unstamped models (no provider stamped yet) fall back to the id author.
+        var unstamped = new AiModel("deepseek/deepseek-v4") { Name = "DeepSeek: DeepSeek V4" };
+        Assert.Equal("DeepSeek V4", unstamped.DisplayLabel);
+
+        // No group prefix -> untouched.
+        var bare = new AiModel("anthropic/claude-3-5-sonnet") { Name = "Claude 3.5 Sonnet" };
+        Assert.Equal("Claude 3.5 Sonnet", bare.DisplayLabel);
+
+        // A prefix that isn't the author survives (e.g. a "free/variant" qualifier).
+        var foreign = new AiModel("deepseek/deepseek-r1") { Name = "Free: DeepSeek R1" };
+        Assert.Equal("Free: DeepSeek R1", foreign.DisplayLabel);
+
+        // A lone group word (no colon) is a short name, not a prefixed one.
+        var shortName = new AiModel("deepseek/deepseek-chat") { Name = "DeepSeek" };
+        Assert.Equal("DeepSeek", shortName.DisplayLabel);
+    }
+
+    [Fact]
     public void Pricing_parses_per_token_to_per_million()
     {
         var pricing = new AiModelPricing

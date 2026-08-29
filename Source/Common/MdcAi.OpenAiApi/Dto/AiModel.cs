@@ -67,11 +67,42 @@ public class AiModel
     public string Author =>
         ModelID?.IndexOf('/') is { } i && i > 0 ? ModelID[..i] : null;
 
-    /// <summary>Nice label for pickers: OpenRouter display name when present, else the model id.</summary>
-    public string DisplayLabel =>
-        !string.IsNullOrEmpty(Name) && !string.Equals(Name, ModelID, StringComparison.OrdinalIgnoreCase)
-            ? $"{Name}"
-            : ModelID;
+    /// <summary>
+    /// Nice label for pickers: OpenRouter display name when present, else the model id.
+    /// OpenRouter names carry a redundant "{Author}: " prefix (e.g. "DeepSeek: DeepSeek V4")
+    /// that the grouped pickers already express via the group header, so it's dropped here —
+    /// the picker button ends up "OpenRouter · DeepSeek V4", not "OpenRouter · DeepSeek: DeepSeek V4".
+    /// </summary>
+    public string DisplayLabel
+    {
+        get
+        {
+            var label = !string.IsNullOrEmpty(Name) && !string.Equals(Name, ModelID, StringComparison.OrdinalIgnoreCase)
+                            ? Name
+                            : ModelID;
+            return StripGroupPrefix(label);
+        }
+    }
+
+    /// <summary>
+    /// Drops a leading "{group}: " from an OpenRouter-style name ("Anthropic: Claude 3.5 Sonnet"
+    /// -> "Claude 3.5 Sonnet") when the prefix is just the author/group the pickers already group
+    /// by. Case-insensitive; anything without that exact prefix passes through untouched.
+    /// </summary>
+    private string StripGroupPrefix(string label)
+    {
+        var group = GroupKey ?? Author;
+        if (string.IsNullOrEmpty(group))
+            return label;
+
+        var prefix = group + ":";
+        if (label.Length > prefix.Length
+            && label.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+            && label[prefix.Length] == ' ')
+            return label[(prefix.Length + 1)..];
+
+        return label;
+    }
 
     /// <summary>
     /// Whether this is a chat-capable model. Provider-aware when stamped, id-heuristic otherwise.

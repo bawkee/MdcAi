@@ -50,8 +50,8 @@ public class ConversationVm : ActivatableViewModel, ILogging
     /// is shared/persisted/reloaded by too many paths for it to also own working state.</summary>
     [Reactive] public string SelectedModel { get; set; }
 
-    /// <summary>Pretty label for the model picker ("OpenRouter · Google: Gemma 4 31B"),
-    /// recomputed whenever the selection or the catalog changes. Null selection -> "".</summary>
+    /// <summary>Pretty label for the model picker ("OpenRouter · Gemma 4 31B"), recomputed
+    /// whenever the selection or the catalog changes. Null selection -> "".</summary>
     [Reactive] public string SelectedModelLabel { get; private set; }
 
     /// <summary>True once the user explicitly picked a model for this conversation (via the

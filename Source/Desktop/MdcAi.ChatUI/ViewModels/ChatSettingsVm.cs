@@ -27,6 +27,13 @@ public class ChatSettingsVm : ViewModel, ILogging
 #else
         = AiModel.Gpt4Turbo;
 #endif
+
+    /// <summary>Persisted default reasoning effort ("low"/"medium"/"high", ...). Null = no
+    /// stored default (legacy rows) - the app picks the level closest to medium for the
+    /// model in use. Mirrors <see cref="Model"/> exactly: it's the persisted default, while
+    /// the working effort lives on ConversationVm.SelectedEffort.</summary>
+    [Reactive] public string Effort { get; set; }
+
     [Reactive] public bool IsReasoningModel { get; set; }
 
     [Reactive] public bool Streaming { get; set; } = true;
@@ -131,6 +138,18 @@ public class ChatSettingsVm : ViewModel, ILogging
                                  ? provider.DefaultModel
                                  : Models[0].ModelID;
                          }
+
+                         // Effort mirrors Model: once the catalog is here, snap the stored
+                         // default to what the (final) model actually supports - clamped to
+                         // the level closest to medium when missing/invalid, null for models
+                         // with no effort support at all (never store effort for those).
+                         if (Models.Length > 0)
+                         {
+                             var supported = Models.FirstOrDefault(m => m.ModelID == Model)?.SupportedEfforts;
+                             Effort = supported != null && supported.Contains(Effort, StringComparer.OrdinalIgnoreCase)
+                                 ? Effort
+                                 : AiEffort.ClosestToMedium(supported);
+                         }
                      })
                      .SubscribeSafe();
 
@@ -147,7 +166,8 @@ public class ChatSettingsVm : ViewModel, ILogging
                      nameof(FrequencyPenalty),
                      nameof(PresencePenalty),
                      nameof(Premise),
-                     nameof(Model));
+                     nameof(Model),
+                     nameof(Effort));
 
     public void CopyTo(ChatSettingsVm c)
     {
@@ -157,6 +177,7 @@ public class ChatSettingsVm : ViewModel, ILogging
         c.Streaming = Streaming;
         c.Temperature = Temperature;
         c.Model = Model;
+        c.Effort = Effort;
         c.Premise = Premise;
     }
 

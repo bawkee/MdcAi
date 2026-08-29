@@ -62,10 +62,10 @@ Tables: `ChatSettings`, `Categories`, `Conversations`, `Messages`.
 
 | Entity | Table | PK / notes | Interesting columns |
 |---|---|---|---|
-| `DbChatSettings` | `ChatSettings` | `[Key]` `IdSettings` (string) | `Model`, `Premise`, `Streaming`(bool=1), `Temperature`, `TopP`, `FrequencyPenalty`, `PresencePenalty` (decimals = 1). Referenced by Categories & Conversations' optional override. |
+| `DbChatSettings` | `ChatSettings` | `[Key]` `IdSettings` (string) | `Model`, `Effort` (nullable — default reasoning effort, same null/legacy handling as Model), `Premise`, `Streaming`(bool=1), `Temperature`, `TopP`, `FrequencyPenalty`, `PresencePenalty` (decimals = 1). Referenced by Categories & Conversations' optional override. |
 | `DbCategory` | `Categories` | `[Key]` `IdCategory` | `IdSettings`(FK→settings, req, cascade), `Name`, `Description`, `IconGlyph`, `IsTrash`. |
 | `DbConversation` | `Conversations` | `[Key]` `IdConversation` | `IdCategory`(FK, optional), `IdSettingsOverride`(FK→settings, optional), `Name`, `IsTrash`, `CreatedTs`. Has `Messages` nav. |
-| `DbMessage` | `Messages` | `[Key]` `IdMessage` | `IdConversation`(FK), `IdMessageParent`(self-ref for forking), `Version`(int), `IsCurrentVersion`(bool), `CreatedTs`, `Role`, `Content`, `Model`(nullable — model id that produced this message, null on user/legacy), `IsTrash`. |
+| `DbMessage` | `Messages` | `[Key]` `IdMessage` | `IdConversation`(FK), `IdMessageParent`(self-ref for forking), `Version`(int), `IsCurrentVersion`(bool), `CreatedTs`, `Role`, `Content`, `Model`(nullable — model id that produced this message, null on user/legacy), `Effort`(nullable — reasoning effort that produced this message, null on user/legacy/effort-less models), `IsTrash`. |
 
 `IsTrash` (bool) is a soft-delete flag on all three aggregate tables (`Categories`, `Conversations`, and message `IsTrash`).
 
@@ -105,6 +105,7 @@ That runs `dotnet ef migrations add <name>` against the project then `dotnet ef 
 5. `20231222172940_Category IsTrash` — adds `Categories.IsTrash`.
 6. `20260827191757_UpgradeToEFCore9` — **data-only**, no schema change: updates the seed `general` ChatSettings row to `Model="gpt-4o"` + newer premise. (Far-future timestamp because EF 9 regenerated the snapshot and the seed data drifted; it's a data-sync migration, not a calendar change.)
 7. `20260828195212_MessagesModel` — adds nullable `Messages.Model` (model id that produced the message; null on user/legacy rows). `ChatMessageVm` stamps it when a completion starts, `ToDbMessages`/`FromDbMessages` round-trip it, and `ConversationVm` defaults the picker to the last AI reply's model when settings reload.
+8. `20260829112225_Effort` — adds nullable `ChatSettings.Effort` (default reasoning effort for the category/conversation) + `Messages.Effort` (effort that produced a message). Same null/legacy convention as `Model`: `ChatMessageVm.Effort` is stamped when a completion starts, round-tripped by `ToDbMessages`/`FromDbMessages`, sent to the renderer via `WebViewChatMessageDto.Effort`, and `ConversationVm.SelectedEffort` re-derives from the last AI reply's effort on reload.
 
 Snapshot: `UserProfileDbContextModelSnapshot.cs` is the canonical current schema+seed.
 

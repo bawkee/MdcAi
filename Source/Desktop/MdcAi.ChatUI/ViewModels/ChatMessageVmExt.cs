@@ -48,7 +48,8 @@ public static class ChatMessageVmExt
             VersionCount = m.Selector.Versions.Count,
             CreatedTs = m.CreatedTs,
             Model = modelId,
-            Provider = provider
+            Provider = provider,
+            Effort = m.Effort
         };
     }
 
@@ -78,7 +79,8 @@ public static class ChatMessageVmExt
                 Role = m.Role,
                 CreatedTs = m.CreatedTs,
                 Version = v + 1,
-                Model = m.Model
+                Model = m.Model,
+                Effort = m.Effort
             };
 
             var children = m.Next?.ToDbMessages(idx + 1) ?? Enumerable.Empty<DbMessage>();
@@ -124,6 +126,7 @@ public static class ChatMessageVmExt
             message.Role = dbMessage.Role;
             message.Content = dbMessage.Content;
             message.Model = dbMessage.Model;
+            message.Effort = dbMessage.Effort;
 
             SetNext(message);
         }

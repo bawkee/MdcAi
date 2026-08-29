@@ -28,3 +28,13 @@ export function getAuthorLabel(item) {
 
     return role === 'assistant' ? 'Assistant' : 'System';
 }
+
+// The reasoning-effort label shown in .chat-item-info-effort:
+//   "Effort: <level>" when the message carries per-message effort provenance,
+//   null for user messages, effort-less models and legacy payloads (nothing rendered).
+export function getEffortLabel(item) {
+    const effort = item?.Effort;
+    if (!effort || getRoleClass(item?.Role) === 'user')
+        return null;
+    return `Effort: ${effort}`;
+}

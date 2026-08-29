@@ -77,6 +77,11 @@
   margin: 0px 4px 0px 4px;
 }
 
+.chat-item-info-effort {
+  margin: 0px 4px 0px 4px;
+  font-style: italic;
+}
+
 @keyframes blink {
 
   0%,

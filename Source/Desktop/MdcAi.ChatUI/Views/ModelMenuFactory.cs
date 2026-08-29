@@ -90,6 +90,39 @@ public static class ModelMenuFactory
         return $"{AiProviders.Get(model.ProviderKey).DisplayName} · {model.DisplayLabel}";
     }
 
+    /// <summary>
+    /// The "Effort: X" submenu with one item per supported level. Always present in the flyout
+    /// (never hidden - menus jumping around are rude), and disabled when the current model has
+    /// no effort support. The header shows the current level ("Effort: Medium"), just "Effort"
+    /// when nothing is selected yet.
+    /// </summary>
+    public static MenuFlyoutSubItem BuildEffortSubMenu(string currentEffort, IReadOnlyList<string> supportedEfforts, Action<string> onSelect)
+    {
+        var sub = new MenuFlyoutSubItem
+        {
+            Text = currentEffort == null ? "Effort" : $"Effort: {currentEffort}",
+            IsEnabled = supportedEfforts != null && supportedEfforts.Count > 0
+        };
+
+        if (supportedEfforts != null)
+        {
+            foreach (var level in supportedEfforts)
+            {
+                var item = new MenuFlyoutItem
+                {
+                    Text = level,
+                    CommandParameter = level
+                };
+
+                item.Click += (_, _) => onSelect(level);
+
+                sub.Items.Add(item);
+            }
+        }
+
+        return sub;
+    }
+
     private static MenuFlyoutItem BuildItem(AiModel model, Action<AiModel> onSelect)
     {
         var item = new MenuFlyoutItem

@@ -83,6 +83,18 @@ public static class AiProviders
         (IsOpenAiReasoningId(modelId) || IsOpenRouterReasoningId(modelId));
 
     /// <summary>
+    /// Whether a model id belongs to an effort-capable family. Used only for OpenAI-provider
+    /// models (OpenRouter models are decided by their fetched <c>supported_efforts</c>
+    /// metadata instead): o1*/o3*/o4*/gpt-5* all take a reasoning_effort parameter.
+    /// </summary>
+    public static bool IsEffortCapableId(string modelId) =>
+        !string.IsNullOrEmpty(modelId) &&
+        (IsOpenAiReasoningId(modelId) || IsGpt5FamilyId(modelId));
+
+    private static bool IsGpt5FamilyId(string id) =>
+        id.StartsWith("gpt-5", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
     /// Best-effort "is this id a chat model" heuristic used when no provider is stamped.
     /// </summary>
     public static bool IsConversationalId(string modelId) =>

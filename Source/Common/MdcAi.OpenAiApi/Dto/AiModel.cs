@@ -92,6 +92,23 @@ public class AiModel
             ? AiProviders.IsReasoningId(ModelID)
             : AiProviders.Get(ProviderKey).IsReasoningModel(this);
 
+    /// <summary>
+    /// The reasoning-effort levels this model supports ("low", "medium", "high", ...), or null
+    /// when the model has no effort support at all. Effort-capable models:
+    ///   - OpenRouter models follow the fetched <c>reasoning.supported_efforts</c> metadata
+    ///     (authoritative - no id guessing for unknown authors),
+    ///   - OpenAI-provider models get the standard level set by id family (o1*/o3*/o4*/gpt-5*).
+    /// Everything else reports null: no effort UI, and the <c>reasoning_effort</c> request
+    /// parameter is never sent for them.
+    /// </summary>
+    [JsonIgnore]
+    public string[] SupportedEfforts =>
+        ProviderKey == AiProviders.OpenRouterKey
+            ? Reasoning?.SupportedEfforts is { Length: > 0 } efforts
+                  ? efforts
+                  : null
+            : AiProviders.IsEffortCapableId(ModelID) ? AiEffort.Levels : null;
+
     public static AiModel AdaTextEmbedding => new("text-embedding-ada-002") { OwnedBy = "openai" };
     public static AiModel Gpt35Turbo => new("gpt-3.5-turbo-1106") { OwnedBy = "openai" };
     public static AiModel Gpt4Turbo => new("gpt-4-1106-preview") { OwnedBy = "openai" };
@@ -128,6 +145,46 @@ public class AiModelPricing
             ? v * 1_000_000m
             : null;
     }
+}
+
+/// <summary>
+/// Reasoning-effort vocabulary. The de-facto standard level set is OpenAI's
+/// low/medium/high, which is what OpenRouter's reasoning metadata reports too; models may
+/// advertise arbitrary strings though, so the app never hard-filters - display and send
+/// whatever the model declares.
+/// </summary>
+public static class AiEffort
+{
+    public const string Low = "low";
+    public const string Medium = "medium";
+    public const string High = "high";
+
+    /// <summary>Standard level set, in display order.</summary>
+    public static readonly string[] Levels = { Low, Medium, High };
+
+    /// <summary>
+    /// Picks the level closest to "medium" - the default the app auto-selects for models
+    /// with effort support and for categories without a stored effort. Prefers an exact
+    /// "medium", then "low" (the cheaper neighbor when medium isn't offered), then any known
+    /// level, then the first declared one for exotic sets.
+    /// </summary>
+    public static string ClosestToMedium(IEnumerable<string> efforts)
+    {
+        if (efforts == null)
+            return null;
+
+        var set = efforts.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        if (set.Length == 0)
+            return null;
+
+        foreach (var want in PreferenceOrder)
+            if (set.FirstOrDefault(e => string.Equals(e, want, StringComparison.OrdinalIgnoreCase)) is { } match)
+                return match;
+
+        return set[0];
+    }
+
+    private static readonly string[] PreferenceOrder = { Medium, Low, High };
 }
 
 /// <summary>

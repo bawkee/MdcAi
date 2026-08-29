@@ -174,43 +174,10 @@ public sealed partial class Conversation : ILogging
                     .SubscribeSafe()
                     .DisposeWith(disposables);
 
-            viewModel.WhenAnyValue(vm => vm.Models)
-                     .WhereNotNull()
+            viewModel.WhenAnyValue(vm => vm.Models, vm => vm.SelectedModel, vm => vm.SelectedEffort)
+                     .Where(t => t.Item1 != null)
                      .ObserveOnMainThread()
-                     .Do(models =>
-                     {
-                         // Provider-grouped model picker (OpenAI / OpenRouter submenus - a
-                         // 400+ model catalog never shows as a flat list, and it's always
-                         // clear which provider a model belongs to).
-                         ModelsMenu.Items.Clear();
-                         foreach (var item in ModelMenuFactory.BuildProviderGroupedMenu(
-                                          models,
-                                          m => viewModel.SelectModelCmd.Execute(m.ModelID).Subscribe()))
-                             ModelsMenu.Items.Add(item);
-
-                         ModelsMenu.Items.Add(new MenuFlyoutSeparator());
-                         ModelsMenu.Items.Add(new MenuFlyoutItem()
-                         {
-                             Text = "Which one to pick? 😕",
-                             Command = ReactiveCommand.CreateFromTask(async () =>
-                             {
-                                 var prompt = new ContentDialog
-                                 {
-                                     Content = "gpt-4-1106-preview ➡️ aka Gpt-4 Turbo, this is the model used by Chat GPT free tier. \r" +
-                                               "gpt-4o ➡️ Better reasoning than the turbo model, used by Chat GPT Plus tier. \r" +
-                                               "gpt-4o-mini ➡️ Solid reasoning model, much faster and much cheaper than above. \r" +
-                                               "o1-mini ➡️ Great and very affordable reasoning model. \r" +
-                                               "o1 ➡️ The advanced reasoning model. \r" +
-                                               "o3-* ➡️ Most advanced reasoning models, available to upper tiers of API users. \r\r" +
-                                               "Pricing is subject to change and sometimes OpenAI has lower prices for more advanced models so stay up to date.",                                               
-                                     XamlRoot = XamlRoot,
-                                     Title = "Explanation of GPT models as of February 2025",
-                                     CloseButtonText = "OK",
-                                 };
-                                 await prompt.ShowAsync();
-                             })
-                         });
-                     })
+                     .Do(t => BuildModelsMenu(viewModel, t.Item1))
                      .SubscribeSafe()
                      .DisposeWith(disposables);
 
@@ -252,34 +219,12 @@ public sealed partial class Conversation : ILogging
 
             PromptField.Focus(FocusState.Programmatic);
 
-            viewModel.WhenAnyValue(vm => vm.Models)
-                     .WhereNotNull()
-                     .Do(models =>
-                     {
-                         // Provider-grouped dropdown shown in the in-conversation settings dialog.
-                         var selectedModel = models.FirstOrDefault(m => m.ModelID == viewModel.Settings.Model);
-                         ChatSettingModelDropdown.Content = ModelMenuFactory.LabelFor(selectedModel);
-                         var flyout = new MenuFlyout();
-                         foreach (var item in ModelMenuFactory.BuildProviderGroupedMenu(models, m =>
-                         {
-                             viewModel.Settings.Model = m.ModelID;
-                             ChatSettingModelDropdown.Content = ModelMenuFactory.LabelFor(m);
-                         }))
-                             flyout.Items.Add(item);
-                         ChatSettingModelDropdown.Flyout = flyout;
-                     })
+            viewModel.WhenAnyValue(vm => vm.Models, vm => vm.Settings.Model, vm => vm.Settings.Effort)
+                     .Where(t => t.Item1 != null)
+                     .ObserveOnMainThread()
+                     .Do(_ => BuildSettingsDialogDropdowns(viewModel))
                      .SubscribeSafe()
                      .DisposeWith(disposables);
-
-            viewModel.Settings.WhenAnyValue(vm => vm.Model)
-                              .WhereNotNull()
-                              .Do(m =>
-                              {
-                                  if (viewModel.Models?.FirstOrDefault(x => x.ModelID == m) is { } model)
-                                      ChatSettingModelDropdown.Content = ModelMenuFactory.LabelFor(model);
-                              })
-                              .SubscribeSafe()
-                              .DisposeWith(disposables);
 
             ViewModel.EditSettingsCmd
                      .ObserveOnMainThread()
@@ -296,6 +241,73 @@ public sealed partial class Conversation : ILogging
                 Name = "SetSelection",
                 Data = index
             }));
+    }
+
+    private void BuildModelsMenu(ConversationVm vm, IEnumerable<AiModel> models)
+    {
+        // Provider-grouped model picker (OpenAI / OpenRouter submenus - a 400+ model catalog
+        // never shows as a flat list, and it's always clear which provider a model belongs
+        // to). The effort chooser hangs off the end; it's always present (never hidden -
+        // menus jumping around are rude) and disabled for effort-less models.
+        ModelsMenu.Items.Clear();
+        foreach (var item in ModelMenuFactory.BuildProviderGroupedMenu(
+                     models,
+                     m => vm.SelectModelCmd.Execute(m.ModelID).Subscribe()))
+            ModelsMenu.Items.Add(item);
+
+        ModelsMenu.Items.Add(new MenuFlyoutSeparator());
+
+        var currentModel = models.FirstOrDefault(m => m.ModelID == vm.SelectedModel);
+        ModelsMenu.Items.Add(ModelMenuFactory.BuildEffortSubMenu(
+            vm.SelectedEffort,
+            currentModel?.SupportedEfforts,
+            e => vm.SelectEffortCmd.Execute(e).Subscribe()));
+    }
+
+    // The in-conversation settings dialog's "Default Model" + "Default Effort" dropdowns.
+    // They edit the persisted defaults (Settings.Model/Settings.Effort); a model change here
+    // clamps the effort to the new model's supported levels (or clears it for effort-less ones).
+    // Uses the conversation's catalog (vm.Models) - the settings VM's own Models only load in
+    // the category editor, a conversation never runs Settings.LoadModelsCmd.
+    private void BuildSettingsDialogDropdowns(ConversationVm vm)
+    {
+        ClampSettingsEffort(vm);
+
+        var models = vm.Models ?? Array.Empty<AiModel>();
+        var selectedModel = models.FirstOrDefault(m => m.ModelID == vm.Settings.Model);
+        ChatSettingModelDropdown.Content = ModelMenuFactory.LabelFor(selectedModel);
+        var modelFlyout = new MenuFlyout();
+        foreach (var item in ModelMenuFactory.BuildProviderGroupedMenu(
+                     models, m => vm.Settings.Model = m.ModelID))
+            modelFlyout.Items.Add(item);
+        ChatSettingModelDropdown.Flyout = modelFlyout;
+
+        var efforts = selectedModel?.SupportedEfforts;
+        ChatSettingEffortDropdown.Content = vm.Settings.Effort == null ? "Effort" : $"Effort: {vm.Settings.Effort}";
+        ChatSettingEffortDropdown.IsEnabled = efforts is { Length: > 0 };
+        var effortFlyout = new MenuFlyout();
+        if (efforts != null)
+        {
+            foreach (var level in efforts)
+            {
+                var item = new MenuFlyoutItem { Text = level };
+                item.Click += (_, _) => vm.Settings.Effort = level;
+                effortFlyout.Items.Add(item);
+            }
+        }
+        ChatSettingEffortDropdown.Flyout = effortFlyout;
+    }
+
+    // Keep the persisted effort default valid for the persisted model: clamp to the level
+    // closest to medium when missing/invalid, null it entirely for effort-less models.
+    private static void ClampSettingsEffort(ConversationVm vm)
+    {
+        var supported = vm.Models?.FirstOrDefault(m => m.ModelID == vm.Settings.Model)?.SupportedEfforts;
+
+        if (supported is not { Length: > 0 })
+            vm.Settings.Effort = null;
+        else if (!supported.Contains(vm.Settings.Effort, StringComparer.OrdinalIgnoreCase))
+            vm.Settings.Effort = AiEffort.ClosestToMedium(supported);
     }
 
     private static async Task ProcessWebResource(CoreWebView2 core, CoreWebView2WebResourceRequestedEventArgs e)

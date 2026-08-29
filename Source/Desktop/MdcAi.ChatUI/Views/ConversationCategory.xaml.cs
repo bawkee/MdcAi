@@ -34,33 +34,11 @@ public sealed partial class ConversationCategory
 
         this.WhenActivated((disposables, viewModel) =>
         {
-            // Provider-grouped model dropdown. Selecting persists the category default.
-            viewModel.Settings.WhenAnyValue(vm => vm.Models)
-                              .WhereNotNull()
-                              .Do(models =>
-                              {
-                                  var selectedId = viewModel.Settings.Model;
-                                  var selectedModel = models.FirstOrDefault(m => m.ModelID == selectedId);
-                                  ChatSettingModelDropdown.Content = ModelMenuFactory.LabelFor(selectedModel);
-                                  var flyout = new MenuFlyout();
-                                  foreach (var item in ModelMenuFactory.BuildProviderGroupedMenu(models, m =>
-                                  {
-                                      viewModel.Settings.Model = m.ModelID;
-                                      ChatSettingModelDropdown.Content = ModelMenuFactory.LabelFor(m);
-                                  }))
-                                      flyout.Items.Add(item);
-                                  ChatSettingModelDropdown.Flyout = flyout;
-                              })
-                              .SubscribeSafe()
-                              .DisposeWith(disposables);
-
-            viewModel.Settings.WhenAnyValue(vm => vm.Model)
-                              .WhereNotNull()
-                              .Do(m =>
-                              {
-                                  if (viewModel.Settings.Models?.FirstOrDefault(x => x.ModelID == m) is { } model)
-                                      ChatSettingModelDropdown.Content = ModelMenuFactory.LabelFor(model);
-                              })
+            // Provider-grouped model dropdown + its effort dropdown. Selecting persists the
+            // category default; a model change clamps the effort to the new model's levels.
+            viewModel.Settings.WhenAnyValue(vm => vm.Models, vm => vm.Model, vm => vm.Effort)
+                              .Where(t => t.Item1 != null)
+                              .Do(_ => BuildDropdowns(viewModel))
                               .SubscribeSafe()
                               .DisposeWith(disposables);
 
@@ -75,6 +53,51 @@ public sealed partial class ConversationCategory
                          })
                      .DisposeWith(disposables);
         });
+    }
+
+    // Builds both the model dropdown and its effort dropdown for the category's settings.
+    // The effort dropdown targets whatever model the category default currently is; a model
+    // change here clamps the stored effort to the new model's supported levels (or clears
+    // it for effort-less models).
+    private void BuildDropdowns(ConversationCategoryVm vm)
+    {
+        ClampSettingsEffort(vm);
+
+        var models = vm.Settings.Models ?? Array.Empty<AiModel>();
+        var selectedModel = models.FirstOrDefault(m => m.ModelID == vm.Settings.Model);
+        ChatSettingModelDropdown.Content = ModelMenuFactory.LabelFor(selectedModel);
+        var modelFlyout = new MenuFlyout();
+        foreach (var item in ModelMenuFactory.BuildProviderGroupedMenu(
+                     models, m => vm.Settings.Model = m.ModelID))
+            modelFlyout.Items.Add(item);
+        ChatSettingModelDropdown.Flyout = modelFlyout;
+
+        var efforts = selectedModel?.SupportedEfforts;
+        ChatSettingEffortDropdown.Content = vm.Settings.Effort == null ? "Effort" : $"Effort: {vm.Settings.Effort}";
+        ChatSettingEffortDropdown.IsEnabled = efforts is { Length: > 0 };
+        var effortFlyout = new MenuFlyout();
+        if (efforts != null)
+        {
+            foreach (var level in efforts)
+            {
+                var item = new MenuFlyoutItem { Text = level };
+                item.Click += (_, _) => vm.Settings.Effort = level;
+                effortFlyout.Items.Add(item);
+            }
+        }
+        ChatSettingEffortDropdown.Flyout = effortFlyout;
+    }
+
+    // Keep the stored effort default valid for the stored model: clamp to the level closest
+    // to medium when missing/invalid, null it entirely for effort-less models.
+    private static void ClampSettingsEffort(ConversationCategoryVm vm)
+    {
+        var supported = vm.Settings.Models?.FirstOrDefault(m => m.ModelID == vm.Settings.Model)?.SupportedEfforts;
+
+        if (supported is not { Length: > 0 })
+            vm.Settings.Effort = null;
+        else if (!supported.Contains(vm.Settings.Effort, StringComparer.OrdinalIgnoreCase))
+            vm.Settings.Effort = AiEffort.ClosestToMedium(supported);
     }
 
     private void IconTemplate_OnPointerPressed(object sender, PointerRoutedEventArgs e)

@@ -4,7 +4,7 @@ import CodeHighlighter from './components/highlighter';
 import AutoScrollComponent from './components/autoScroll';
 import DateTime from './components/dateTime';
 import { isElementFullyVisible } from './util';
-import { getAuthorLabel, getRoleClass } from './messageMeta';
+import { getAuthorLabel, getEffortLabel, getRoleClass } from './messageMeta';
 //import initialData from './sample1.json';
 
 function App() {
@@ -122,6 +122,11 @@ function App() {
                 <span className='chat-item-info-role'>
                   {getAuthorLabel(item)}
                 </span>
+                {getEffortLabel(item) && (
+                  <span className='chat-item-info-effort'>
+                    {getEffortLabel(item)}
+                  </span>
+                )}
                 <span className='chat-item-info-createdts'>
                   sent <DateTime date={new Date(item.CreatedTs)} />
                 </span>

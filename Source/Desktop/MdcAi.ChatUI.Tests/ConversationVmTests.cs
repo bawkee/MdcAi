@@ -222,4 +222,122 @@ public class ConversationVmTests
         Assert.Equal("gpt-4o", convo.SelectedModel);
         Assert.Equal("OpenAI · gpt-4o", convo.SelectedModelLabel);
     }
+
+    #region Working effort
+
+    [Theory]
+    [InlineData(null, "high", null, false, "high")] // category default used for legacy chats
+    [InlineData("low", null, null, false, "low")] // last reply's effort wins over no default
+    [InlineData("low", "high", null, false, "low")] // last reply beats category default
+    [InlineData(null, null, null, false, "medium")] // nothing anywhere -> "pick the middle one"
+    [InlineData(null, null, "medium", true, "medium")] // user pick never stomped
+    [InlineData("low", "high", "medium", true, "medium")] // user pick beats last reply too
+    public void ResolveWorkingEffort_covers_load_scenarios(
+        string lastReply, string categoryDefault, string current, bool userPicked, string expected)
+    {
+        var supported = new[] { "low", "medium", "high" };
+        Assert.Equal(expected, ConversationVm.ResolveWorkingEffort(lastReply, categoryDefault, current, userPicked, supported));
+    }
+
+    [Fact]
+    public void ResolveWorkingEffort_clamps_an_invalid_user_pick_to_closest_medium()
+    {
+        // A stale "medium" pick for a model that no longer offers it -> clamp to the
+        // cheaper neighbor "low" (no medium in the set); don't send an unsupported level.
+        Assert.Equal("low", ConversationVm.ResolveWorkingEffort(null, null, "medium", true, new[] { "low", "high" }));
+    }
+
+    [Fact]
+    public void ResolveWorkingEffort_defaults_legacy_categories_to_medium()
+    {
+        // Category effort null (legacy row) + no reply provenance -> "pick the middle one".
+        Assert.Equal("medium", ConversationVm.ResolveWorkingEffort(null, null, null, false, new[] { "low", "medium", "high" }));
+    }
+
+    [Fact]
+    public async Task Effort_capable_model_defaults_working_effort_to_medium()
+    {
+        var (convo, _, _, _) = Make(("openai:ApiKey", "sk-oa"));
+        await convo.LoadModelsCmd.Execute();
+
+        convo.SelectModelCmd.Execute("o1-mini").Subscribe();
+
+        Assert.Equal("o1-mini", convo.SelectedModel);
+        Assert.Equal(AiEffort.Medium, convo.SelectedEffort);
+        Assert.Equal("Effort: medium", convo.SelectedEffortLabel);
+    }
+
+    [Fact]
+    public async Task Switching_to_an_effortless_model_clears_working_effort()
+    {
+        var (convo, _, _, _) = Make(("openai:ApiKey", "sk-oa"));
+        await convo.LoadModelsCmd.Execute();
+
+        convo.SelectModelCmd.Execute("o1-mini").Subscribe();
+        await Task.Yield();
+        Assert.Equal("medium", convo.SelectedEffort);
+
+        convo.SelectModelCmd.Execute("gpt-4o").Subscribe();
+        await Task.Yield();
+
+        Assert.Null(convo.SelectedEffort);
+        Assert.Equal("", convo.SelectedEffortLabel);
+    }
+
+    [Fact]
+    public async Task User_effort_pick_is_kept_when_valid_for_the_model()
+    {
+        var (convo, _, _, _) = Make(("openai:ApiKey", "sk-oa"));
+        await convo.LoadModelsCmd.Execute();
+
+        convo.SelectModelCmd.Execute("o1-mini").Subscribe();
+        convo.SelectEffortCmd.Execute("high").Subscribe();
+
+        Assert.Equal("high", convo.SelectedEffort);
+        Assert.Equal("Effort: high", convo.SelectedEffortLabel);
+    }
+
+    [Fact]
+    public async Task Modern_conversation_reloads_effort_from_last_reply()
+    {
+        var (convo, _, _, chatSettings) = Make(("openai:ApiKey", "sk-oa"));
+        chatSettings.IdSettings = "general";
+        chatSettings.Model = "o1-mini";
+        chatSettings.Effort = "high"; // category default - must lose to the reply's effort
+        await convo.LoadModelsCmd.Execute();
+
+        var user = new ChatMessageVm(convo, ChatMessageRole.User) { Content = "hi" };
+        var assistant = new ChatMessageVm(convo, ChatMessageRole.Assistant)
+        {
+            Content = "hello",
+            Model = "o1-mini",
+            Effort = "low", // per-message provenance
+            Previous = user
+        };
+        user.Next = assistant;
+        convo.Head = user.Selector;
+
+        await Task.Delay(200); // let the 50ms apply throttle fire
+
+        Assert.Equal("low", convo.SelectedEffort);
+    }
+
+    [Fact]
+    public async Task Legacy_conversation_defaults_effort_from_category()
+    {
+        var (convo, _, _, chatSettings) = Make(("openai:ApiKey", "sk-oa"));
+        chatSettings.IdSettings = "general";
+        chatSettings.Model = "o1-mini";
+        chatSettings.Effort = "high"; // category default
+        await convo.LoadModelsCmd.Execute();
+
+        var user = new ChatMessageVm(convo, ChatMessageRole.User) { Content = "hi" };
+        convo.Head = user.Selector;
+
+        await Task.Delay(200);
+
+        Assert.Equal("high", convo.SelectedEffort);
+    }
+
+    #endregion
 }

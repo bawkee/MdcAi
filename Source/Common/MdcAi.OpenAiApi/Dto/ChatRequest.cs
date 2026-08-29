@@ -1,4 +1,4 @@
-﻿#region Copyright Notice
+#region Copyright Notice
 
 // Copyright (c) 2023 Bojan Sala
 //   Licensed under the Apache License, Version 2.0 (the "License");
@@ -62,6 +62,15 @@ public class ChatRequest
     [JsonProperty("logit_bias")] public IReadOnlyDictionary<string, float> LogitBias { get; set; }
     [JsonProperty("user")] public string User { get; set; }
 
+    /// <summary>
+    /// Reasoning effort for models that support it ("low"/"medium"/"high", or whatever the
+    /// model advertises via <see cref="AiModel.SupportedEfforts"/>). Omitted from the JSON
+    /// when null (NullValueHandling.Ignore) - the app guarantees null for models without
+    /// effort support, so this parameter is never sent to those.
+    /// </summary>
+    [JsonProperty("reasoning_effort", NullValueHandling = NullValueHandling.Ignore)]
+    public string ReasoningEffort { get; set; }
+
     [JsonProperty("tools")] public ChatTool[] Tools { get; set; }
 
     public ChatRequest() { }
@@ -81,6 +90,9 @@ public class ChatRequest
         FrequencyPenalty = basedOn.FrequencyPenalty;
         PresencePenalty = basedOn.PresencePenalty;
         LogitBias = basedOn.LogitBias;
+        ReasoningEffort = basedOn.ReasoningEffort;
+        User = basedOn.User;
+        Tools = basedOn.Tools;
     }
 }
 

@@ -130,6 +130,43 @@ public class ChatSettingsVmTests
         Assert.False(vm.IsReasoningModel);
     }
 
+    #region Effort default
+
+    [Fact]
+    public async Task Stored_valid_effort_is_kept_for_an_effort_capable_model()
+    {
+        var api = new FakeOpenAiApi();
+        var vm = new ChatSettingsVm(api) { Model = "o1-mini", Effort = "high" };
+
+        await vm.LoadModelsCmd.Execute();
+
+        Assert.Equal("high", vm.Effort);
+    }
+
+    [Fact]
+    public async Task Stored_invalid_effort_is_clamped_to_closest_medium()
+    {
+        var api = new FakeOpenAiApi();
+        var vm = new ChatSettingsVm(api) { Model = "o1-mini", Effort = "bogus" };
+
+        await vm.LoadModelsCmd.Execute();
+
+        Assert.Equal("medium", vm.Effort);
+    }
+
+    [Fact]
+    public async Task Stored_effort_is_cleared_for_an_effortless_model()
+    {
+        var api = new FakeOpenAiApi();
+        var vm = new ChatSettingsVm(api) { Model = "gpt-4o", Effort = "high" };
+
+        await vm.LoadModelsCmd.Execute();
+
+        Assert.Null(vm.Effort);
+    }
+
+    #endregion
+
     [Fact]
     public async Task SaveCmd_persists_default_without_transient_state()
     {
@@ -137,7 +174,8 @@ public class ChatSettingsVmTests
         var vm = new ChatSettingsVm(api)
         {
             IdSettings = "test-settings", // always assigned before a save in the app
-            Model = "gpt-4o"
+            Model = "gpt-4o",
+            Effort = "medium"
         };
         await Task.Yield(); // kick the dirty chain so SaveCmd can execute
 
@@ -150,6 +188,7 @@ public class ChatSettingsVmTests
             // selection to clobber anymore (that lives on ConversationVm.SelectedModel).
             Assert.Equal("gpt-4o", vm.Model);
             Assert.Equal("gpt-4o", ctx.ChatSettings.Single(s => s.IdSettings == "test-settings").Model);
+            Assert.Equal("medium", ctx.ChatSettings.Single(s => s.IdSettings == "test-settings").Effort);
         }
         finally
         {

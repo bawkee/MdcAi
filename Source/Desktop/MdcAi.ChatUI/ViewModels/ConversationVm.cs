@@ -58,6 +58,22 @@ public class ConversationVm : ActivatableViewModel, ILogging
     /// send-button picker). Auto-deriving on load never stomps a deliberate pick.</summary>
     private bool _modelUserPicked;
 
+    /// <summary>The reasoning effort this conversation uses right now ("low"/"medium"/"high",
+    /// or whatever the model advertises). Deliberately mirrors <see cref="SelectedModel"/>:
+    /// it lives on the conversation (transient working state), is persisted per-message so
+    /// reloads re-derive from the last reply, and falls back to the category default (or the
+    /// level closest to medium when there's no stored default). Null = the current model has
+    /// no effort support - no effort UI, nothing sent.</summary>
+    [Reactive] public string SelectedEffort { get; set; }
+
+    /// <summary>Effort label for the picker button ("Effort: Medium"). Empty when the current
+    /// model has no effort support (or nothing resolved yet).</summary>
+    [Reactive] public string SelectedEffortLabel { get; private set; }
+
+    /// <summary>True once the user explicitly picked an effort level for this conversation.
+    /// Mirror of <see cref="_modelUserPicked"/> - auto-deriving never stomps a deliberate pick.</summary>
+    private bool _effortUserPicked;
+
     [Reactive] public bool IsTrash { get; set; }
     [Reactive] public bool CanSendPrompt { get; private set; }
     [Reactive] public bool CanEdit { get; private set; }
@@ -80,6 +96,7 @@ public class ConversationVm : ActivatableViewModel, ILogging
     public ReactiveCommand<string, Unit> SelectCmd { get; }
     public ReactiveCommand<Unit, AiModel[]> LoadModelsCmd { get; }
     public ReactiveCommand<string, Unit> SelectModelCmd { get; }
+    public ReactiveCommand<string, Unit> SelectEffortCmd { get; }
     public ReactiveCommand<Unit, Unit> SendPromptCmd { get; }
     public ReactiveCommand<Unit, Unit> DebugCmd { get; }
     public ReactiveCommand<Unit, Unit> SaveCmd { get; }
@@ -277,6 +294,13 @@ public class ConversationVm : ActivatableViewModel, ILogging
             .Do(l => SelectedModelLabel = l)
             .SubscribeSafe();
 
+        // Same for the effort label ("Effort: Medium"); empty = the current model has no
+        // effort support (or nothing resolved yet), which keeps effort-less models clean.
+        this.WhenAnyValue(vm => vm.SelectedEffort)
+            .ObserveOnMainThread()
+            .Do(e => SelectedEffortLabel = e == null ? "" : $"Effort: {e}")
+            .SubscribeSafe();
+
         // Trace who sets the working model and why (debug level, NLog app-*.log).
         this.WhenAnyValue(vm => vm.SelectedModel)
             .WhereNotNull()
@@ -290,17 +314,37 @@ public class ConversationVm : ActivatableViewModel, ILogging
             this.LogDebug("User picked model {Model}", model);
         });
 
+        SelectEffortCmd = ReactiveCommand.Create((string effort) =>
+        {
+            _effortUserPicked = true;
+            SelectedEffort = effort;
+            this.LogDebug("User picked effort {Effort}", effort);
+        });
+
         // New conversations start at the persisted default; reloads re-derive from the last
         // reply when the conversation has one (per-message provenance) and else keep the
         // current selection. Runs on settings (re)load and when the message tree arrives,
-        // so ordering never matters.
+        // so ordering never matters. The same triggers re-derive the working effort.
         Observable.Merge(
                       this.WhenAnyValue(vm => vm.Head).WhereNotNull().Select(_ => Unit.Default),
                       Settings.LoadCmd.Select(_ => Unit.Default))
                   .Throttle(TimeSpan.FromMilliseconds(50))
                   .ObserveOnMainThread()
-                  .Do(_ => ApplySelectedModel())
+                  .Do(_ =>
+                  {
+                      ApplySelectedModel();
+                      ApplySelectedEffort();
+                  })
                   .SubscribeSafe();
+
+        // The effort depends on the model in use (its supported levels), so re-derive it
+        // whenever the model or the catalog changes too - e.g. picking an effortless model
+        // clears the effort, picking an effort-capable one snaps it back to a valid level.
+        this.WhenAnyValue(vm => vm.SelectedModel, vm => vm.Models)
+            .Skip(1)
+            .ObserveOnMainThread()
+            .Do(_ => ApplySelectedEffort())
+            .SubscribeSafe();
 
         CancelEditCmd = ReactiveCommand.Create(
             () =>
@@ -685,6 +729,46 @@ public class ConversationVm : ActivatableViewModel, ILogging
     // Pure decision so the load-scenario matrix is trivially unit-testable.
     internal static string ResolveWorkingModel(string lastReplyModel, string categoryDefault, string current, bool userPicked) =>
         userPicked ? current : lastReplyModel ?? categoryDefault ?? current;
+
+    // Effort resolves exactly like Model, with one extra wrinkle: the target domain is the
+    // current model's supported efforts. A deliberate user pick is kept whenever it's still
+    // valid for the model; anything else (or an invalid pick) falls back to the last
+    // reply's effort -> the category default -> the level closest to medium (legacy
+    // categories carry null effort, so "pick the middle one" is what null means here).
+    // Models with no effort support resolve to null (nothing shown, nothing sent).
+    private void ApplySelectedEffort()
+    {
+        var lastAiEffort = Head?.Message.GetNextMessages()
+                               .LastOrDefault(m => m.Role == ChatMessageRole.Assistant && m.Effort != null)
+                               ?.Effort;
+
+        var categoryDefault = Settings.IdSettings != null ? Settings.Effort : null;
+
+        var supported = Models?.FirstOrDefault(m => m.ModelID == SelectedModel)?.SupportedEfforts;
+
+        var next = ResolveWorkingEffort(lastAiEffort, categoryDefault, SelectedEffort, _effortUserPicked, supported);
+
+        this.LogDebug("Applying working effort (userPicked={UserPicked}): lastReply={LastReply ?? \"<none>\"}, " +
+                      "loaded={Loaded}, default={Default}, current={Current}, supported={Supported}, -> {Next}",
+                      _effortUserPicked, lastAiEffort, Settings.IdSettings != null, Settings.Effort, SelectedEffort,
+                      supported == null ? "<none>" : string.Join(",", supported), next);
+
+        SelectedEffort = next;
+    }
+
+    // Pure decision so the effort load-scenario matrix is trivially unit-testable.
+    internal static string ResolveWorkingEffort(string lastReplyEffort, string categoryDefaultEffort, string current,
+                                                bool userPicked, string[] supportedEfforts)
+    {
+        if (supportedEfforts == null || supportedEfforts.Length == 0)
+            return null;
+
+        var candidate = userPicked ? current : lastReplyEffort ?? categoryDefaultEffort ?? current;
+
+        return candidate != null && supportedEfforts.Contains(candidate, StringComparer.OrdinalIgnoreCase)
+            ? candidate
+            : AiEffort.ClosestToMedium(supportedEfforts);
+    }
 
     private static string FormatModelLabel(string modelId, AiModel[] models)
     {

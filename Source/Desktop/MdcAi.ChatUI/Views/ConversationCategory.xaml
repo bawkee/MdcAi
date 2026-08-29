@@ -175,6 +175,11 @@
                                    Description="Defines which AI model to use, its version and extra features such as higher token limit.">
               <DropDownButton x:Name="ChatSettingModelDropdown" MinWidth="150" Content="Select model" />
             </c:SettingsCard>
+
+            <c:SettingsCard Header="Default Effort"
+                                   Description="Reasoning effort used by models that support it. Ignored by models without effort levels.">
+              <DropDownButton x:Name="ChatSettingEffortDropdown" MinWidth="150" Content="Effort" />
+            </c:SettingsCard>
           </c:SettingsExpander.Items>
         </c:SettingsExpander>
 

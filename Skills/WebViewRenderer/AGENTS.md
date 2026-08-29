@@ -33,7 +33,8 @@ So the WebView loads a locally-real URL (`http://localhost:3431/`) that is inter
     "Content": "<html>",      // pre-rendered HTML (from Markdig)
     "Version": 1, "VersionCount": 1, "CreatedTs": "...",
     "Model": "gpt-4o",        // model that produced the message (assistant msgs; null on user/legacy)
-    "Provider": "OpenAI"      // provider display name serving that model (null when unknown)
+    "Provider": "OpenAI",     // provider display name serving that model (null when unknown)
+    "Effort": "medium"        // reasoning effort that produced the message (assistant msgs; null on user/legacy/effort-less models)
   }
   ```
 
@@ -62,8 +63,8 @@ So if you add a new feature to the renderer, add a new `Name` value + its `Data`
 Key files in `Source/React Chat Renderer/RendererApp/src/`:
 
 - `index.js` — reads `prefers-color-scheme`, sets `data-theme`, renders `<App>`.
-- `App.js` — the app shell; keeps message `data` (from `SetMessages`), `selectedChat` index, and registers the `window.chrome.webview` `message` listener; posts back `Ready`, `SetSelection`, `IsScrollToBottom`; renders `.chat-list` rows. Author labels come from `messageMeta.js`: `user` → "You", `assistant` → "`Provider · Model`" (falls back to plain "Assistant"/"System" for legacy payloads that carry no model info).
-- `messageMeta.js` — pure helpers (`getAuthorLabel` / `getRoleClass`) for the author label + css role class; unit-tested in `messageMeta.test.js`.
+- `App.js` — the app shell; keeps message `data` (from `SetMessages`), `selectedChat` index, and registers the `window.chrome.webview` `message` listener; posts back `Ready`, `SetSelection`, `IsScrollToBottom`; renders `.chat-list` rows. Author labels come from `messageMeta.js`: `user` → "You", `assistant` → "`Provider · Model`" (falls back to plain "Assistant"/"System" for legacy payloads that carry no model info), plus an italic `Effort: <level>` span next to the timestamp when the message carries per-message effort (`getEffortLabel` in `messageMeta.js`).
+- `messageMeta.js` — pure helpers (`getAuthorLabel` / `getRoleClass` / `getEffortLabel`) for the author label + css role class + effort label; unit-tested in `messageMeta.test.js`.
 - `components/autoScroll.js` — scroll listener decides auto-scroll on/off.
 - `components/highlighter.js` — the syntax-highlight pipeline: parses the incoming HTML with `DOMParser`, finds `<code class="language-*">`, uses `starryNight.flagToScope` + `starryNight.highlight` + `hast-util-to-dom`, and wraps `<pre>` blocks with a copy button.
 - `components/dateTime.js` — formats `CreatedTs` with `Intl.DateTimeFormat`.

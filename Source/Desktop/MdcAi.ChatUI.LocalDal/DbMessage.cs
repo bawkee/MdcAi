@@ -1,4 +1,4 @@
-﻿#region Copyright Notice
+#region Copyright Notice
 // Copyright (c) 2023 Bojan Sala
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -29,6 +29,11 @@ public class DbMessage
     /// <summary>Model id that (re)generated this message ("gpt-4o", "anthropic/claude-3-5-sonnet", ...).
     /// Null on user messages and on legacy rows that predate per-message provenance.</summary>
     public string Model { get; set; }
+
+    /// <summary>Reasoning effort that (re)generated this message ("low"/"medium"/"high", ...).
+    /// Null on user messages, on effort-less models, and on legacy rows that predate
+    /// per-message effort provenance - same convention as <see cref="Model"/>.</summary>
+    public string Effort { get; set; }
 
     public bool IsTrash { get; set; }
 

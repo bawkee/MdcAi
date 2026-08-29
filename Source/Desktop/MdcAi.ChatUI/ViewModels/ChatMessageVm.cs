@@ -35,6 +35,12 @@ public class ChatMessageVm : ViewModel, ILogging
     /// (streamed or not) so it survives pauses/edits; null on user messages.</summary>
     [Reactive] public string Model { get; set; }
 
+    /// <summary>Reasoning effort that (re)generated this message ("low"/"medium"/"high", ...).
+    /// Stamped alongside <see cref="Model"/> when a completion starts; null on user messages,
+    /// on effort-less models, and on legacy rows. Powers the working-effort default for
+    /// reloads, exactly like Model does.</summary>
+    [Reactive] public string Effort { get; set; }
+
     public DateTime CreatedTs { get; set; }
     public ConversationVm Conversation { get; }
     public ChatMessageVm Previous { get; set; } // Previous item        
@@ -71,6 +77,7 @@ public class ChatMessageVm : ViewModel, ILogging
                             {
                                 Content = null; // Just because there can be such a big delay when regenerating
                                 Model = Conversation.SelectedModel; // Remember which model produced (this version of) this message
+                                Effort = Conversation.SelectedEffort; // ... and which effort level was in play
                             })
                             .Select(_ => Conversation.Settings.Streaming ?
                                         CreateGenerationStream()
@@ -229,7 +236,15 @@ public class ChatMessageVm : ViewModel, ILogging
         var req = new ChatRequest
         {
             Messages = messages,
-            Model = Conversation.SelectedModel
+            Model = Conversation.SelectedModel,
+            // Only ever send reasoning_effort to models that support it; the conversation's
+            // working effort is null for effortless models anyway, but the capability check
+            // here is the belt-and-braces that guarantees we never send it to those.
+            ReasoningEffort = Conversation.Models?
+                                        .FirstOrDefault(m => m.ModelID == modelId)?
+                                        .SupportedEfforts is { Length: > 0 }
+                ? Conversation.SelectedEffort
+                : null
         };
 
         return req;

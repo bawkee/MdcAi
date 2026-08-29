@@ -27,4 +27,7 @@ public class WebViewChatMessageDto
 
     /// <summary>Display name of the provider that served the model ("OpenAI", "OpenRouter", ...). Null on legacy/user messages.</summary>
     public string Provider { get; set; }
+
+    /// <summary>Reasoning effort that produced this message ("low"/"medium"/"high", ...). Null on legacy/user messages and effort-less models.</summary>
+    public string Effort { get; set; }
 }

@@ -1,4 +1,4 @@
-﻿#region Copyright Notice
+#region Copyright Notice
 // Copyright (c) 2023 Bojan Sala
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -19,6 +19,13 @@ public class DbChatSettings
 {
     [Key] public string IdSettings { get; set; }
     public string Model { get; set; }
+
+    /// <summary>Default reasoning effort ("low"/"medium"/"high", or whatever the model
+    /// advertises). Null = the category/conversation has no stored default - the app picks
+    /// the level closest to medium for the model in use, and legacy rows stay null just like
+    /// legacy Model rows.</summary>
+    public string Effort { get; set; }
+
     public bool Streaming { get; set; } = true;
     public decimal Temperature { get; set; } = 1m;
     public decimal TopP { get; set; } = 1m;

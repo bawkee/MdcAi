@@ -1,4 +1,4 @@
-import { getAuthorLabel, getRoleClass } from './messageMeta';
+import { getAuthorLabel, getEffortLabel, getRoleClass } from './messageMeta';
 
 describe('getRoleClass', () => {
     it('normalizes known roles', () => {
@@ -54,5 +54,21 @@ describe('getAuthorLabel', () => {
         expect(getAuthorLabel({ Role: 'ASSISTANT', Model: 'gpt-4o', Provider: 'OpenAI' })).toBe(
             'OpenAI · gpt-4o'
         );
+    });
+});
+
+describe('getEffortLabel', () => {
+    it('formats the effort when the message carries per-message effort', () => {
+        expect(getEffortLabel({ Role: 'assistant', Effort: 'medium' })).toBe('Effort: medium');
+        expect(getEffortLabel({ Role: 'assistant', Effort: 'high' })).toBe('Effort: high');
+    });
+
+    it('returns null for user messages and messages without effort', () => {
+        expect(getEffortLabel({ Role: 'user', Effort: 'medium' })).toBe(null);
+        expect(getEffortLabel({ Role: 'assistant' })).toBe(null);
+        expect(getEffortLabel({ Role: 'assistant', Effort: null })).toBe(null);
+        expect(getEffortLabel({ Role: 'assistant', Effort: '' })).toBe(null);
+        expect(getEffortLabel({})).toBe(null);
+        expect(getEffortLabel(undefined)).toBe(null);
     });
 });

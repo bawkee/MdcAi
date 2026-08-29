@@ -105,6 +105,9 @@
           <SplitButton Command="{x:Bind ViewModel.SendPromptCmd, Mode=OneWay}" Height="32" Padding="10,0">
             <StackPanel Orientation="Horizontal">
               <TextBlock Text="{x:Bind ViewModel.SelectedModelLabel, Mode=OneWay}" />
+              <TextBlock Text="{x:Bind ViewModel.SelectedEffortLabel, Mode=OneWay}"
+                         Margin="8,0,0,0"
+                         Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
               <SymbolIcon Symbol="Send" VerticalAlignment="Center" Margin="10,0,0,0" />
             </StackPanel>
             <SplitButton.Flyout>
@@ -359,7 +362,7 @@
             <Thickness x:Key="ContentDialogPadding">10</Thickness>
           </ContentDialog.Resources>
 
-          <Pivot Width="400" DataContext="{x:Bind ViewModel, Mode=OneWay}">
+          <Pivot Width="500" DataContext="{x:Bind ViewModel, Mode=OneWay}">
             <PivotItem Header="Parameters">
               <StackPanel Margin="0,10,0,0">
 
@@ -430,9 +433,15 @@
                   <ToggleSwitch IsOn="{x:Bind ViewModel.Settings.Streaming, Mode=TwoWay}" />
                 </c:UniformGrid>
 
-                <c:UniformGrid Columns="2">
+                <c:UniformGrid Columns="2" Margin="0,5,0,0">
                   <TextBlock Text="Default Model" Margin="0,5" />
                   <DropDownButton x:Name="ChatSettingModelDropdown" HorizontalAlignment="Stretch" Content="Select model" />
+                </c:UniformGrid>
+
+                <c:UniformGrid Columns="2" Margin="0,5,0,0"
+                               ToolTipService.ToolTip="Reasoning effort used by models that support it. Does nothing for models without effort levels.">
+                  <TextBlock Text="Default Effort" Margin="0,5" />
+                  <DropDownButton x:Name="ChatSettingEffortDropdown" HorizontalAlignment="Stretch" Content="Effort" />
                 </c:UniformGrid>
 
               </StackPanel>

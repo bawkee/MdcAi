@@ -53,8 +53,8 @@ Adding a provider = adding one descriptor to `AiProviders.All`. The legacy OpenA
 | `ChatChoice` | `Index`, `Message`, `FinishReason`, `Delta`. |
 | `ChatMessage` | `Role`, `Content`, `Name`, `ToolCalls`, `ToolCallId`, copy-ctor. |
 | `ChatMessageRole` | smart string wrapper (`System/User/Assistant/Tool`, implicit conversions). |
-| `ChatRequest` | `Model`, `Messages`, `Temperature`, `TopP`, `n`, `Streaming` (internal set), `MaxTokens`, penalties, `LogitBias`, `User`, `Tools`, `CompiledStop`. Unsupported params are ignored by OpenRouter, safe to send. |
-| `AiModel` | `ModelID`, `OwnedBy`, plus OpenRouter extras (`Name`, `ContextLength`, `Pricing` per-token USD → per-M parse helpers, `Reasoning`). Stamped after fetch: `ProviderKey`, `GroupKey`; `IsConversational`/`IsReasoning` are **provider-aware** (fall back to id heuristics when unstamped). |
+| `ChatRequest` | `Model`, `Messages`, `Temperature`, `TopP`, `n`, `Streaming` (internal set), `MaxTokens`, penalties, `LogitBias`, `User`, `Tools`, `CompiledStop`, `ReasoningEffort` (new `reasoning_effort` param on the wire, JSON-omitted when null). Unsupported params are ignored by OpenRouter, safe to send. |
+| `AiModel` | `ModelID`, `OwnedBy`, plus OpenRouter extras (`Name`, `ContextLength`, `Pricing` per-token USD → per-M parse helpers, `Reasoning`). Stamped after fetch: `ProviderKey`, `GroupKey`; `IsConversational`/`IsReasoning` are **provider-aware** (fall back to id heuristics when unstamped). `SupportedEfforts` — the effort levels a model supports: OpenRouter models from their fetched `reasoning.supported_efforts` metadata (authoritative), OpenAI-provider models by id family (o1*/o3*/o4*/gpt-5* → low/medium/high), null for everything else (no effort UI, `reasoning_effort` never sent). |
 | `Permissions`, `ChatUsage` | usage + OpenRouter cost (`Cost`, `IsByok`, token details). |
 
 ## Streaming

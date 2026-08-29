@@ -45,6 +45,14 @@
         <NavigationViewItem DataContext="{x:Bind}">
           <UserControl>
             <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <!-- Always-allocated spinner slot: the fixed width keeps the conversation label
+                     in place whether or not the conversation is working, so items never jump
+                     when a completion starts/finishes in the background. -->
+                <ColumnDefinition Width="18" />
+              </Grid.ColumnDefinitions>
+
               <!-- Convo item preview, visual state manager must be inside a Grid or something (not page/usercontrol) -->
               <VisualStateManager.VisualStateGroups>
                 <VisualStateGroup>
@@ -58,7 +66,16 @@
                   </VisualState>
                 </VisualStateGroup>
               </VisualStateManager.VisualStateGroups>
-              <TextBlock x:Name="NameTextBlock" Text="{Binding Path=Name, Mode=OneWay}" />
+
+              <TextBlock x:Name="NameTextBlock" Grid.Column="0" Text="{Binding Path=Name, Mode=OneWay}" />
+
+              <ProgressRing Grid.Column="1"
+                            Width="12"
+                            Height="12"
+                            Margin="4,0,2,0"
+                            VerticalAlignment="Center"
+                            IsActive="{Binding Path=IsWorking, Mode=OneWay}"
+                            Visibility="{Binding Path=IsWorking, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
             </Grid>
           </UserControl>
 

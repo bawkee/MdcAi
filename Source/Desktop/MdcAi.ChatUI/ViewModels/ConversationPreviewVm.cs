@@ -26,6 +26,12 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationPreviewI
     [Reactive] public ConversationCategoryPreviewVm Category { get; set; }
     [Reactive] public object FullItem { get; private set; }
 
+    /// <summary>True while this conversation is "doing something" - streaming a completion,
+    /// reloading, ... Drives the little spinner in the nav list. Mirrors the state of the
+    /// underlying conversation VM so it keeps spinning for background conversations while
+    /// the user works elsewhere.</summary>
+    [Reactive] public bool IsWorking { get; private set; }
+
     public ReactiveCommand<Unit, Unit> DeleteCmd { get; }
     public ReactiveCommand<Unit, Unit> RenameCmd { get; }
 
@@ -142,6 +148,23 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationPreviewI
                             .Select(_ => Unit.Default)
                     ))
             .Switch()
+            .SubscribeSafe();
+
+        // Spinner state: mirror the conversation VM's busy flags. Ctor-level on purpose - the
+        // preview's WhenActivated dies the moment the item is deselected and we want the
+        // spinner to keep spinning (and the layout slot to stay allocated) for conversations
+        // that are still working in the background.
+        this.WhenAnyValue(vm => vm.FullItem)
+            .Cast<ConversationVm>()
+            .Select(convo => convo == null
+                                 ? Observable.Return(false)
+                                 : Observable.CombineLatest(
+                                       convo.WhenAnyValue(vm => vm.IsCompleting),
+                                       convo.WhenAnyValue(vm => vm.IsLoading),
+                                       (completing, loading) => completing || loading))
+            .Switch()
+            .DistinctUntilChanged()
+            .Do(w => IsWorking = w)
             .SubscribeSafe();
 
         DeleteCmd = ReactiveCommand.CreateFromTask(

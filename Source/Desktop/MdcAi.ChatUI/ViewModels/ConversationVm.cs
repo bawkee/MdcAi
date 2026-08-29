@@ -522,6 +522,30 @@ public class ConversationVm : ActivatableViewModel, ILogging
                            });
                 }));
 
+        // Trigger completions when user posts a message. Kept at VM-constructor level (NOT
+        // WhenActivated) on purpose: ReactiveCommand.Execute() cancels the running stream the
+        // moment its subscription is disposed, and the old activation-bound chain got disposed
+        // the instant the user switched to another conversation - killing the in-flight
+        // completion (this was "the current conversation stops when I move away"). Each
+        // conversation already owns its own VM instance (created lazily on first open, retained
+        // afterwards), so ctor-level subscriptions let any number of conversations stream in
+        // parallel without interfering with each other or with the visible UI.
+        this.WhenAnyValue(vm => vm.Tail)
+            .Where(t => t?.Message.Role == ChatMessageRole.User)
+            .Select(t => new
+            {
+                Tail = t,
+                Completion = new ChatMessageVm(this, ChatMessageRole.Assistant)
+                {
+                    Previous = t.Message
+                }
+            })
+            .Do(x => x.Tail.Message.Next = x.Completion)
+            .Select(x => x.Completion.CompleteCmd.Execute())
+            .Switch()
+            .Retry()
+            .SubscribeSafe();
+
         this.WhenAnyValue(vm => vm.Tail)
             .Where(t => t?.Message?.Role == ChatMessageRole.Assistant)
             .Select(t => t.Message.CompleteCmd
@@ -645,24 +669,6 @@ public class ConversationVm : ActivatableViewModel, ILogging
         {
             //Debug.WriteLine($"Activated {Name}");
             //Disposable.Create(() => Debug.WriteLine($"Deactivated {Name}")).DisposeWith(disposables);
-
-            // Trigger completions when user posts a message
-            this.WhenAnyValue(vm => vm.Tail)
-                .Where(t => t?.Message.Role == ChatMessageRole.User)
-                .Select(t => new
-                {
-                    Tail = t,
-                    Completion = new ChatMessageVm(this, ChatMessageRole.Assistant)
-                    {
-                        Previous = t.Message
-                    }
-                })
-                .Do(x => x.Tail.Message.Next = x.Completion)
-                .Select(x => x.Completion.CompleteCmd.Execute())
-                .Switch()
-                .Retry()
-                .SubscribeSafe()
-                .DisposeWith(disposables);
 
             // Build request data to communicate with WebView for rendering
             this.WhenAnyValue(vm => vm.Messages)

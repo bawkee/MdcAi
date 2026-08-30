@@ -28,20 +28,32 @@ using SalaTools.Core;
 public class ChatApiRouter : IOpenAiApi, IDisposable
 {
     private readonly Func<AiProvider, AiProviderCredentials> _credentialsProvider;
+    private readonly Func<AiProvider, bool> _hasCredentials;
     private readonly Func<AiProvider, HttpClient> _clientFactory;
     private readonly Dictionary<string, OpenAiClient> _clients = new(StringComparer.OrdinalIgnoreCase);
     private readonly object _lock = new();
 
+    /// <summary>App-level catalog fetch. Shared by every conversation; invalidated by
+    /// <see cref="RefreshCredentials"/> (i.e. whenever any credential changes) so it never
+    /// goes stale, but a conversation open never repeats the fetch or the vault reads.</summary>
+    private Task<AiModel[]> _allModelsFetch;
+
     public AiProvider ActiveProvider { get; private set; } = AiProviders.Default;
     public IReadOnlyList<AiProvider> Providers => AiProviders.All;
 
-    public bool HasCredentials(string providerKey) => _credentialsProvider(AiProviders.Get(providerKey)).HasKey;
+    public bool HasCredentials(string providerKey) => _hasCredentials(AiProviders.Get(providerKey));
 
     public ChatApiRouter(Func<AiProvider, AiProviderCredentials> credentialsProvider = null,
-                         Func<AiProvider, HttpClient> clientFactory = null)
+                         Func<AiProvider, HttpClient> clientFactory = null,
+                         Func<AiProvider, bool> hasCredentials = null)
     {
         _credentialsProvider = credentialsProvider ?? (_ => new AiProviderCredentials());
         _clientFactory = clientFactory;
+        // Default matches the old behavior (full credential read). The app wires in a
+        // one-slot check instead: whether a provider can be talked to is decided by its
+        // API key alone, and reading the other (optional) slots here would be vault work
+        // for a question that doesn't need it.
+        _hasCredentials = hasCredentials ?? (p => _credentialsProvider(p).HasKey);
     }
 
     /// <summary>Switches the app-level active provider (used as default / shown in pickers).</summary>
@@ -52,8 +64,8 @@ public class ChatApiRouter : IOpenAiApi, IDisposable
     }
 
     /// <summary>
-    /// Drops the cached clients so the next request re-reads credentials from the provider
-    /// function. Call after the user edits any credential.
+    /// Drops the cached clients AND the catalog so the next request re-reads credentials from
+    /// the provider function. Call after the user edits any credential.
     /// </summary>
     public void RefreshCredentials()
     {
@@ -62,6 +74,7 @@ public class ChatApiRouter : IOpenAiApi, IDisposable
             foreach (var client in _clients.Values)
                 client.Dispose();
             _clients.Clear();
+            _allModelsFetch = null;
         }
     }
 
@@ -76,8 +89,21 @@ public class ChatApiRouter : IOpenAiApi, IDisposable
     /// Composite catalog: every provider that can respond (OpenRouter has a public models list,
     /// OpenAI needs a key). Providers that fail auth are skipped - the picker should never show
     /// "OpenAI" models the user can't actually run.
+    /// 
+    /// Fetched once and shared by every consumer (each conversation's LoadModelsCmd, the
+    /// category editor, ...); <see cref="RefreshCredentials"/> clears it, so a credential
+    /// change still re-fetches. The Task-based cache also means concurrent callers coalesce
+    /// onto a single fetch instead of stampeding the endpoints.
     /// </summary>
-    public async Task<AiModel[]> GetAllModels()
+    public Task<AiModel[]> GetAllModels()
+    {
+        lock (_lock)
+        {
+            return _allModelsFetch ??= FetchAllModelsAsync();
+        }
+    }
+
+    private async Task<AiModel[]> FetchAllModelsAsync()
     {
         var all = new List<AiModel>();
 
@@ -98,6 +124,11 @@ public class ChatApiRouter : IOpenAiApi, IDisposable
             catch (HttpRequestException)
             {
                 // Provider unreachable - don't kill the whole catalog.
+            }
+            catch (ObjectDisposedException)
+            {
+                // A credential refresh disposed the client mid-flight; the next call after
+                // RefreshCredentials rebuilds the cache from scratch.
             }
         }
 
@@ -142,6 +173,7 @@ public class ChatApiRouter : IOpenAiApi, IDisposable
             foreach (var client in _clients.Values)
                 client.Dispose();
             _clients.Clear();
+            _allModelsFetch = null;
         }
     }
 }

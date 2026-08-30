@@ -28,46 +28,99 @@ public interface ICredsStore
 /// <summary>
 /// PasswordVault-backed credential store. Stored under one resource name ("MdcAi") with
 /// per-provider value names, e.g. "openai:ApiKey", "openrouter:ApiKey".
+/// 
+/// Reads come from an in-memory snapshot of the whole vault (taken once at construction and
+/// kept fresh by every write). This matters: <see cref="PasswordVault.Retrieve"/> *throws*
+/// when an entry doesn't exist, so the old per-lookup implementation threw a COMException
+/// ("Cannot get credential from Vault") for every optional slot that was never set - which
+/// the debugger surfaces as exception spam on every conversation open. Snapshotting turns a
+/// lookup into a dictionary hit: no throw, no vault round-trip.
 /// </summary>
 public class PasswordVaultCredsStore : ICredsStore
 {
     private readonly PasswordVault _vault;
-
-    public PasswordVaultCredsStore() { _vault = new PasswordVault(); }
+    private readonly object _lock = new();
+    private readonly Dictionary<string, string> _cache;
 
     public static readonly string ResourceName = "MdcAi";
 
-    public void SetValue(string name, string value)
+    public PasswordVaultCredsStore()
     {
-        var credential = string.IsNullOrEmpty(value) ? null : new PasswordCredential(ResourceName, name, value);
+        _vault = new PasswordVault();
+        _cache = LoadAll();
+    }
 
-        // Remove the old credential if it exists
+    /// <summary>
+    /// Reads every credential the app can see, keeps only the ones stored under our resource,
+    /// and keys the cache by user name ("openai:ApiKey", ...). Entries that can't be decrypted
+    /// for this identity (e.g. vault namespace differs between packaged/unpackaged runs) are
+    /// treated as absent - same outcome the old throwing Retrieve had, just quiet about it.
+    /// </summary>
+    private Dictionary<string, string> LoadAll()
+    {
+        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
         try
         {
-            var oldCredential = _vault.Retrieve(ResourceName, name);
-            _vault.Remove(oldCredential);
+            foreach (var credential in _vault.RetrieveAll())
+            {
+                if (!string.Equals(credential.Resource, ResourceName, StringComparison.Ordinal))
+                    continue;
+
+                try
+                {
+                    credential.RetrievePassword();
+                    result[credential.UserName] = credential.Password;
+                }
+                catch
+                {
+                    /* Not decryptable for this identity - treat as absent */
+                }
+            }
         }
         catch
         {
-            /* Ignored if there's no existing credential */
+            /* Vault entirely unavailable - cache stays empty, reads return null */
         }
 
-        if (credential != null)
-            // Add the new credential
-            _vault.Add(credential);
+        return result;
+    }
+
+    public void SetValue(string name, string value)
+    {
+        lock (_lock)
+        {
+            // Remove the old credential if it exists. The cache already tells us whether one
+            // does, so we never probe the vault blindly (a Retrieve on a missing entry throws).
+            if (_cache.ContainsKey(name))
+            {
+                try
+                {
+                    var oldCredential = _vault.Retrieve(ResourceName, name);
+                    _vault.Remove(oldCredential);
+                }
+                catch
+                {
+                    /* Entry disappeared out from under us - the cache write below still wins */
+                }
+            }
+
+            if (string.IsNullOrEmpty(value))
+                _cache.Remove(name);
+            else
+            {
+                // Add the new credential
+                _vault.Add(new PasswordCredential(ResourceName, name, value));
+                _cache[name] = value;
+            }
+        }
     }
 
     public string GetValue(string name)
     {
-        try
+        lock (_lock)
         {
-            var credential = _vault.Retrieve(ResourceName, name);
-            credential.RetrievePassword();
-            return credential.Password;
-        }
-        catch
-        {
-            return null;
+            return _cache.TryGetValue(name, out var value) ? value : null;
         }
     }
 }

@@ -211,7 +211,12 @@ public partial class App : ILogging
 
         var settings = AppServices.Container.Resolve<SettingsVm>();
 
-        var api = new ChatApiRouter(provider => ProviderCreds.Build(AppCredsManager.Store, provider));
+        var api = new ChatApiRouter(
+            provider => ProviderCreds.Build(AppCredsManager.Store, provider),
+            // "Can we talk to this provider?" is decided by its API key alone - the other
+            // slots (organisation, referer, app title) are optional attribution. Checking
+            // them here would be extra credential work for a question that doesn't need it.
+            hasCredentials: provider => !string.IsNullOrEmpty(ProviderCreds.GetApiKey(AppCredsManager.Store, provider)));
 
         AppServices.Container.Register(
             Component.For<IOpenAiApi>()

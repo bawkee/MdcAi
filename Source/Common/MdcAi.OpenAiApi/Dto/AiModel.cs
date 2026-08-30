@@ -114,8 +114,8 @@ public class AiModel
             : AiProviders.Get(ProviderKey).IsConversationalModel(this);
 
     /// <summary>
-    /// Whether this is a reasoning model (premise is skipped for those, etc).
-    /// Provider-aware when stamped, id-heuristic otherwise.
+    /// Whether this is a reasoning model (drives reasoning-effort support and how reasoning
+    /// output is handled). Provider-aware when stamped, id-heuristic otherwise.
     /// </summary>
     [JsonIgnore]
     public bool IsReasoning =>

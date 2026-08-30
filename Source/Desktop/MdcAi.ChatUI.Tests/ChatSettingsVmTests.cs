@@ -113,23 +113,6 @@ public class ChatSettingsVmTests
         Assert.Equal("gpt-4o", vm.Model);
     }
 
-    [Fact]
-    public async Task Model_marks_reasoning_flag_from_stamped_metadata()
-    {
-        var api = new FakeOpenAiApi();
-        var vm = new ChatSettingsVm(api);
-
-        vm.Model = "o1-mini";
-        await Task.Yield(); // let the reactive chain tick
-
-        Assert.True(vm.IsReasoningModel);
-
-        vm.Model = "gpt-4o";
-        await Task.Yield();
-
-        Assert.False(vm.IsReasoningModel);
-    }
-
     #region Effort default
 
     [Fact]

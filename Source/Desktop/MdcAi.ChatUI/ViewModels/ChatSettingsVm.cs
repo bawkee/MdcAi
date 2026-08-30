@@ -34,8 +34,6 @@ public class ChatSettingsVm : ViewModel, ILogging
     /// the working effort lives on ConversationVm.SelectedEffort.</summary>
     [Reactive] public string Effort { get; set; }
 
-    [Reactive] public bool IsReasoningModel { get; set; }
-
     [Reactive] public bool Streaming { get; set; } = true;
     [Reactive] public decimal Temperature { get; set; } = 1m;
     [Reactive] public decimal TopP { get; set; } = 1m;
@@ -91,13 +89,6 @@ public class ChatSettingsVm : ViewModel, ILogging
         SaveCmd.ObserveOnMainThread()
                .Do(_ => changes.Clean())
                .SubscribeSafe();
-        
-        this.WhenAnyValue(vm => vm.Model)
-            .WhereNotNull()
-            .Select(m => new AiModel(m).IsReasoning)
-            .ObserveOnMainThread()
-            .Do(v => IsReasoningModel = v)
-            .SubscribeSafe();
 
         LoadCmd.ObserveOnMainThread()
                .Select(_ => TrackRelevantChanges())

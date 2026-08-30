@@ -193,10 +193,6 @@
             <c:SettingsCard Padding="10,0,0,10">
               <c:SettingsCard.Description>
                 <c:DockPanel Margin="0,15,0,0">
-                  <Border c:DockPanel.Dock="Top" Visibility="{x:Bind ViewModel.Settings.IsReasoningModel, Converter={StaticResource boolToVis}, Mode=OneWay}">
-                    <TextBlock Text="⚠️ WARNING: Premise is ignored in reasoning models such as o1-* and o3-*" Padding="0" />
-                  </Border>
-                  
                   <TextBox TextWrapping="Wrap"
                          Text="{x:Bind ViewModel.Settings.Premise, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                          Margin="0,10,0,0"

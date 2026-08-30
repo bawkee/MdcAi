@@ -448,10 +448,6 @@
             </PivotItem>
             <PivotItem Header="Premise">
               <c:DockPanel Margin="0,15,0,0">
-                <Border c:DockPanel.Dock="Top" Visibility="{x:Bind ViewModel.Settings.IsReasoningModel, Converter={StaticResource boolToVis}, Mode=OneWay}">
-                  <TextBlock TextWrapping="WrapWholeWords" Text="⚠️ WARNING: Premise is ignored in reasoning models such as o1-* and o3-*" Padding="0" />
-                </Border>
-
                 <TextBox TextWrapping="Wrap"
                          Text="{x:Bind ViewModel.Settings.Premise, Mode=TwoWay}"
                          Margin="0,10,0,0"

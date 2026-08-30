@@ -39,7 +39,7 @@ public sealed class AiProvider
     /// <summary>Whether a model id is a chat model for this provider.</summary>
     public Func<AiModel, bool> IsConversationalModel { get; init; } = static _ => true;
 
-    /// <summary>Whether a model id is a reasoning model for this provider (premise is skipped).</summary>
+    /// <summary>Whether a model id is a reasoning model for this provider (reasoning-effort support, reasoning output handling).</summary>
     public Func<AiModel, bool> IsReasoningModel { get; init; } = static _ => false;
 
     /// <summary>Heading models of this provider are grouped under in pickers.</summary>

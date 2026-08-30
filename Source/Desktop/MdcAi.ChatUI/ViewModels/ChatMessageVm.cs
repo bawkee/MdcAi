@@ -124,8 +124,14 @@ public class ChatMessageVm : ViewModel, ILogging
         const string caretMd = "'%caret%'";
         const string caretHtml = "<span id=\"caret\"/>";
 
+        // Render on a fixed cadence while tokens are streaming instead of waiting for
+        // the stream to go quiet. Rx Throttle is a TRAILING debounce: during a
+        // continuous stream (new delta every few ms) it never fires, so the whole
+        // reply only appeared in one burst at the very end. Sample(~33ms) paints the
+        // latest text at ~30fps - the tokens arrive at the same speed, the UI just
+        // shows them live.
         this.WhenAnyValue(vm => vm.Content)
-            .Throttle(TimeSpan.FromMilliseconds(50))
+            .Sample(TimeSpan.FromMilliseconds(33))
             .ObserveOnMainThread()
             .Select(c =>
             {
@@ -154,9 +160,9 @@ public class ChatMessageVm : ViewModel, ILogging
             .SubscribeSafe();
 
         // Reasoning renders into its own block (the renderer collapses it behind a one-liner);
-        // the preview is derived on the same throttle so both stay in step while streaming.
+        // the preview is derived on the same cadence so both stay in step while streaming.
         this.WhenAnyValue(vm => vm.ReasoningContent)
-            .Throttle(TimeSpan.FromMilliseconds(50))
+            .Sample(TimeSpan.FromMilliseconds(33))
             .ObserveOnMainThread()
             .Do(r =>
             {

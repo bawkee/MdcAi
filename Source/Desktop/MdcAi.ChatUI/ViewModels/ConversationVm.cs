@@ -679,11 +679,14 @@ public class ConversationVm : ActivatableViewModel, ILogging
                     {
                         // Repush when either the answer or the thinking block re-renders, so
                         // the WebView gets reasoning deltas while the model is still thinking.
+                        // Sampled at a fixed cadence (not a trailing debounce - see ChatMessageVm):
+                        // during a continuous stream a Throttle would never fire, so the WebView
+                        // only received the final burst at the end of generation.
                         var last = m.Last();
                         return Observable.Merge(
                                    last.WhenAnyValue(vm => vm.HTMLContent),
                                    last.WhenAnyValue(vm => vm.ReasoningHTMLContent))
-                               .Throttle(TimeSpan.FromMilliseconds(50))
+                               .Sample(TimeSpan.FromMilliseconds(33))
                                .Select(_ => m);
                     }
                     return Observable.Return(m);

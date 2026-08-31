@@ -100,11 +100,20 @@ public sealed class FakeOpenAiApi : IOpenAiApi
             }
         });
 
+    public Task<ChatResult> CreateChatCompletions(ChatRequest request, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        return CreateChatCompletions(request);
+    }
+
     public async IAsyncEnumerable<ChatResult> CreateChatCompletionsStream(ChatRequest request)
     {
         var result = await CreateChatCompletions(request);
         yield return result;
     }
+
+    public IAsyncEnumerable<ChatResult> CreateChatCompletionsStream(ChatRequest request, CancellationToken ct) =>
+        CreateChatCompletionsStream(request);
 }
 
 /// <summary>

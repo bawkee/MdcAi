@@ -38,4 +38,14 @@ public class DbChatSettings
     public decimal FrequencyPenalty { get; set; } = 1m;
     public decimal PresencePenalty { get; set; } = 1m;
     public string Premise { get; set; }
+
+    /// <summary>
+    /// Category default: workspace tools ON/OFF for (new) conversations in this category.
+    /// Null = not configured (legacy rows) - treated as off. A conversation may still override
+    /// this per-conversation.
+    /// </summary>
+    public bool? ToolsEnabled { get; set; }
+
+    /// <summary>Category default workspace folder; only meaningful while ToolsEnabled is true.</summary>
+    public string WorkspacePath { get; set; }
 }

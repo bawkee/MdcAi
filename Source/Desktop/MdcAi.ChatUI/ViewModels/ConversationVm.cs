@@ -444,6 +444,7 @@ public class ConversationVm : ActivatableViewModel, ILogging
                   {
                       ApplySelectedModel();
                       ApplySelectedEffort();
+                      ApplyToolsDefault();
                   })
                   .SubscribeSafe();
 
@@ -876,6 +877,27 @@ public class ConversationVm : ActivatableViewModel, ILogging
     // Pure decision so the load-scenario matrix is trivially unit-testable.
     internal static string ResolveWorkingModel(string lastReplyModel, string categoryDefault, string current, bool userPicked) =>
         userPicked ? current : lastReplyModel ?? categoryDefault ?? current;
+
+    /// <summary>
+    /// Category default for workspace tools: a brand-new conversation that has not enabled tools
+    /// itself inherits the category's ToolsEnabled/WorkspacePath (set in the category editor's
+    /// AI Parameters). Deliberately never DISABLES tools - once a conversation has tools on, a
+    /// category default change can't silently revoke it, and loaded conversations keep their
+    /// persisted per-conversation values.
+    /// </summary>
+    private void ApplyToolsDefault()
+    {
+        if (!IsNew)
+            return; // loaded conversations keep their own persisted values
+        if (ToolsEnabled)
+            return; // never clobber a deliberate per-conversation enable
+        if (Settings.IdSettings == null || !Settings.ToolsEnabled)
+            return; // no category default (or default is off) -> nothing to do
+
+        ToolsEnabled = true;
+        WorkspacePath = Settings.WorkspacePath;
+        this.LogDebug("Inherited workspace tools from category default (path {Path})", WorkspacePath);
+    }
 
     // Effort resolves exactly like Model, with one extra wrinkle: the target domain is the
     // current model's supported efforts. A deliberate user pick is kept whenever it's still

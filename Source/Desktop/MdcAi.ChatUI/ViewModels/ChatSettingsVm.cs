@@ -40,6 +40,13 @@ public class ChatSettingsVm : ViewModel, ILogging
     [Reactive] public decimal FrequencyPenalty { get; set; } = 1m;
     [Reactive] public decimal PresencePenalty { get; set; } = 1m;
     [Reactive] public string Premise { get; set; } = "You are a helpful AI assistant.";
+
+    /// <summary>Category default: workspace tools ON/OFF for new conversations in this category.</summary>
+    [Reactive] public bool ToolsEnabled { get; set; }
+
+    /// <summary>Category default workspace folder; shown/edited in the category editor.</summary>
+    [Reactive] public string WorkspacePath { get; set; }
+
     [Reactive] public AiModel[] Models { get; private set; }
     [Reactive] public bool IsLoadingModels { get; private set; }
 
@@ -158,7 +165,9 @@ public class ChatSettingsVm : ViewModel, ILogging
                      nameof(PresencePenalty),
                      nameof(Premise),
                      nameof(Model),
-                     nameof(Effort));
+                     nameof(Effort),
+                     nameof(ToolsEnabled),
+                     nameof(WorkspacePath));
 
     public void CopyTo(ChatSettingsVm c)
     {
@@ -170,6 +179,8 @@ public class ChatSettingsVm : ViewModel, ILogging
         c.Model = Model;
         c.Effort = Effort;
         c.Premise = Premise;
+        c.ToolsEnabled = ToolsEnabled;
+        c.WorkspacePath = WorkspacePath;
     }
 
     public static AiModel[] MockModels =

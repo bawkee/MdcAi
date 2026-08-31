@@ -100,6 +100,24 @@ public sealed partial class ConversationCategory
             vm.Settings.Effort = AiEffort.ClosestToMedium(supported);
     }
 
+    // Pick the category-default workspace folder with a proper WinUI FolderPicker (needs the
+    // app window HWND to open as a modal on WinUI 3).
+    private async void BrowseWorkspaceFolder_OnClick(object sender, RoutedEventArgs e)
+    {
+        var picker = new Windows.Storage.Pickers.FolderPicker
+        {
+            SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.ComputerFolder
+        };
+        picker.FileTypeFilter.Add("*");
+
+        if (AppServices.MainWindowHandle != IntPtr.Zero)
+            WinRT.Interop.InitializeWithWindow.Initialize(picker, AppServices.MainWindowHandle);
+
+        var folder = await picker.PickSingleFolderAsync();
+        if (folder != null)
+            ViewModel.Settings.WorkspacePath = folder.Path;
+    }
+
     private void IconTemplate_OnPointerPressed(object sender, PointerRoutedEventArgs e)
     {
         if (ViewModel.Icons.SelectedItem is { } prevItem)

@@ -249,6 +249,7 @@ public partial class App : ILogging
         DebugSettings.IsBindingTracingEnabled = Debugging.IsBindingTracingEnabled;
 
         Window = new MainWindow();
+        AppServices.MainWindow = Window;
         Window.Activate();
     }
 }

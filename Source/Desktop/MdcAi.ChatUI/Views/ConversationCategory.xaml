@@ -180,6 +180,25 @@
                                    Description="Reasoning effort used by models that support it. Ignored by models without effort levels.">
               <DropDownButton x:Name="ChatSettingEffortDropdown" MinWidth="150" Content="Effort" />
             </c:SettingsCard>
+
+            <c:SettingsCard Header="Workspace Tools"
+                                   Description="Let the AI read, edit and run commands inside a workspace folder you choose. Every edit and shell action still asks for your approval first. Applies to new conversations in this category.">
+              <ToggleSwitch OffContent="" OnContent="" IsOn="{x:Bind ViewModel.Settings.ToolsEnabled, Mode=TwoWay}" />
+            </c:SettingsCard>
+
+            <c:SettingsCard Header="Workspace Folder"
+                                   Description="The folder the AI is allowed to work in. PowerShell can reach beyond it - that always needs your approval.">
+              <StackPanel Orientation="Horizontal" Spacing="8"
+                          Visibility="{x:Bind ViewModel.Settings.ToolsEnabled, Mode=OneWay, Converter={StaticResource boolToVis}}">
+                <TextBlock x:Name="WorkspacePathText"
+                           Text="{x:Bind ViewModel.Settings.WorkspacePath, Mode=OneWay, TargetNullValue='No folder selected'}"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                           VerticalAlignment="Center"
+                           MaxWidth="360"
+                           TextTrimming="CharacterEllipsis" />
+                <Button Content="Browse…" Click="BrowseWorkspaceFolder_OnClick" />
+              </StackPanel>
+            </c:SettingsCard>
           </c:SettingsExpander.Items>
         </c:SettingsExpander>
 

@@ -1,4 +1,4 @@
-﻿#region Copyright Notice
+#region Copyright Notice
 // Copyright (c) 2023 Bojan Sala
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -25,6 +25,13 @@ public static class AppServices
 {
     // Service locator antipattern - with great power comes great... uh... productivity?
     public static IWindsorContainer Container { get; set; }
+
+    /// <summary>The app's main window, stamped at launch. Needed to parent WinUI pickers (FolderPicker etc.).</summary>
+    public static Microsoft.UI.Xaml.Window MainWindow { get; set; }
+
+    /// <summary>HWND of the main window for WinRT pickers/dialogs (InitializeWithWindow). Zero when not launched.</summary>
+    public static IntPtr MainWindowHandle =>
+        MainWindow == null ? IntPtr.Zero : WinRT.Interop.WindowNative.GetWindowHandle(MainWindow);
 
     public static IWindsorContainer Install()
     {

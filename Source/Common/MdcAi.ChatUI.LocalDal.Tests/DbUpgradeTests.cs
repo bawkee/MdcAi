@@ -126,6 +126,38 @@ public class DbUpgradeTests : IDisposable
     }
 
     [Fact]
+    public async Task Category_settings_workspace_tools_round_trip()
+    {
+        var dbPath = TempDb("settings-tools.db");
+
+        await using (var db = new UserProfileDbContext(dbPath))
+        {
+            await db.Database.MigrateAsync();
+
+            var settings = await db.ChatSettings.FirstAsync(s => s.IdSettings == "general");
+            settings.ToolsEnabled = true;
+            settings.WorkspacePath = @"C:\workspace";
+            await db.SaveChangesAsync();
+        }
+
+        // Reload in a fresh context - the category default persisted.
+        await using var reload = new UserProfileDbContext(dbPath);
+        var loaded = await reload.ChatSettings.FirstAsync(s => s.IdSettings == "general");
+        Assert.True(loaded.ToolsEnabled);
+        Assert.Equal(@"C:\workspace", loaded.WorkspacePath);
+
+        // Nulls are the "not configured" legacy state.
+        loaded.ToolsEnabled = null;
+        loaded.WorkspacePath = null;
+        await reload.SaveChangesAsync();
+
+        await using var verify = new UserProfileDbContext(dbPath);
+        var legacy = await verify.ChatSettings.FirstAsync(s => s.IdSettings == "general");
+        Assert.Null(legacy.ToolsEnabled);
+        Assert.Null(legacy.WorkspacePath);
+    }
+
+    [Fact]
     public async Task Background_jobs_round_trip_and_reconcile_on_restart()
     {
         var dbPath = TempDb("jobs.db");

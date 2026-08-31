@@ -340,4 +340,64 @@ public class ConversationVmTests
     }
 
     #endregion
+
+    #region Workspace tools (category default)
+
+    [Fact]
+    public async Task New_conversation_inherits_category_workspace_tools_default()
+    {
+        var (convo, _, _, chatSettings) = Make(("openai:ApiKey", "sk-oa"));
+        chatSettings.IdSettings = "general";
+        chatSettings.ToolsEnabled = true;      // category default from the category editor
+        chatSettings.WorkspacePath = @"C:\ws";
+
+        var user = new ChatMessageVm(convo, ChatMessageRole.User) { Content = "hi" };
+        convo.Head = user.Selector;            // triggers the 50ms apply throttle
+
+        await Task.Delay(200);
+
+        Assert.True(convo.IsNew);
+        Assert.True(convo.ToolsEnabled);
+        Assert.Equal(@"C:\ws", convo.WorkspacePath);
+    }
+
+    [Fact]
+    public async Task New_conversation_stays_off_when_category_default_is_off()
+    {
+        var (convo, _, _, chatSettings) = Make(("openai:ApiKey", "sk-oa"));
+        chatSettings.IdSettings = "general";
+        chatSettings.ToolsEnabled = false;     // category default off
+        chatSettings.WorkspacePath = null;
+
+        var user = new ChatMessageVm(convo, ChatMessageRole.User) { Content = "hi" };
+        convo.Head = user.Selector;
+
+        await Task.Delay(200);
+
+        Assert.False(convo.ToolsEnabled);
+        Assert.Null(convo.WorkspacePath);
+    }
+
+    [Fact]
+    public async Task Inherited_tools_never_clobber_a_deliberate_per_conversation_enable()
+    {
+        var (convo, _, _, chatSettings) = Make(("openai:ApiKey", "sk-oa"));
+        chatSettings.IdSettings = "general";
+        chatSettings.ToolsEnabled = true;
+        chatSettings.WorkspacePath = @"C:\default-ws";
+
+        // The conversation already enabled tools with ITS OWN workspace.
+        convo.ToolsEnabled = true;
+        convo.WorkspacePath = @"C:\mine";
+
+        var user = new ChatMessageVm(convo, ChatMessageRole.User) { Content = "hi" };
+        convo.Head = user.Selector;
+
+        await Task.Delay(200);
+
+        // The category default must NOT overwrite the conversation's own choice.
+        Assert.Equal(@"C:\mine", convo.WorkspacePath);
+    }
+
+    #endregion
 }

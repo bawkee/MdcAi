@@ -25,12 +25,19 @@ To download an unpackaged version of the app (no Microsoft Store, no installatio
 	- Semantic search can be done to easily find past chats.
  	- New conversations can be augmented with past ones, if the user chooses.
 - Multimodality with image-to-text and text-to-image capabilities (DALL-E).
-- Custom tools, aka function calling, in a nutshell a possibility to describe a Python class or Powershell script that the LLM can run during a conversation. For example, define a Powershell script that deactivates an active directory user, so if that LLM determines that you wish to deactivate the user, it will ask you for required parameters (i.e. username) and execute the script, outputting results.
 - An automated retrieval-augmented generation pipeline to be implemented using local storage. This includes a vector knowledge database of locally stored documents (such as PDFs and Word files) in a specified folder, enabling users to easily ask questions about their documents. Being a desktop app gives it a huge benefit of not having to upload large documents or pay for remote vector storage, you could theoretically put an entire library in it.
 - Multimodality to be extended to use self-hosted Flux or Stable Diffusion for image-to-image generation, as well as inpainting and outpainting of existing images. Being a desktop app, it would have the potential to auto-install the entire desired AI pipeline.
 - Possibility to Edit (correct) a bad completion directly instead of stacking multiple attempts of achieving the correct solution (thus stacking up context length and reducing prediction precision). Best example is with coding solutions where you hint to an incorrect code and instead of correcting the previous answer, it stacks up a new, possibly also incorrect answer, requiring another review. etc. which can add up and affect the performance and precision of future answers.
-- Implementing other API endpoints such as Claude, DeepSeek and Mistral.
+- Implementing other API endpoints such as Claude and Mistral.
 - Ability to auto-install and use self-hosted LLMs, similar to other chat UIs.
+- Direct DeepSeek provider (currently proven through OpenRouter; explicit provider routing is already in place).
+
+## Workspace Tools (experimental)
+- Per-conversation **Workspace tools** (off by default; enable + pick a workspace folder) turn MdcAi into a coding agent on the same pattern as the DeepSeek Harness: the model can read/list/search files, atomically write/patch files, and run PowerShell (all mutating/shell actions go through an inline approval card).
+- Long PowerShell runs become **background jobs** you can poll (`get_job`) and stop (`stop_job`); output is bounded with a consuming cursor.
+- One-shot **read-only helpers** (`delegate_task`) run bounded sub-inspections on the same loop without mutating anything.
+- The conversation can run as a **bounded multi-round goal** (round/token/cost caps; pause/resume; never auto-resumes after restart).
+- The transcript renders as typed activities: thinking, read, search, terminal, diff/proposed-applied, context, retry, turn usage — all replayable from persisted presentation intent.
 
 ## Current Features
 - **Multi-provider support**: OpenAI **and** OpenRouter out of the box. Settings shows each provider's own API-access section (keys stored separately in Windows Credentials), so you can configure as many providers as you like — any chat can use any provider depending on which model it's using. Model pickers group by provider first (OpenAI / OpenRouter submenus, then author within OpenRouter) so the full 400-model catalog stays navigable and it's always obvious where a model comes from.

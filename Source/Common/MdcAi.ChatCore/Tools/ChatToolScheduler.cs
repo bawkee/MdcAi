@@ -23,19 +23,23 @@ using Newtonsoft.Json.Linq;
 /// denied consent, timeout, nonzero exit, unknown tool - become structured <c>role:"tool"</c>
 /// results that continue the turn; they never crash it (DSH proposal §5.2).
 ///
-/// Phase 1 executes sequentially and always returns results in model order; bounded parallel
-/// scheduling of contiguous ParallelSafe calls is deferred to Phase 3. The execution mode on a
-/// tool definition must not bake sequential behavior in.
+/// Phase 3 (P3-08): contiguous ParallelSafe calls may execute concurrently on a bounded pool
+/// (default 4); approval/preflight still happens in model order; results are COMMITTED in model
+/// order. An Exclusive call is a barrier before and after itself. The execution mode on a tool
+/// definition is authoritative - never run writes/shell concurrently merely because the model
+/// emitted them together.
 /// </summary>
 public sealed class ChatToolScheduler
 {
     private readonly ChatToolRegistry _registry;
     private readonly int _maxConsecutiveRepeats;
+    private readonly int _parallelPool;
 
-    public ChatToolScheduler(ChatToolRegistry registry, int maxConsecutiveRepeats = 3)
+    public ChatToolScheduler(ChatToolRegistry registry, int maxConsecutiveRepeats = 3, int parallelPool = 4)
     {
         _registry = registry;
         _maxConsecutiveRepeats = maxConsecutiveRepeats;
+        _parallelPool = Math.Max(1, parallelPool);
     }
 
     public async ValueTask<IReadOnlyList<ChatToolResultRecord>> ExecuteAsync(
@@ -51,7 +55,8 @@ public sealed class ChatToolScheduler
         var consecutiveRepeats = 0;
         var concluded = false;
 
-        for (var i = 0; i < calls.Count; i++)
+        var i = 0;
+        while (i < calls.Count)
         {
             ct.ThrowIfCancellationRequested();
 
@@ -68,6 +73,7 @@ public sealed class ChatToolScheduler
                 var skipRecord = new ChatToolResultRecord(call.Id, name, i, skipped);
                 results.Add(skipRecord);
                 await sink.AppendToolResultAsync(skipRecord, ct);
+                i++;
                 continue;
             }
 
@@ -88,22 +94,64 @@ public sealed class ChatToolScheduler
                 break;
             }
 
-            var record = await ExecuteOneAsync(call, i, name, tool, turn, sink, readSet, stepNumber, ct);
-            results.Add(record);
-            await sink.AppendToolResultAsync(record, ct);
+            // Partition: a contiguous run of ParallelSafe calls can execute concurrently; an
+            // Exclusive call is a barrier it must run in its own group, alone. Consecutive
+            // IDENTICAL calls are never parallelized - they are the loop-guard's business.
+            var run = new List<int>();
+            var canParallel = _registry.TryGet(name, out var firstTool) && firstTool.ExecutionMode == ChatToolExecutionMode.ParallelSafe;
+            run.Add(i);
 
-            // Prior-step read observations register only AFTER the read result is durably
-            // committed - a read that never landed cannot authorize a later edit.
-            if (record.Result.Ok && record.Result.Observation != null)
-                readSet.Record(record.Result.Observation);
-
-            if (record.Result.ConcludesTurn)
+            if (canParallel)
             {
-                concluded = true;
-                continue;
+                var j = i + 1;
+                while (j < calls.Count)
+                {
+                    var nextName = calls[j].Function?.Name;
+                    var nextIsParallel = _registry.TryGet(nextName, out var nextTool)
+                                        && nextTool.ExecutionMode == ChatToolExecutionMode.ParallelSafe;
+                    if (!nextIsParallel)
+                        break;
+
+                    // A repeat of the last call in the run breaks the partition so the loop guard
+                    // can see and stop the 3rd consecutive identical call.
+                    if (string.Equals(BuildRepeatKey(calls[j]), BuildRepeatKey(calls[j - 1]), StringComparison.Ordinal))
+                        break;
+
+                    run.Add(j);
+                    j++;
+                }
             }
 
-            if (record.Result.Status == ChatToolStatus.Completed && isStateChanging)
+            var group = run.ToArray();
+
+            if (canParallel && group.Length > 1)
+            {
+                // Execute concurrently on a bounded pool; results come back per index so commit
+                // stays in MODEL order. The probability-loop repeat bookkeeping below only counts
+                // the first call of the group - a repeated call inside one parallel group is
+                // already suspicious and the model can see all results together.
+                var executed = await ExecuteGroupParallelAsync(calls, group, turn, sink, readSet, stepNumber, ct);
+                foreach (var rec in executed)
+                {
+                    results.Add(rec);
+                    await sink.AppendToolResultAsync(rec, ct);
+                    if (rec.Result.Ok && rec.Result.Observation != null)
+                        readSet.Record(rec.Result.Observation);
+                }
+            }
+            else
+            {
+                var record = await ExecuteOneAsync(call, i, name, tool, turn, sink, readSet, stepNumber, ct);
+                results.Add(record);
+                await sink.AppendToolResultAsync(record, ct);
+                if (record.Result.Ok && record.Result.Observation != null)
+                    readSet.Record(record.Result.Observation);
+            }
+
+            var firstExecuted = results[results.Count - group.Length];
+            if (firstExecuted.Result.ConcludesTurn)
+                concluded = true;
+            else if (firstExecuted.Result.Status == ChatToolStatus.Completed && isStateChanging)
             {
                 consecutiveRepeats = 0;
                 lastRepeatKey = null;
@@ -113,9 +161,52 @@ public sealed class ChatToolScheduler
                 consecutiveRepeats = repeatKey == lastRepeatKey ? consecutiveRepeats + 1 : 1;
                 lastRepeatKey = repeatKey;
             }
+
+            i += group.Length;
         }
 
         return results;
+    }
+
+    /// <summary>
+    /// Bounded parallel execution of a contiguous ParallelSafe run: approval/preflight happens
+    /// in MODEL order, execution overlaps on a small pool, and results are returned in model
+    /// order for ordered commit.
+    /// </summary>
+    private async ValueTask<ChatToolResultRecord[]> ExecuteGroupParallelAsync(
+        IReadOnlyList<ChatMessageToolCall> calls,
+        int[] group,
+        ChatTurnRequest turn,
+        IChatSessionSink sink,
+        WorkspaceReadObservationSet readSet,
+        int stepNumber,
+        CancellationToken ct)
+    {
+        var records = new ChatToolResultRecord[group.Length];
+        using var pool = new SemaphoreSlim(_parallelPool);
+
+        var tasks = new Task[group.Length];
+        for (var k = 0; k < group.Length; k++)
+        {
+            var idx = group[k];
+            var slot = k;
+            tasks[slot] = Task.Run(async () =>
+            {
+                await pool.WaitAsync(ct);
+                try
+                {
+                    records[slot] = await ExecuteOneAsync(calls[idx], idx, calls[idx].Function?.Name, null,
+                                                          turn, sink, readSet, stepNumber, ct);
+                }
+                finally
+                {
+                    pool.Release();
+                }
+            }, ct);
+        }
+
+        await Task.WhenAll(tasks);
+        return records;
     }
 
     private static string BuildRepeatKey(ChatMessageToolCall call)
@@ -172,10 +263,16 @@ public sealed class ChatToolScheduler
         // Unknown tool - a structured failure the model can recover from.
         if (string.IsNullOrEmpty(name) || tool == null)
         {
-            var fail = ErrorResult(
-                ChatToolStatus.Failed, "unknown_tool",
-                string.IsNullOrEmpty(name) ? "Tool call is missing a tool name." : $"Unknown or disabled tool '{name}'.");
-            return new ChatToolResultRecord(call.Id, name, callIndex, fail);
+            // Parallel groups pass null from the caller; resolve from the registry here.
+            if (!string.IsNullOrEmpty(name) && tool == null && _registry.TryGet(name, out var resolved))
+                tool = resolved;
+            else
+            {
+                var fail = ErrorResult(
+                    ChatToolStatus.Failed, "unknown_tool",
+                    string.IsNullOrEmpty(name) ? "Tool call is missing a tool name." : $"Unknown or disabled tool '{name}'.");
+                return new ChatToolResultRecord(call.Id, name, callIndex, fail);
+            }
         }
 
         // Arguments must parse as JSON.

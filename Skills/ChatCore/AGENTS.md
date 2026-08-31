@@ -12,15 +12,21 @@ Read this if you touch: the step loop, tool registry/execution, workspace securi
 |---|---|---|
 | Sessions | `Sessions/ChatSessionService.cs`, `ChatTurnRequest.cs`, `ChatTurnResult.cs`, `ChatSessionEvents.cs`, `ChatResponseAssembler.cs`, `ChatModelRequestRecovery.cs` | The turn/step driver, sink contract, streaming assembler, retry policy |
 | Prompting | `Prompting/ChatPromptBuilder.cs` | Ordered system-prompt sections; one system message |
-| Tools | `Tools/IChatTool.cs`, `ChatToolRegistry.cs`, `ChatToolScheduler.cs`, `ChatToolArgumentValidator.cs`, `Tools/BuiltIn/*` | Registry, host validation, scheduling, read/write/patch/PowerShell built-ins |
+| Tools | `Tools/IChatTool.cs`, `ChatToolRegistry.cs`, `ChatToolScheduler.cs`, `ChatToolArgumentValidator.cs`, `Tools/BuiltIn/*` | Registry, host validation, bounded parallel scheduling, read/write/patch/PowerShell/job/delegate/goal built-ins |
 | Security | `Security/WorkspacePathGuard.cs`, `WorkspaceReadObservationSet.cs`, `IChatToolApprovalService.cs` | Workspace boundary, prior-step read observations, approval seam |
 | Process | `Process/ChatProcessRunner.cs`, `SystemProcessRunner.cs` | Bounded, cancellable process execution (PowerShell backend) |
+| Jobs | `Jobs/*` | Background jobs: bounded output ring buffer + consuming cursor, per-conversation/app caps, ownership, shutdown |
+| Helpers | `Helpers/HelperSessionService.cs` | One-shot read-only child sessions on the SAME step loop (delegate_task) |
+| Goals | `Goals/*` | Durable goal state machine, budgets, exactly-once round admission, continuation controller |
+| Context | `Context/ChatContextPlanner.cs`, `WorkspaceContextDiscoveryService.cs` | Token estimator + atomic context-unit planning; AGENTS.md discovery/framing |
 
 Dependency rule: `MdcAi.ChatCore` → `MdcAi.OpenAiApi` only. It never references view models or EF entities; transcripts flow through `IChatSessionSink` (the ChatUI `ConversationChatSessionSink` is the main-conversation adapter, an in-memory sink exists for tests).
 
 ## The step loop in one paragraph
 
 A turn is zero or more steps; a step is ONE `chat/completions` request plus all the tool calls it returned. `ChatSessionService.RunTurnAsync` derives each request from the ACCEPTED transcript branch (sink), pins one stable assistant placeholder id per step, streams into a fresh `ChatResponseAssembler`, commits the assembled message, and — if it carries tool calls — runs them through `ChatToolScheduler`, which validates, approves, executes and commits results in MODEL order. The loop stops when the model returns no tool calls or a guard (MaxSteps/MaxTokens/loop) ends the turn with an explicit outcome.
+
+Scheduling (P3-08): contiguous `ParallelSafe` calls may execute concurrently on a bounded pool (default 4) with approval/preflight in model order and ordered commit; `Exclusive` calls are barriers before/after themselves; consecutive IDENTICAL calls are never parallelized (they belong to the loop guard). Writes/shell never run concurrently merely because the model emitted them together.
 
 Invariants that must NEVER break (the transcript validator in tests checks these):
 

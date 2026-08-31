@@ -92,6 +92,11 @@ public sealed class ChatToolScheduler
             results.Add(record);
             await sink.AppendToolResultAsync(record, ct);
 
+            // Prior-step read observations register only AFTER the read result is durably
+            // committed - a read that never landed cannot authorize a later edit.
+            if (record.Result.Ok && record.Result.Observation != null)
+                readSet.Record(record.Result.Observation);
+
             if (record.Result.ConcludesTurn)
             {
                 concluded = true;

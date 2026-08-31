@@ -39,7 +39,9 @@ public enum ChatToolRisk
 /// The canonical execution result. <see cref="Value"/> is the structured result retained for
 /// audit/UI; <see cref="ModelContent"/> is the bounded exact string sent to the model as the
 /// <c>role:"tool"</c> content. <see cref="ConcludesTurn"/> is host-only (terminal goal tools)
-/// and never serializes into the model-facing result.
+/// and never serializes into the model-facing result. <see cref="Observation"/> is the prior-step
+/// read observation a file-read tool wants registered AFTER its result is durably committed -
+/// the optimistic-concurrency guard behind read-before-write (host-only, never serialized).
 /// </summary>
 public sealed record ChatToolExecutionResult(
     bool Ok,
@@ -51,10 +53,14 @@ public sealed record ChatToolExecutionResult(
     bool ConcludesTurn = false,
     bool Truncated = false,
     long? TotalBytes = null,
-    string ArtifactId = null)
+    string ArtifactId = null,
+    FileReadObservation Observation = null)
 {
     public static ChatToolExecutionResult Success(JToken value, string modelContent) =>
         new(true, ChatToolStatus.Completed, value, modelContent);
+
+    public static ChatToolExecutionResult Success(JToken value, string modelContent, FileReadObservation observation) =>
+        new(true, ChatToolStatus.Completed, value, modelContent, Observation: observation);
 
     public static ChatToolExecutionResult Failure(ChatToolStatus status, string errorCode, string summary) =>
         new(false, status, null, summary, errorCode);

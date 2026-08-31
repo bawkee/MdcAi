@@ -14,10 +14,13 @@
 namespace MdcAi.ChatUI.ViewModels;
 
 using LocalDal;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using OpenAiApi;
 
 public static class ChatMessageVmExt
 {
+    /// <summary>Walks the CURRENT selected branch as ChatMessageVm nodes (Head → Tail).</summary>
     public static IEnumerable<ChatMessageVm> GetNextMessages(this ChatMessageVm head)
     {
         var message = head;
@@ -27,6 +30,40 @@ public static class ChatMessageVmExt
             message = message.Next?.Selector.Message;
         }
     }
+
+    /// <summary>
+    /// The exact protocol message for this node. This is the ONLY history source for the
+    /// agentic loop: every request is derived from the accepted fork, never a private list.
+    /// </summary>
+    public static ChatMessage ToProtocolMessage(this ChatMessageVm m)
+    {
+        if (m == null)
+            return null;
+
+        return new ChatMessage
+        {
+            Role = m.Role,
+            Content = m.Content,
+            ReasoningContent = m.ReasoningContent,
+            ReasoningRaw = m.ReasoningRaw?.DeepClone() as JToken,
+            ReasoningDetails = m.ReasoningDetails?.DeepClone() as JArray,
+            ToolCalls = m.ToolCalls?.Select(tc => new ChatMessageToolCall(tc)).ToArray(),
+            ToolCallId = m.ToolCallId
+        };
+    }
+
+    /// <summary>
+    /// The current selected branch projected into protocol messages, excluding an optional
+    /// in-flight assistant node (the driver holds one stable placeholder while it streams).
+    /// Protocol order is the branch order; reasoning/tool continuity is preserved exactly.
+    /// </summary>
+    public static List<ChatMessage> ToProtocolBranch(this ConversationVm conversation, string excludeMessageId = null) =>
+        conversation.Head?.Message
+                    .GetNextMessages()
+                    .Where(m => m.Id != excludeMessageId)
+                    .Select(m => m.ToProtocolMessage())
+                    .Where(m => m != null)
+                    .ToList() ?? new List<ChatMessage>();
 
     public static WebViewChatMessageDto GetWebViewDto(this ChatMessageVm m)
     {
@@ -65,6 +102,11 @@ public static class ChatMessageVmExt
         };
     }
 
+    /// <summary>
+    /// Flattens the fork tree into DbMessage rows with the FULL protocol surface. The wire
+    /// arrays stay authoritative JSON; the renderable text and structured reasoning are kept
+    /// apart so replay never depends on parsing prose.
+    /// </summary>
     public static IEnumerable<DbMessage> ToDbMessages(this ChatMessageVm source, int idx = 0)
     {
         if (source == null)
@@ -84,7 +126,17 @@ public static class ChatMessageVmExt
                 Version = v + 1,
                 Model = m.Model,
                 Effort = m.Effort,
-                Reasoning = m.ReasoningContent
+                Reasoning = m.ReasoningContent,
+                ProviderKey = m.ProviderKey,
+                Origin = m.Origin,
+                CompletionState = m.CompletionState,
+                FinishReason = m.FinishReason,
+                ToolCallsJson = m.ToolCalls == null ? null : JsonConvert.SerializeObject(m.ToolCalls),
+                ToolCallId = m.ToolCallId,
+                ToolName = m.ToolName,
+                ToolResultJson = m.ToolResultJson?.ToString(Formatting.None),
+                ReasoningRawJson = m.ReasoningRaw?.ToString(Formatting.None),
+                ReasoningDetailsJson = m.ReasoningDetails?.ToString(Formatting.None)
             };
 
             var children = m.Next?.ToDbMessages(idx + 1) ?? Enumerable.Empty<DbMessage>();
@@ -132,6 +184,24 @@ public static class ChatMessageVmExt
             message.Model = dbMessage.Model;
             message.Effort = dbMessage.Effort;
             message.ReasoningContent = dbMessage.Reasoning;
+            message.ProviderKey = dbMessage.ProviderKey;
+            message.Origin = dbMessage.Origin;
+            message.CompletionState = dbMessage.CompletionState;
+            message.FinishReason = dbMessage.FinishReason;
+            message.ToolCallId = dbMessage.ToolCallId;
+            message.ToolName = dbMessage.ToolName;
+            message.ToolResultJson = string.IsNullOrEmpty(dbMessage.ToolResultJson)
+                                         ? null
+                                         : JToken.Parse(dbMessage.ToolResultJson);
+            message.ToolCalls = string.IsNullOrEmpty(dbMessage.ToolCallsJson)
+                                    ? null
+                                    : JsonConvert.DeserializeObject<ChatMessageToolCall[]>(dbMessage.ToolCallsJson);
+            message.ReasoningRaw = string.IsNullOrEmpty(dbMessage.ReasoningRawJson)
+                                       ? null
+                                       : JToken.Parse(dbMessage.ReasoningRawJson);
+            message.ReasoningDetails = string.IsNullOrEmpty(dbMessage.ReasoningDetailsJson)
+                                           ? null
+                                           : JArray.Parse(dbMessage.ReasoningDetailsJson);
 
             SetNext(message);
         }

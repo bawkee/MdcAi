@@ -1,4 +1,4 @@
-﻿#region Copyright Notice
+#region Copyright Notice
 // Copyright (c) 2023 Bojan Sala
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -32,7 +32,9 @@ public static class ConversationVmExt
             Messages = messages.ToList(),
             IdCategory = source.IdCategory,
             IsTrash = source.IsTrash,
-            IdSettingsOverride = source.IdSettingsOverride
+            IdSettingsOverride = source.IdSettingsOverride,
+            ToolsEnabled = source.ToolsEnabled,
+            WorkspacePath = source.WorkspacePath
         };
 
         return convo;

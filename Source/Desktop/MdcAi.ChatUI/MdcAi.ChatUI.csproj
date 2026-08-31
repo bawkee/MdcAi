@@ -50,6 +50,7 @@
     <ProjectReference Include="..\MdcAi.Extensions.WinUI\MdcAi.Extensions.WinUI.csproj" />
     <ProjectReference Include="..\..\Common\MdcAi.OpenAiApi\MdcAi.OpenAiApi.csproj" />
     <ProjectReference Include="..\MdcAi.ChatUI.LocalDal\MdcAi.ChatUI.LocalDal.csproj" />
+    <ProjectReference Include="..\..\Common\MdcAi.ChatCore\MdcAi.ChatCore.csproj" />
   </ItemGroup>    
 
   <ItemGroup>

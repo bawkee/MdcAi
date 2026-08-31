@@ -37,6 +37,11 @@ public sealed class FakeOpenAiApi : IOpenAiApi
     private readonly Dictionary<string, string> _keys = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, AiModel[]> _models = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>Scripted streaming responses, one IAsyncEnumerable per request (agentic tests).</summary>
+    public Queue<IAsyncEnumerable<ChatResult>> ScriptedStreams { get; } = new();
+
+    public List<ChatRequest> Requests { get; } = new();
+
     public AiProvider ActiveProvider { get; set; } = AiProviders.Default;
     public IReadOnlyList<AiProvider> Providers => AiProviders.All;
 
@@ -85,8 +90,10 @@ public sealed class FakeOpenAiApi : IOpenAiApi
         return Task.FromResult(all.ToArray());
     }
 
-    public Task<ChatResult> CreateChatCompletions(ChatRequest request) =>
-        Task.FromResult(new ChatResult
+    public Task<ChatResult> CreateChatCompletions(ChatRequest request)
+    {
+        Requests.Add(request);
+        return Task.FromResult(new ChatResult
         {
             Id = "chatcmpl-test",
             Model = request.Model,
@@ -99,6 +106,7 @@ public sealed class FakeOpenAiApi : IOpenAiApi
                 }
             }
         });
+    }
 
     public Task<ChatResult> CreateChatCompletions(ChatRequest request, CancellationToken ct)
     {
@@ -112,8 +120,56 @@ public sealed class FakeOpenAiApi : IOpenAiApi
         yield return result;
     }
 
-    public IAsyncEnumerable<ChatResult> CreateChatCompletionsStream(ChatRequest request, CancellationToken ct) =>
-        CreateChatCompletionsStream(request);
+    public IAsyncEnumerable<ChatResult> CreateChatCompletionsStream(ChatRequest request, CancellationToken ct)
+    {
+        Requests.Add(request);
+
+        if (ScriptedStreams.Count > 0)
+            return new CtAwareEnumerable(ScriptedStreams.Dequeue(), ct);
+
+        return CreateChatCompletionsStream(request);
+    }
+
+    /// <summary>
+    /// Wraps a scripted stream so a blocking MoveNextAsync observes the caller's token - the
+    /// agentic loop must be stoppable mid-stream.
+    /// </summary>
+    private sealed class CtAwareEnumerable : IAsyncEnumerable<ChatResult>
+    {
+        private readonly IAsyncEnumerable<ChatResult> _inner;
+        private readonly CancellationToken _token;
+
+        public CtAwareEnumerable(IAsyncEnumerable<ChatResult> inner, CancellationToken token)
+        {
+            _inner = inner;
+            _token = token;
+        }
+
+        public IAsyncEnumerator<ChatResult> GetAsyncEnumerator(CancellationToken ct) =>
+            new Enumerator(_inner.GetAsyncEnumerator(ct), _token);
+
+        private sealed class Enumerator : IAsyncEnumerator<ChatResult>
+        {
+            private readonly IAsyncEnumerator<ChatResult> _inner;
+            private readonly CancellationToken _token;
+
+            public Enumerator(IAsyncEnumerator<ChatResult> inner, CancellationToken token)
+            {
+                _inner = inner;
+                _token = token;
+            }
+
+            public ChatResult Current => _inner.Current;
+
+            public async ValueTask<bool> MoveNextAsync()
+            {
+                using var linked = CancellationTokenSource.CreateLinkedTokenSource(_token);
+                return await _inner.MoveNextAsync().AsTask().WaitAsync(linked.Token);
+            }
+
+            public ValueTask DisposeAsync() => _inner.DisposeAsync();
+        }
+    }
 }
 
 /// <summary>

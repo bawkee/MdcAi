@@ -21,6 +21,8 @@ using LocalDal;
 using Microsoft.EntityFrameworkCore;
 using Mapster;
 using Properties;
+using MdcAi.ChatUI.Sessions;
+using MdcAi.ChatCore.Sessions;
 
 public class ConversationVm : ActivatableViewModel, ILogging
 {
@@ -86,6 +88,13 @@ public class ConversationVm : ActivatableViewModel, ILogging
     [Reactive] public bool ShowGettingStartedTips { get; private set; }
     [Reactive] public bool ShowReadOnlyNotice { get; private set; }
 
+    /// <summary>Workspace tools are OFF by default; enabling requires a workspace folder.
+    /// Per-conversation on purpose - never silently global (DSH proposal §6.4).</summary>
+    [Reactive] public bool ToolsEnabled { get; set; }
+
+    /// <summary>Selected workspace folder for this conversation; null until tools are enabled.</summary>
+    [Reactive] public string WorkspacePath { get; set; }
+
     public ReactiveCommand<Unit, Unit> DebugGeneratePromptCmd { get; }
     public ReactiveCommand<Unit, Unit> EditSelectedCmd { get; }
     public ReactiveCommand<Unit, Unit> CancelEditCmd { get; }
@@ -106,9 +115,17 @@ public class ConversationVm : ActivatableViewModel, ILogging
     [Reactive] public ReactiveCommand<Unit, bool> EditSettingsCmd { get; set; }
     public ReactiveCommand<Unit, Unit> TurnOffGettingStartedTipCmd { get; }
 
+    /// <summary>Explicit agentic turn runner (DSH proposal §4): tool-enabled conversations run
+    /// their whole step loop through ChatSessionService instead of the tail-driven surrogate.</summary>
+    public ReactiveCommand<Unit, Unit> RunTurnCmd { get; }
+    public ReactiveCommand<Unit, Unit> StopSessionCmd { get; }
+
     [Reactive] public ObservableCollection<ChatMessageVm> Messages { get; set; }
     [Reactive] public WebViewRequestDto LastMessagesRequest { get; set; }
     public HashSet<string> MessageTrashBin { get; } = new();
+
+    private readonly ChatCore.Sessions.ChatSessionService _sessionService;
+    private readonly Sessions.ConversationSessionController _controller;
 
     public ConversationVm(IOpenAiApi api, SettingsVm globalSettings, ChatSettingsVm chatSettings)
     {
@@ -119,6 +136,45 @@ public class ConversationVm : ActivatableViewModel, ILogging
         CreatedTs = DateTime.Now;
         Name = "My Conversation";
         IsNew = true;
+
+        // Agentic machinery: one shared registry/service (stateless across turns) and one
+        // turn controller, so a conversation is never executing two agentic turns at once.
+        _sessionService = ConversationSessionServices.Create(api);
+        _controller = new ConversationSessionController();
+
+        // Explicit agentic turn runner. Tools-enabled conversations are the ONLY path through
+        // ChatSessionService for now; the classic tail-driven subscription below stays for
+        // tool-disabled chat until the full switch-over (DSH proposal §17.2).
+        RunTurnCmd = ReactiveCommand.CreateFromTask(async () =>
+        {
+            var turn = BuildAgenticTurn();
+            var sink = new ConversationChatSessionSink(this);
+            sink.StartTurn(new SessionTurnContext(
+                turn.TurnId,
+                turn.TriggerMessageId,
+                turn.ProviderKey,
+                turn.Model,
+                turn.Effort,
+                turn.WorkspacePath,
+                turn.Origin.ToString().ToLowerInvariant()));
+
+            await _controller.RunAsync(async ct =>
+                await _sessionService.RunTurnAsync(turn, sink, ct));
+        });
+
+        StopSessionCmd = ReactiveCommand.Create(
+            () => _controller.Stop(),
+            this.WhenAnyValue(vm => vm.IsCompleting));
+
+        // In agentic mode the controller drives IsCompleting; the classic mode has its own
+        // subscription below (they are mutually exclusive via ToolsEnabled).
+        Observable.FromEvent(h => _controller.ActiveChanged += h, h => _controller.ActiveChanged -= h)
+                  .StartWith(Unit.Default)
+                  .Select(_ => _controller.IsTurnActive)
+                  .ObserveOnMainThread()
+                  .Where(_ => ToolsEnabled)
+                  .Do(active => IsCompleting = active)
+                  .SubscribeSafe();
 
         // When Head is set, automatically track the entire tree and all its forks to set the Tail. This structure is a tree but it 
         // renders a simple linked list so it is crucial that we always have the current head and tail.
@@ -197,8 +253,16 @@ public class ConversationVm : ActivatableViewModel, ILogging
                 .Select(m => m?.Message.Role == ChatMessageRole.User));
 
         RegenerateSelectedCmd = ReactiveCommand.CreateFromObservable(
-            () => SelectedMessage.Message.CompleteCmd.Execute(Unit.Default)
-                                 .Select(_ => Unit.Default),
+            () =>
+            {
+                // Agentic regenerate = re-run ONLY the final model step over the already
+                // accepted tool results. It must never repeat writes or PowerShell.
+                if (ToolsEnabled)
+                    return RegenerateAgenticTail();
+
+                return SelectedMessage.Message.CompleteCmd.Execute(Unit.Default)
+                                     .Select(_ => Unit.Default);
+            },
             this.WhenAnyValue(vm => vm.CanRegenerate));
 
         Observable.CombineLatest(
@@ -236,6 +300,11 @@ public class ConversationVm : ActivatableViewModel, ILogging
                           Head = data.Message.Selector;
                       else
                           Tail.Message.Next = data.Message;
+
+                      // Agentic conversation: the user message is appended, then the explicit
+                      // turn runner takes over (the tail-driven subscription is off for tools).
+                      if (ToolsEnabled)
+                          RunTurnCmd.Execute().Subscribe();
                   })
                   .Select(_ => Unit.Default),
             this.WhenAnyValue(vm => vm.CanSendPrompt));
@@ -245,10 +314,12 @@ public class ConversationVm : ActivatableViewModel, ILogging
 
         this.WhenAnyValue(vm => vm.IsLoadingModels,
                           vm => vm.Prompt.Contents,
-                          vm => vm.IsAIReady)
+                          vm => vm.IsAIReady,
+                          vm => vm.IsCompleting)
             .Do(x => CanSendPrompt = !x.Item1 &&
                                      !string.IsNullOrEmpty(x.Item2) &&
-                                     IsAIReady)
+                                     x.Item3 &&
+                                     !x.Item4)
             .SubscribeSafe();
 
         SelectCmd = ReactiveCommand.Create((string m) =>
@@ -371,6 +442,8 @@ public class ConversationVm : ActivatableViewModel, ILogging
                                 IdCategory = convo.IdCategory;
                                 IdSettingsOverride = convo.IdSettingsOverride;
                                 IsTrash = convo.IsTrash;
+                                ToolsEnabled = convo.ToolsEnabled;
+                                WorkspacePath = convo.WorkspacePath;
                                 Head = convo.Messages.FromDbMessages(this);
                                 IsNew = false;
                             }));
@@ -499,8 +572,11 @@ public class ConversationVm : ActivatableViewModel, ILogging
                                 this.Adapt(existingConvo);
                                 await token.Ctx.Messages.Where(m => MessageTrashBin.Contains(m.IdMessage))
                                            .ExecuteDeleteAsync();
-                                await Task.WhenAll(
-                                    convo.Messages.Select(msg => token.Ctx.Messages.Upsert(msg).RunAsync()));
+                                // Sequential upserts on ONE context - EF contexts are not
+                                // thread-safe, so Task.WhenAll over the same context is unsafe
+                                // (DSH proposal §6.5). Ordered writes inside the transaction.
+                                foreach (var msg in convo.Messages)
+                                    await token.Ctx.Messages.Upsert(msg).RunAsync();
                             }
 
                             await token.Ctx.SaveChangesAsync();
@@ -530,14 +606,18 @@ public class ConversationVm : ActivatableViewModel, ILogging
         // conversation already owns its own VM instance (created lazily on first open, retained
         // afterwards), so ctor-level subscriptions let any number of conversations stream in
         // parallel without interfering with each other or with the visible UI.
-        this.WhenAnyValue(vm => vm.Tail)
-            .Where(t => t?.Message.Role == ChatMessageRole.User)
-            .Select(t => new
+        //
+        // Agentic conversations (ToolsEnabled) deliberately do NOT use this tail-driven
+        // surrogate: appending assistant/tool nodes changes Tail repeatedly, which would cancel
+        // and replace work mid-turn. They run through RunTurnCmd explicitly (DSH §4).
+        this.WhenAnyValue(vm => vm.Tail, vm => vm.ToolsEnabled)
+            .Where(x => x.Item1?.Message.Role == ChatMessageRole.User && !x.Item2)
+            .Select(x => new
             {
-                Tail = t,
+                Tail = x.Item1,
                 Completion = new ChatMessageVm(this, ChatMessageRole.Assistant)
                 {
-                    Previous = t.Message
+                    Previous = x.Item1.Message
                 }
             })
             .Do(x => x.Tail.Message.Next = x.Completion)
@@ -546,10 +626,12 @@ public class ConversationVm : ActivatableViewModel, ILogging
             .Retry()
             .SubscribeSafe();
 
-        this.WhenAnyValue(vm => vm.Tail)
-            .Where(t => t?.Message?.Role == ChatMessageRole.Assistant)
-            .Select(t => t.Message.CompleteCmd
-                          .Select(_ => t.Message.WhenAnyValue(m => m.IsCompleting))
+        // Classic (tools-disabled) IsCompleting follows the tail assistant's CompleteCmd; the
+        // agentic path drives IsCompleting from the controller instead.
+        this.WhenAnyValue(vm => vm.Tail, vm => vm.ToolsEnabled)
+            .Where(x => x.Item1?.Message?.Role == ChatMessageRole.Assistant && !x.Item2)
+            .Select(x => x.Item1.Message.CompleteCmd
+                          .Select(_ => x.Item1.Message.WhenAnyValue(m => m.IsCompleting))
                           .Switch())
             .Switch()
             .ObserveOnMainThread()
@@ -796,6 +878,56 @@ public class ConversationVm : ActivatableViewModel, ILogging
             return modelId;
 
         return $"{AiProviders.Get(model.ProviderKey).DisplayName} · {model.DisplayLabel}";
+    }
+
+    /// <summary>Which provider the current working model belongs to (catalog-stamped when
+    /// available, legacy slash heuristic otherwise).</summary>
+    public string ResolveProviderKey() =>
+        Models?.FirstOrDefault(m => m.ModelID == SelectedModel)?.ProviderKey
+        ?? AiProviders.GetProviderForModelId(SelectedModel).Key;
+
+    /// <summary>
+    /// Builds the immutable agentic turn request. Provider/model/effort/tool schema are stamped
+    /// once at turn start and never vary mid-turn (DSH proposal §9.2).
+    /// </summary>
+    private ChatTurnRequest BuildAgenticTurn()
+    {
+        var trigger = Head?.Message.GetNextMessages()
+                           .LastOrDefault(m => m.Role == ChatMessageRole.User);
+
+        return new ChatTurnRequest(
+            Id,
+            "turn-" + Guid.NewGuid().ToString("N"),
+            trigger?.Id,
+            ResolveProviderKey(),
+            SelectedModel,
+            SelectedEffort,
+            Settings.Premise,
+            WorkspacePath,
+            ToolsEnabled ? ConversationSessionServices.BuiltInToolNames : Array.Empty<string>(),
+            ChatTurnOrigin.Human,
+            null, // Phase 1: no approval UI yet - mutating/process tools deny by policy
+            ChatTurnLimits.Default);
+    }
+
+    /// <summary>
+    /// Agentic regenerate: drop the final assistant node and re-run the LAST model step from the
+    /// already accepted tool results. Never repeats writes or PowerShell - the tool results are
+    /// already in the transcript the next request is derived from.
+    /// </summary>
+    private IObservable<Unit> RegenerateAgenticTail()
+    {
+        return Observable.Defer(() =>
+        {
+            var tail = SelectedMessage.Message;
+
+            if (tail.Previous != null)
+                tail.Previous.Next = null;
+            else
+                Head = null;
+
+            return RunTurnCmd.Execute();
+        });
     }
 
     // Allows you to track `Next` property of an item including all the subsequent items in the list. Always ticks the

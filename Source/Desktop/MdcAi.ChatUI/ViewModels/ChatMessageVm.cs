@@ -19,9 +19,13 @@ using Windows.Storage;
 using Markdig;
 using System.Web;
 using OpenAiApi;
+using Newtonsoft.Json.Linq;
 
 /// <summary>
 /// This is a doubly linked list, plus each message can diverge and we keep all the versions.
+/// A node is the TRANSCRIPT/presentation side of one protocol message: the raw wire fields
+/// (tool calls, structured reasoning, tool call id, provider key) live here so the fork tree
+/// round-trips WITHOUT reconstruction from display state (DSH proposal §5.3 / §9.1).
 /// </summary>
 public class ChatMessageVm : ViewModel, ILogging
 {
@@ -46,6 +50,14 @@ public class ChatMessageVm : ViewModel, ILogging
     /// <see cref="Content"/>; null/empty on user messages and on models that never think.</summary>
     [Reactive] public string ReasoningContent { get; set; }
 
+    /// <summary>Raw OpenRouter `reasoning` value (string or structured) - protocol replay state,
+    /// independent of the display text. Null when absent.</summary>
+    public JToken ReasoningRaw { get; set; }
+
+    /// <summary>Raw ordered `reasoning_details` array (may be signed/encrypted); kept
+    /// byte/sequence faithful for replay. Null when absent.</summary>
+    public JArray ReasoningDetails { get; set; }
+
     /// <summary>Markdig-rendered HTML of <see cref="ReasoningContent"/> - what the renderer
     /// expands to when the user opens the thinking block. Empty string when there's nothing
     /// to show.</summary>
@@ -60,6 +72,33 @@ public class ChatMessageVm : ViewModel, ILogging
     public ChatMessageVm Previous { get; set; } // Previous item        
     [Reactive] public ChatMessageVm Next { get; set; } // Next item
     [Reactive] public bool IsCompleting { get; private set; } // Whether completion is in progress
+
+    // --- Phase 1 agentic protocol surface ---
+
+    /// <summary>Exact ordered tool calls of this assistant message (wire shape). Never
+    /// reconstructed from tool cards; kept with the message.</summary>
+    [Reactive] public ChatMessageToolCall[] ToolCalls { get; set; }
+
+    /// <summary>Wire tool_call_id on a role:"tool" result message.</summary>
+    [Reactive] public string ToolCallId { get; set; }
+
+    /// <summary>Tool name on a role:"tool" result message.</summary>
+    [Reactive] public string ToolName { get; set; }
+
+    /// <summary>Canonical structured tool result (audit/UI); Content stays the exact bounded model-visible string.</summary>
+    public JToken ToolResultJson { get; set; }
+
+    /// <summary>Which provider produced this message; null on legacy rows (heuristic then).</summary>
+    [Reactive] public string ProviderKey { get; set; }
+
+    /// <summary>Provenance, not display: human | model | tool | goal | job | workspace_context | summary | subagent.</summary>
+    [Reactive] public string Origin { get; set; }
+
+    /// <summary>pending | streaming | completed | interrupted | failed. Null on legacy rows.</summary>
+    [Reactive] public string CompletionState { get; set; }
+
+    /// <summary>Provider finish_reason ("stop", "length", "tool_calls", ...).</summary>
+    [Reactive] public string FinishReason { get; set; }
 
     public ReactiveCommand<Unit, (string Content, string Reasoning)> CompleteCmd { get; }
     public ReactiveCommand<Unit, Unit> StopCompletionCmd { get; }
@@ -330,11 +369,21 @@ public class ChatMessageVm : ViewModel, ILogging
         return req;
     }
 
+    /// <summary>
+    /// The exact protocol message for this node - content, tool calls and reasoning preserved
+    /// together (DSH proposal §5.3). This is what the fork projection feeds every request
+    /// history; NEVER reconstruct a tool-calling assistant from display state.
+    /// </summary>
     private ChatMessage CreateMessageRequest() =>
         new()
         {
+            Role = Role,
             Content = Content,
-            Role = Role
+            ReasoningContent = ReasoningContent,
+            ReasoningRaw = ReasoningRaw?.DeepClone() as JToken,
+            ReasoningDetails = ReasoningDetails?.DeepClone() as JArray,
+            ToolCalls = ToolCalls?.Select(tc => new ChatMessageToolCall(tc)).ToArray(),
+            ToolCallId = ToolCallId
         };
 }
 

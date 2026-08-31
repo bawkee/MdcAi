@@ -126,6 +126,64 @@ public class DbUpgradeTests : IDisposable
     }
 
     [Fact]
+    public async Task Background_jobs_round_trip_and_reconcile_on_restart()
+    {
+        var dbPath = TempDb("jobs.db");
+
+        await using (var db = new UserProfileDbContext(dbPath))
+        {
+            await db.Database.MigrateAsync();
+
+            db.BackgroundJobs.Add(new DbBackgroundJob
+            {
+                IdJob = "job-running",
+                OwnerConversationId = "c-1",
+                OwnerTurnId = "turn-1",
+                ToolCallId = "call_1",
+                OwnerToolName = "run_powershell",
+                Kind = "powershell",
+                Status = "running",
+                StartedUtc = DateTime.UtcNow,
+                CommandPresentationHash = "abc123",
+                OutputBytes = 10,
+                OutputTruncated = false
+            });
+
+            db.BackgroundJobs.Add(new DbBackgroundJob
+            {
+                IdJob = "job-done",
+                OwnerConversationId = "c-1",
+                Kind = "powershell",
+                Status = "completed",
+                StartedUtc = DateTime.UtcNow.AddMinutes(-1),
+                EndedUtc = DateTime.UtcNow,
+                ExitCode = 0,
+                OutputBytes = 100
+            });
+
+            await db.SaveChangesAsync();
+        }
+
+        // Restart: nonterminal jobs become killed/interrupted - no process reattach.
+        await using (var reload = new UserProfileDbContext(dbPath))
+        {
+            var running = await reload.BackgroundJobs.FirstAsync(j => j.IdJob == "job-running");
+            Assert.Equal("running", running.Status);
+
+            running.Status = "killed";
+            running.EndedUtc = DateTime.UtcNow;
+            running.FailureSummary = "Interrupted on app restart; cannot be resumed.";
+            await reload.SaveChangesAsync();
+        }
+
+        // The terminal job is untouched; the killed job carries the honest notice.
+        await using var verify = new UserProfileDbContext(dbPath);
+        Assert.Equal("completed", (await verify.BackgroundJobs.FirstAsync(j => j.IdJob == "job-done")).Status);
+        Assert.Equal("killed", (await verify.BackgroundJobs.FirstAsync(j => j.IdJob == "job-running")).Status);
+        Assert.Contains("Interrupted on app restart", (await verify.BackgroundJobs.FirstAsync(j => j.IdJob == "job-running")).FailureSummary);
+    }
+
+    [Fact]
     public async Task Agentic_checkpoints_round_trip_through_ef()
     {
         var dbPath = TempDb("agentic.db");

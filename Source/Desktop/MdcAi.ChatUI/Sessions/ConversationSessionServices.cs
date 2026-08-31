@@ -29,7 +29,8 @@ public static class ConversationSessionServices
 
     public static IReadOnlyList<string> BuiltInToolNames { get; } = new[]
     {
-        "read_file", "list_dir", "grep", "write_file", "patch_file", "run_powershell"
+        "read_file", "list_dir", "grep", "write_file", "patch_file", "run_powershell",
+        "get_job", "stop_job"
     };
 
     public static ChatToolRegistry Registry =>
@@ -40,7 +41,9 @@ public static class ConversationSessionServices
             new GrepChatTool(),
             new WriteFileChatTool(),
             new PatchFileChatTool(),
-            new RunPowerShellChatTool()
+            new RunPowerShellChatTool(),
+            new GetJobChatTool(),
+            new StopJobChatTool()
         });
 
     public static ChatSessionService Create(IOpenAiApi api) => new(api, Registry);

@@ -26,6 +26,7 @@ public class UserProfileDbContext : DbContext
     public DbSet<DbChatStep> Steps { get; set; }
     public DbSet<DbModelRequestAttempt> ModelRequestAttempts { get; set; }
     public DbSet<DbToolCall> ToolCalls { get; set; }
+    public DbSet<DbBackgroundJob> BackgroundJobs { get; set; }
 
     public string DbPath { get; }
     public Action<string> Log { get; set; }
@@ -137,6 +138,12 @@ public class UserProfileDbContext : DbContext
 
         modelBuilder.Entity<DbChatTurn>()
                     .HasIndex(t => t.IdTriggerMessage);
+
+        modelBuilder.Entity<DbBackgroundJob>()
+                    .HasIndex(j => j.OwnerConversationId);
+
+        modelBuilder.Entity<DbBackgroundJob>()
+                    .HasIndex(j => j.Status);
 
         modelBuilder.Entity<DbChatSettings>()
                     .HasData(CreateDefaultChatSettings("general"));

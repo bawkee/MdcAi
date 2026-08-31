@@ -13,35 +13,41 @@
 
 namespace MdcAi.ChatCore.Tools.BuiltIn;
 
+using MdcAi.ChatCore.Jobs;
 using MdcAi.ChatCore.Process;
-using MdcAi.ChatCore.Security;
 
 /// <summary>
 /// run_powershell: executes an exact script through pwsh.exe with redirected stdin
 /// (-NoLogo -NoProfile -NonInteractive), drains stdout/stderr concurrently, bounds retained
 /// output, and kills the whole process tree on timeout/cancellation. A nonzero exit is a
-/// COMPLETED tool result with ok:false - never a thrown loop exception. PowerShell is
-/// full-trust: the approval copy says plainly it can touch anything the user can.
+/// COMPLETED tool result with ok:false - never a thrown loop exception.
+///
+/// When a conversation-level background-job service is present (Phase 3A), execution goes
+/// through the JOB path: the process starts as a job, a short fast-path window is awaited, and
+/// a still-running command returns status:"running" + job_id so the model polls with get_job.
+/// PowerShell is full-trust: the approval copy says plainly it can touch anything the user can.
 /// </summary>
-public sealed class RunPowerShellChatTool : WorkspaceToolBase
+public sealed class RunPowerShellChatTool : IChatTool
 {
     public const int DefaultTimeoutMs = 120_000;
 
     private readonly IChatProcessRunner _runner;
     private readonly Func<string> _pwshResolver;
+    private readonly int _fastPathWaitMs;
 
-    public RunPowerShellChatTool(IChatProcessRunner runner = null, Func<string> pwshResolver = null)
+    public RunPowerShellChatTool(IChatProcessRunner runner = null, Func<string> pwshResolver = null, int? fastPathWaitMs = null)
     {
         _runner = runner ?? new SystemProcessRunner();
         _pwshResolver = pwshResolver ?? ResolvePwsh;
+        _fastPathWaitMs = fastPathWaitMs ?? JobServiceOptions.Default.FastPathWaitMs;
     }
 
-    public override string Name => "run_powershell";
-    public override string Description =>
+    public string Name => "run_powershell";
+    public string Description =>
         "Run a PowerShell 7 script (stdin, no quoting games). Output is bounded and polled; " +
         "the script runs with YOUR full user permissions - outside any workspace boundary.";
 
-    public override JObject ParametersSchema => JObject.Parse($$"""
+    public JObject ParametersSchema => JObject.Parse($$"""
         {
           "type": "object",
           "additionalProperties": false,
@@ -55,13 +61,12 @@ public sealed class RunPowerShellChatTool : WorkspaceToolBase
         }
         """);
 
-    public override ChatToolExecutionMode ExecutionMode => ChatToolExecutionMode.Exclusive;
-    public override ChatToolRisk Risk => ChatToolRisk.Process;
-    public override TimeSpan Timeout => TimeSpan.FromMinutes(15);
+    public ChatToolExecutionMode ExecutionMode => ChatToolExecutionMode.Exclusive;
+    public ChatToolRisk Risk => ChatToolRisk.Process;
+    public TimeSpan Timeout => TimeSpan.FromMinutes(15);
 
-    protected override async ValueTask<ChatToolExecutionResult> ExecuteWorkspaceAsync(
+    public async ValueTask<ChatToolExecutionResult> ExecuteAsync(
         JObject arguments,
-        WorkspacePathGuard guard,
         ChatToolExecutionContext context,
         CancellationToken ct)
     {
@@ -70,18 +75,135 @@ public sealed class RunPowerShellChatTool : WorkspaceToolBase
             return Error("script_required", "run_powershell requires a non-empty script.");
 
         var cwd = (string)arguments["working_directory"] ?? ".";
+        var timeoutMs = arguments["timeout_ms"]?.Value<int?>() ?? DefaultTimeoutMs;
+
+        // Resolve the workspace-relative cwd (guarded like every file tool).
+        var guard = string.IsNullOrEmpty(context.WorkspacePath) ? null : new Security.WorkspacePathGuard(context.WorkspacePath);
+        string cwdFull;
+        if (guard != null)
+        {
+            cwdFull = guard.TryResolveRelative(cwd, out var rejection);
+            if (rejection != null)
+                return Error(rejection, $"Working directory rejected ({rejection}): {cwd}");
+        }
+        else
+            cwdFull = cwd;
 
         var pwshPath = _pwshResolver();
         if (pwshPath == null)
             return Error("pwsh_unavailable",
                          "PowerShell 7 (pwsh.exe) was not found. Install PowerShell 7 or configure its location.");
 
-        var cwdFull = guard.TryResolveRelative(cwd, out var rejection);
-        if (rejection != null)
-            return Error(rejection, $"Working directory rejected ({rejection}): {cwd}");
+        // Phase 3A job path: the conversation owns a job service -> run as a background job.
+        if (context.JobService != null)
+        {
+            return await RunAsJobAsync(
+                context.JobService, context, script, pwshPath, cwdFull, timeoutMs, ct);
+        }
 
-        var timeoutMs = arguments["timeout_ms"]?.Value<int?>() ?? DefaultTimeoutMs;
+        // Fallback (no job service - unit tests / legacy): synchronous bounded run.
+        return await RunSynchronouslyAsync(script, pwshPath, cwdFull, timeoutMs, ct);
+    }
 
+    private async ValueTask<ChatToolExecutionResult> RunAsJobAsync(
+        IBackgroundJobService jobService,
+        ChatToolExecutionContext context,
+        string script,
+        string pwshPath,
+        string cwdFull,
+        int timeoutMs,
+        CancellationToken ct)
+    {
+        var request = new ChatProcessRequest(
+            pwshPath,
+            new[] { "-NoLogo", "-NoProfile", "-NonInteractive", "-Command", "-" },
+            cwdFull,
+            script,
+            MaxRetainedOutputBytes: 96 * 1024,
+            TimeoutMs: timeoutMs);
+
+        // The worker streams process output into the job buffer as it arrives.
+        var start = await jobService.StartAsync(new BackgroundJobStartRequest(
+            "powershell", context.ConversationId, context.TurnId, context.ToolCallId,
+            async (writer, workerCt) =>
+            {
+                var streamed = false;
+                var streaming = request with
+                {
+                    OnStdoutChunk = (text, _) =>
+                    {
+                        streamed = true;
+                        writer.WriteAsync(text, workerCt).AsTask().GetAwaiter().GetResult();
+                    },
+                    OnStderrChunk = (text, _) =>
+                    {
+                        streamed = true;
+                        writer.WriteAsync(text, workerCt).AsTask().GetAwaiter().GetResult();
+                    }
+                };
+
+                var processResult = await _runner.RunAsync(streaming, workerCt);
+                writer.SetExitCode(processResult.ExitCode);
+
+                // A runner that did not stream (e.g. a simple fake) still must land its
+                // output; a streaming runner already wrote everything via the callbacks.
+                if (!streamed)
+                {
+                    if (!string.IsNullOrEmpty(processResult.Stdout))
+                        await writer.WriteAsync(processResult.Stdout, workerCt);
+                    if (!string.IsNullOrEmpty(processResult.Stderr))
+                        await writer.WriteAsync(processResult.Stderr, workerCt);
+                }
+            },
+            MaxRetainedOutputBytes: 96 * 1024), ct);
+
+        // Fast path: wait briefly; a short command returns its terminal result immediately.
+        var fastPathCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        fastPathCts.CancelAfter(_fastPathWaitMs);
+
+        try
+        {
+            var poll = await jobService.PollAsync(
+                start.JobId, context.ConversationId, 0, _fastPathWaitMs, fastPathCts.Token);
+
+            if (poll.IsTerminal)
+                return BuildJobTerminalResult(poll);
+            if (ct.IsCancellationRequested)
+                return Error("cancelled", "PowerShell execution was cancelled.");
+
+            return BuildJobRunningResult(poll);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            // Fast path elapsed (not user cancellation) -> still running, model must poll.
+            var record = await jobService.GetAsync(start.JobId, context.ConversationId, ct);
+            var running = new BackgroundJobPollResult(record, "", record.TotalOutputBytes);
+            return BuildJobRunningResult(running);
+        }
+    }
+
+    private ChatToolExecutionResult BuildJobRunningResult(BackgroundJobPollResult poll) =>
+        ChatToolExecutionResult.Success(
+            JobToolPayloads.RunningPayload(poll.Record.JobId, poll.NewOutput, poll.NextCursor),
+            JobToolPayloads.RunningPayload(poll.Record.JobId, poll.NewOutput, poll.NextCursor).ToString(Formatting.None));
+
+    private ChatToolExecutionResult BuildJobTerminalResult(BackgroundJobPollResult poll)
+    {
+        var payload = JobToolPayloads.TerminalPayload(poll.Record, poll.NewOutput, poll.NextCursor);
+
+        var ok = poll.Record.Status == BackgroundJobStatus.Completed && poll.Record.ExitCode == 0;
+        return new ChatToolExecutionResult(
+            ok,
+            ChatToolStatus.Completed, // a nonzero exit is still a completed, model-visible result
+            payload,
+            payload.ToString(Formatting.None),
+            ErrorCode: ok ? null : "nonzero_exit",
+            Truncated: poll.Record.OutputTruncated);
+    }
+
+    private async ValueTask<ChatToolExecutionResult> RunSynchronouslyAsync(
+        string script, string pwshPath, string cwdFull, int timeoutMs, CancellationToken ct)
+    {
         var processRequest = new ChatProcessRequest(
             pwshPath,
             new[] { "-NoLogo", "-NoProfile", "-NonInteractive", "-Command", "-" },
@@ -101,46 +223,23 @@ public sealed class RunPowerShellChatTool : WorkspaceToolBase
                                                    "PowerShell execution was cancelled.");
         }
 
-        var summary = BuildSummary(processResult);
+        var payload = new JObject
+        {
+            ["status"] = processResult.Cancelled ? "cancelled" : processResult.TimedOut ? "timed_out" : processResult.Success ? "completed" : "failed",
+            ["exit_code"] = processResult.ExitCode,
+            ["stdout"] = processResult.Stdout,
+            ["stderr"] = processResult.Stderr,
+            ["duration_ms"] = (long)processResult.Duration.TotalMilliseconds,
+            ["truncated"] = processResult.StdoutTruncated || processResult.StderrTruncated
+        };
 
         return new ChatToolExecutionResult(
-            Ok: processResult.Success,
-            ChatToolStatus.Completed, // a nonzero exit is still a completed, model-visible result
-            new JObject
-            {
-                ["exit_code"] = processResult.ExitCode,
-                ["stdout"] = processResult.Stdout,
-                ["stderr"] = processResult.Stderr,
-                ["duration_ms"] = (long)processResult.Duration.TotalMilliseconds,
-                ["timed_out"] = processResult.TimedOut,
-                ["cancelled"] = processResult.Cancelled,
-                ["stdout_truncated"] = processResult.StdoutTruncated,
-                ["stderr_truncated"] = processResult.StderrTruncated,
-                ["total_stdout_bytes"] = processResult.TotalStdoutBytes,
-                ["total_stderr_bytes"] = processResult.TotalStderrBytes
-            },
-            summary,
+            processResult.Success,
+            ChatToolStatus.Completed,
+            payload,
+            payload.ToString(Formatting.None),
             ErrorCode: processResult.Success ? null : "nonzero_exit",
             Truncated: processResult.StdoutTruncated || processResult.StderrTruncated);
-    }
-
-    private static string BuildSummary(ChatProcessResult r)
-    {
-        var status = r.Cancelled ? "cancelled"
-                   : r.TimedOut ? "timed out"
-                   : r.Success ? "ok"
-                   : $"exit code {r.ExitCode}";
-
-        var sb = new System.Text.StringBuilder();
-        sb.Append($"pwsh: {status}");
-        if (!string.IsNullOrWhiteSpace(r.Stdout))
-            sb.Append("\nstdout:\n").Append(r.Stdout.TrimEnd());
-        if (!string.IsNullOrWhiteSpace(r.Stderr))
-            sb.Append("\nstderr:\n").Append(r.Stderr.TrimEnd());
-        if (r.StdoutTruncated || r.StderrTruncated)
-            sb.Append("\n(output truncated; retained the first 96 KiB)");
-
-        return sb.ToString();
     }
 
     /// <summary>Resolve pwsh.exe deliberately: standard install path first, then PATH.</summary>
@@ -178,7 +277,7 @@ public sealed class RunPowerShellChatTool : WorkspaceToolBase
         }
     }
 
-    public override ChatToolCallPresentation PresentCall(JObject arguments)
+    public ChatToolCallPresentation PresentCall(JObject arguments)
     {
         var description = (string)arguments["description"];
         var label = description ?? "run script";
@@ -193,8 +292,11 @@ public sealed class RunPowerShellChatTool : WorkspaceToolBase
             });
     }
 
-    public override ChatToolResultPresentation PresentResult(JObject arguments, ChatToolExecutionResult result) =>
+    public ChatToolResultPresentation PresentResult(JObject arguments, ChatToolExecutionResult result) =>
         new(1, ChatToolResultPresentationKind.Terminal, "PowerShell",
             result.Ok ? "Pwsh · ok" : $"Pwsh · {result.ErrorCode ?? "failed"}",
             result.Value as JObject ?? new JObject { ["script"] = arguments["script"] });
+
+    private static ChatToolExecutionResult Error(string code, string summary) =>
+        ChatToolExecutionResult.Failure(ChatToolStatus.Failed, code, summary);
 }

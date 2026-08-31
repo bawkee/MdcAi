@@ -74,5 +74,8 @@ public sealed class ChatPromptBuilder
         - Prefer exact, unique replacement text over blind rewrites.
         - Report the actual tool results; on precondition failures, read the file and retry.
         - Workspace tools never run without the host's approval - you can only propose.
+        - Long commands run as background jobs: if run_powershell returns status "running" with a
+          job_id, poll with get_job until the status is terminal BEFORE claiming success. Never
+          start a duplicate command while a job is still running.
         """.Trim();
 }

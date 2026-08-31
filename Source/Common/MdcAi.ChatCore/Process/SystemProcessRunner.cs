@@ -62,8 +62,8 @@ public sealed class SystemProcessRunner : IChatProcessRunner
             var stdout = new BoundedBuffer(request.MaxRetainedOutputBytes);
             var stderr = new BoundedBuffer(request.MaxRetainedOutputBytes);
 
-            var drainOut = DrainAsync(process.StandardOutput, stdout, ct);
-            var drainErr = DrainAsync(process.StandardError, stderr, ct);
+            var drainOut = DrainAsync(process.StandardOutput, stdout, ct, request.OnStdoutChunk);
+            var drainErr = DrainAsync(process.StandardError, stderr, ct, request.OnStderrChunk);
 
             using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             if (request.TimeoutMs is { } ms)
@@ -100,7 +100,8 @@ public sealed class SystemProcessRunner : IChatProcessRunner
         }
     }
 
-    private static async Task DrainAsync(StreamReader reader, BoundedBuffer buffer, CancellationToken ct)
+    private static async Task DrainAsync(StreamReader reader, BoundedBuffer buffer, CancellationToken ct,
+        Action<string, CancellationToken> onChunk)
     {
         var chunk = new char[4096];
         while (true)
@@ -109,6 +110,8 @@ public sealed class SystemProcessRunner : IChatProcessRunner
             if (read == 0)
                 return;
             buffer.Append(chunk, read);
+            if (onChunk != null && read > 0)
+                onChunk(new string(chunk, 0, read), ct);
         }
     }
 

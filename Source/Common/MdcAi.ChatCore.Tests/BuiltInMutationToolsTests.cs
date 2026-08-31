@@ -264,8 +264,8 @@ public class BuiltInMutationToolsTests : IDisposable
         Assert.False(result.Ok);
         Assert.Equal("nonzero_exit", result.ErrorCode);
         Assert.Equal(ChatToolStatus.Completed, result.Status);
-        Assert.Contains("exit code 1", result.ModelContent);
-        Assert.Contains("boom", result.ModelContent);
+        Assert.Contains("exit_code", result.ModelContent);
+        Assert.Equal(1, (int)result.Value["exit_code"]);
     }
 
     [Fact]
@@ -279,8 +279,8 @@ public class BuiltInMutationToolsTests : IDisposable
                                              Ctx(), CancellationToken.None);
 
         Assert.False(result.Ok);
-        Assert.Contains("timed out", result.ModelContent);
-        Assert.True((bool)result.Value["timed_out"]);
+        Assert.Equal("timed_out", (string)result.Value["status"]);
+        Assert.Equal(-1, (int)result.Value["exit_code"]);
     }
 
     [Fact]

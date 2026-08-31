@@ -108,6 +108,9 @@ public class ConversationVm : ActivatableViewModel, ILogging
     /// </summary>
     public Sessions.ConversationToolApprovalService ApprovalService { get; }
 
+    /// <summary>Per-conversation background-job service; job ownership is the conversation id (P3-01).</summary>
+    public ChatCore.Jobs.BackgroundJobService JobService { get; }
+
     /// <summary>The current pending approval card for the renderer; null when none is awaiting.</summary>
     [Reactive] public Sessions.PendingApproval PendingApproval { get; private set; }
 
@@ -159,9 +162,11 @@ public class ConversationVm : ActivatableViewModel, ILogging
 
         // Agentic machinery: one shared registry/service (stateless across turns) and one
         // turn controller, so a conversation is never executing two agentic turns at once.
+        // Each conversation owns its background-job service (job ownership = conversation).
         _sessionService = ConversationSessionServices.Create(api);
         _controller = new ConversationSessionController();
         ApprovalService = new Sessions.ConversationToolApprovalService();
+        JobService = new ChatCore.Jobs.BackgroundJobService();
 
         // Surface pending approvals to the renderer (inline approve/deny cards).
         ApprovalService.Pending
@@ -1001,7 +1006,8 @@ public class ConversationVm : ActivatableViewModel, ILogging
             ToolsEnabled ? ConversationSessionServices.BuiltInToolNames : Array.Empty<string>(),
             ChatTurnOrigin.Human,
             ToolsEnabled ? ApprovalService : null, // inline approval for mutating/process tools
-            ChatTurnLimits.Default);
+            ChatTurnLimits.Default,
+            ToolsEnabled ? JobService : null);
     }
 
     /// <summary>

@@ -13,6 +13,7 @@
 
 namespace MdcAi.ChatCore.Sessions;
 
+using MdcAi.ChatCore.Jobs;
 using MdcAi.ChatCore.Security;
 
 /// <summary>
@@ -43,7 +44,8 @@ public sealed record ChatTurnRequest(
     IReadOnlyList<string> EnabledToolNames,
     ChatTurnOrigin Origin,
     IChatToolApprovalService ApprovalService,
-    ChatTurnLimits Limits);
+    ChatTurnLimits Limits,
+    IBackgroundJobService JobService = null);
 
 /// <summary>
 /// Conservative, configurable loop guards (DSH proposal §6.2). Exceeding a guard ends the turn

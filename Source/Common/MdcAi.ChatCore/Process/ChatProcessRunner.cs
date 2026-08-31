@@ -25,7 +25,9 @@ public sealed record ChatProcessRequest(
     string WorkingDirectory,
     string StandardInputScript,
     int MaxRetainedOutputBytes = 96 * 1024,
-    int? TimeoutMs = null);
+    int? TimeoutMs = null,
+    Action<string, CancellationToken> OnStdoutChunk = null,
+    Action<string, CancellationToken> OnStderrChunk = null);
 
 public sealed record ChatProcessResult(
     int ExitCode,

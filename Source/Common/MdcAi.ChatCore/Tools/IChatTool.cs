@@ -13,6 +13,7 @@
 
 namespace MdcAi.ChatCore.Tools;
 
+using MdcAi.ChatCore.Jobs;
 using MdcAi.ChatCore.Security;
 using Newtonsoft.Json.Linq;
 
@@ -79,7 +80,8 @@ public enum ChatToolStatus
 
 /// <summary>
 /// Per-call execution context. Carries the conversation workspace root and the turn-scoped read
-/// observation set (used by read-before-write enforcement) plus the approval service.
+/// observation set (used by read-before-write enforcement) plus the approval service and the
+/// conversation's background-job service (used by run_powershell / get_job / stop_job).
 /// </summary>
 public sealed record ChatToolExecutionContext(
     string ConversationId,
@@ -88,7 +90,8 @@ public sealed record ChatToolExecutionContext(
     string ToolCallId,
     string WorkspacePath,
     WorkspaceReadObservationSet ReadObservations,
-    IChatToolApprovalService ApprovalService);
+    IChatToolApprovalService ApprovalService,
+    IBackgroundJobService JobService = null);
 
 /// <summary>
 /// A registered tool. Name/Description/ParametersSchema are the model-facing surface; execution

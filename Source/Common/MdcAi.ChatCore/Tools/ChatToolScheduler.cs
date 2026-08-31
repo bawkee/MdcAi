@@ -203,7 +203,7 @@ public sealed class ChatToolScheduler
 
         var context = new ChatToolExecutionContext(
             turn.ConversationId, turn.TurnId, stepNumber, call.Id,
-            turn.WorkspacePath, readSet, turn.ApprovalService);
+            turn.WorkspacePath, readSet, turn.ApprovalService, turn.JobService);
 
         var approval = await RequestApprovalAsync(tool, call.Id, name, arguments, turn, ct);
         if (approval == ChatApprovalDecision.Denied)

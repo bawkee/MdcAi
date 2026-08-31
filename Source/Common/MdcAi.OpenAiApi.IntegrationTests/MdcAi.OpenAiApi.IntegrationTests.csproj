@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MdcAi.OpenAiApi\MdcAi.OpenAiApi.csproj" />
+    <ProjectReference Include="..\MdcAi.ChatCore\MdcAi.ChatCore.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -34,6 +35,10 @@
     <Using Include="System.Collections.Generic" />
     <Using Include="System.Threading.Tasks" />
     <Using Include="Newtonsoft.Json" />
+    <Using Include="Newtonsoft.Json.Linq" />
+    <Using Include="MdcAi.ChatCore.Sessions" />
+    <Using Include="MdcAi.ChatCore.Tools" />
+    <Using Include="MdcAi.ChatCore.Tools.BuiltIn" />
   </ItemGroup>
 
 </Project>

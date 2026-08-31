@@ -28,6 +28,9 @@ public class UserProfileDbContext : DbContext
     public DbSet<DbToolCall> ToolCalls { get; set; }
     public DbSet<DbBackgroundJob> BackgroundJobs { get; set; }
     public DbSet<DbGoal> Goals { get; set; }
+    public DbSet<DbConversationSummary> ConversationSummaries { get; set; }
+    public DbSet<DbWorkspaceContext> WorkspaceContexts { get; set; }
+    public DbSet<DbArtifact> Artifacts { get; set; }
 
     public string DbPath { get; }
     public Action<string> Log { get; set; }
@@ -148,6 +151,15 @@ public class UserProfileDbContext : DbContext
 
         modelBuilder.Entity<DbGoal>()
                     .HasIndex(g => new { g.IdConversation, g.Status });
+
+        modelBuilder.Entity<DbConversationSummary>()
+                    .HasIndex(s => new { s.IdConversation, s.Status });
+
+        modelBuilder.Entity<DbWorkspaceContext>()
+                    .HasIndex(c => new { c.IdConversation, c.SourceKind, c.State });
+
+        modelBuilder.Entity<DbArtifact>()
+                    .HasIndex(a => a.OwnerConversationId);
 
         modelBuilder.Entity<DbChatSettings>()
                     .HasData(CreateDefaultChatSettings("general"));

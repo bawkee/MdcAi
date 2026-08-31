@@ -40,4 +40,16 @@ public class WebViewChatMessageDto
     /// on the same throttle as the reasoning HTML). Can be null transiently (fresh message);
     /// the renderer falls back to a plain "Thinking" label in that case.</summary>
     public string ReasoningPreview { get; set; }
+
+    /// <summary>Provenance: human | model | tool | goal | job | workspace_context | summary | subagent. Never a display label.</summary>
+    public string Origin { get; set; }
+
+    /// <summary>pending | streaming | completed | interrupted | failed. Null on legacy rows.</summary>
+    public string CompletionState { get; set; }
+
+    /// <summary>Provider finish_reason ("stop", "length", "tool_calls", ...). Null on legacy rows.</summary>
+    public string FinishReason { get; set; }
+
+    /// <summary>True for intermediate steps of an agentic turn (not editable/regenerable by the existing commands).</summary>
+    public bool IsIntermediate { get; set; }
 }

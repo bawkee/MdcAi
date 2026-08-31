@@ -224,3 +224,182 @@
 .code-block-copy-button:hover {
   opacity: 1;
 }
+
+/* --- Phase 2 activity transcript (DSH proposal §7.3) --- */
+
+/* Activity rows are quiet, full-width rows between prose blocks. */
+.chat-item-activity {
+  padding: 2px 6px;
+}
+
+.activity-row {
+  font-size: 9pt;
+  line-height: 1.3;
+}
+
+.activity-row-main {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  padding: 3px 4px;
+  border-radius: 4px;
+  color: #888;
+  cursor: text;
+  user-select: text;
+}
+
+.activity-row-main[role='button'] {
+  cursor: pointer;
+  user-select: none;
+}
+
+.activity-row-main:hover {
+  background: rgba(128, 128, 128, 0.08);
+}
+
+.activity-row-icon {
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9pt;
+  flex: none;
+  color: #888;
+}
+
+.activity-row-title {
+  font-weight: 600;
+  color: #aaa;
+  white-space: nowrap;
+}
+
+.activity-row-dot {
+  color: #666;
+  flex: none;
+}
+
+.activity-row-summary {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #999;
+}
+
+.activity-row-pill {
+  flex: none;
+  color: #888;
+  background: rgba(128, 128, 128, 0.15);
+  border-radius: 8px;
+  padding: 0 8px;
+  font-size: 8pt;
+  line-height: 1.6;
+}
+
+/* Status tones */
+.activity-running .activity-row-icon { color: #66b0ff; }
+.activity-failed .activity-row-icon,
+.activity-denied .activity-row-icon { color: #e0625b; }
+.activity-completed .activity-row-icon,
+.activity-ok .activity-row-icon { color: #4caf7d; }
+
+/* Detail surface: bounded scrollport, independent of the page. */
+.activity-detail {
+  margin: 2px 0 4px 24px;
+  padding: 4px 6px;
+  max-height: 260px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: rgba(128, 128, 128, 0.06);
+  border-radius: 4px;
+  font-size: 8.5pt;
+  user-select: text;
+}
+
+.activity-detail pre {
+  margin: 0;
+  white-space: pre;
+  overflow: auto;
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 8.5pt;
+}
+
+/* Read */
+.read-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.read-path { font-weight: 600; }
+.read-lang { color: #888; }
+.copy-btn {
+  margin-left: auto;
+  border: 1px solid #666;
+  background: transparent;
+  color: #aaa;
+  border-radius: 4px;
+  padding: 1px 8px;
+  font-size: 8pt;
+  cursor: pointer;
+}
+.read-line { display: flex; gap: 8px; white-space: pre; }
+.read-line-number { color: #666; min-width: 3ch; text-align: right; user-select: none; }
+.read-omitted, .search-omitted { color: #666; font-style: italic; }
+
+/* Search */
+.search-file-label { cursor: pointer; font-weight: 600; color: #aaa; }
+.search-match { display: flex; gap: 8px; white-space: pre; }
+.search-line-no { color: #666; min-width: 3ch; text-align: right; user-select: none; }
+
+/* Terminal */
+.terminal-script, .terminal-cwd { margin-bottom: 4px; }
+.terminal-stdout { color: #ddd; }
+.terminal-stderr { color: #e0625b; }
+.terminal-truncated { color: #888; font-style: italic; }
+
+/* Diff */
+.diff-file-header { font-weight: 600; margin-bottom: 2px; }
+.diff-body { white-space: pre-wrap; }
+.diff-footer { display: flex; gap: 8px; align-items: center; color: #888; margin-top: 4px; }
+.diff-state { text-transform: capitalize; font-weight: 700; }
+.diff-state-proposed { color: #d7b852; }
+.diff-state-applied { color: #4caf7d; }
+.diff-state-failed { color: #e0625b; }
+
+/* Context / thinking */
+.context-row { color: #888; }
+.context-content { white-space: pre-wrap; max-height: 180px; overflow: auto; }
+.thinking-detail { white-space: pre-wrap; max-height: 120px; overflow: auto; }
+
+/* Approval actions (Phase 2.5) */
+.approval-actions { display: flex; gap: 8px; padding: 4px 8px 4px 28px; }
+.approval-approve, .approval-deny {
+  border-radius: 4px;
+  padding: 2px 12px;
+  font-size: 8.5pt;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+.approval-approve { background: #4caf7d; color: white; }
+.approval-deny { background: transparent; color: #e0625b; border-color: #e0625b; }
+.approval-approve:disabled, .approval-deny:disabled { opacity: 0.5; cursor: default; }
+
+@media (prefers-color-scheme: light) {
+  .activity-row-main { color: #555; }
+  .activity-row-title { color: #333; }
+  .activity-row-summary { color: #666; }
+  .activity-detail { background: #f5f5f5; }
+  .terminal-stdout { color: #111; }
+  .read-line-number, .search-line-no { color: #999; }
+}
+
+/* Reduced motion: no sweep/shimmer, keep identity only. */
+@media (prefers-reduced-motion: reduce) {
+  .activity-running .activity-row-icon { animation: none; }
+}
+
+/* Interrupted marker on messages */
+.chat-item-info-interrupted {
+  margin: 0 4px;
+  color: #d7b852;
+  font-style: italic;
+}

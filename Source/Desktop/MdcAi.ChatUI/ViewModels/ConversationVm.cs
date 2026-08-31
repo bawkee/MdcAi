@@ -95,6 +95,13 @@ public class ConversationVm : ActivatableViewModel, ILogging
     /// <summary>Selected workspace folder for this conversation; null until tools are enabled.</summary>
     [Reactive] public string WorkspacePath { get; set; }
 
+    /// <summary>Monotonically increasing per-conversation transcript revision. Bumped on every
+    /// structural change; the renderer rejects deltas older than its snapshot revision (DSH §7.5).</summary>
+    [Reactive] public long Revision { get; private set; }
+
+    /// <summary>Bumps the transcript revision (call after a fork/message mutation).</summary>
+    public void BumpRevision() => Revision++;
+
     public ReactiveCommand<Unit, Unit> DebugGeneratePromptCmd { get; }
     public ReactiveCommand<Unit, Unit> EditSelectedCmd { get; }
     public ReactiveCommand<Unit, Unit> CancelEditCmd { get; }
@@ -774,7 +781,14 @@ public class ConversationVm : ActivatableViewModel, ILogging
                     return Observable.Return(m);
                 })
                 .Switch()
-                .Select(m => m.CreateWebViewSetMessageRequest())
+                .Select(m =>
+                {
+                    // Tools-enabled conversations get the versioned transcript snapshot (Phase 2
+                    // contract); ordinary chat keeps the classic message list until P2-04.
+                    return ToolsEnabled
+                               ? ProjectTranscript()
+                               : m.CreateWebViewSetMessageRequest();
+                })
                 .ObserveOnMainThread()
                 .Do(r => LastMessagesRequest = r)
                 .SubscribeSafe()
@@ -885,6 +899,23 @@ public class ConversationVm : ActivatableViewModel, ILogging
     public string ResolveProviderKey() =>
         Models?.FirstOrDefault(m => m.ModelID == SelectedModel)?.ProviderKey
         ?? AiProviders.GetProviderForModelId(SelectedModel).Key;
+
+    /// <summary>
+    /// Projects the current selected branch into the versioned transcript snapshot. Tool
+    /// activities pair each assistant tool call with its matching result; thinking projects as
+    /// its own activity; revision is monotonic. Used by the Phase 2 WebView contract.
+    /// </summary>
+    private WebViewRequestDto ProjectTranscript()
+    {
+        var nodes = Head?.Message.GetNextMessages().ToArray() ?? Array.Empty<ChatMessageVm>();
+        var snapshot = WebViewTranscriptProjector.Project(this, nodes, Revision);
+
+        return new WebViewRequestDto
+        {
+            Name = "SetMessages",
+            Data = snapshot
+        };
+    }
 
     /// <summary>
     /// Builds the immutable agentic turn request. Provider/model/effort/tool schema are stamped

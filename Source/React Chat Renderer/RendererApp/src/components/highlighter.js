@@ -6,31 +6,23 @@ import * as log from '../logging';
 const starryNight = await createStarryNight(all);
 const domParser = new DOMParser();
 
-var selectedCodeBlock;
-
 const CodeHighlighter = ({ code }) => {
     let html = code;
 
     const handleClick = (target) => {
         const pre = target.closest('pre');
         const btn = target.closest('button');
-        if (pre) {
-            // if (selectedCodeBlock)
-            //     selectedCodeBlock.classList.remove('selected-code-block');
-            // selectedCodeBlock = pre;
-            // pre.classList.add('selected-code-block');
-        }
-        if (btn) {
-            if (btn.classList.contains('code-block-copy-button')) {
-                var clipboardData = btn.getAttribute('code');
-                if (clipboardData) {
-                    navigator.clipboard.writeText(clipboardData);
-                    btn.textContent = 'Done';
-                    setTimeout(() => {
-                        btn.textContent = 'Copy';
-                    }, 3000);
-                }
+        if (btn && btn.classList.contains('code-block-copy-button')) {
+            const clipboardData = btn.getAttribute('code');
+            if (clipboardData) {
+                navigator.clipboard.writeText(clipboardData);
+                btn.textContent = 'Done';
+                setTimeout(() => {
+                    btn.textContent = 'Copy';
+                }, 3000);
             }
+        } else if (pre) {
+            // (selection chrome intentionally left off - see git history)
         }
     }
 

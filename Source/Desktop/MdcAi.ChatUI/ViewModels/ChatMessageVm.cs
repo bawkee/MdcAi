@@ -100,6 +100,10 @@ public class ChatMessageVm : ViewModel, ILogging
     /// <summary>Provider finish_reason ("stop", "length", "tool_calls", ...).</summary>
     [Reactive] public string FinishReason { get; set; }
 
+    /// <summary>True for intermediate model steps of an agentic turn - selectable for
+    /// inspection but NOT editable/regenerable by the existing commands (DSH proposal §7.7).</summary>
+    public bool IsIntermediate { get; set; }
+
     public ReactiveCommand<Unit, (string Content, string Reasoning)> CompleteCmd { get; }
     public ReactiveCommand<Unit, Unit> StopCompletionCmd { get; }
 

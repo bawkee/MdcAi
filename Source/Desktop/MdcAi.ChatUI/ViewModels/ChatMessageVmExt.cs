@@ -65,6 +65,23 @@ public static class ChatMessageVmExt
                     .Where(m => m != null)
                     .ToList() ?? new List<ChatMessage>();
 
+    /// <summary>
+    /// Full v2 DTO mapping: the message surface plus provenance/completion state and the
+    /// intermediate flag (agentic steps are not editable/regenerable by the existing commands).
+    /// </summary>
+    public static WebViewChatMessageDto GetWebViewDtoEx(this ChatMessageVm m)
+    {
+        var dto = GetWebViewDto(m);
+        if (dto == null)
+            return null;
+
+        dto.Origin = m.Origin;
+        dto.CompletionState = m.CompletionState;
+        dto.FinishReason = m.FinishReason;
+        dto.IsIntermediate = m.IsIntermediate;
+        return dto;
+    }
+
     public static WebViewChatMessageDto GetWebViewDto(this ChatMessageVm m)
     {
         if (m == null)

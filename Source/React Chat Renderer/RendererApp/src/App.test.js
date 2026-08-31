@@ -28,8 +28,10 @@ afterEach(() => {
 
 describe('host handshake', () => {
     it('posts Ready when the app module loads', () => {
-        // postMessage.mock.calls is an array of call-argument arrays
-        expect(moduleLoadCalls).toEqual([[{ Name: 'Ready' }]]);
+        // postMessage.mock.calls is an array of call-argument arrays. The module load also
+        // emits a diagnostic LogInfo, so filter to the Ready handshake specifically.
+        const readyCalls = moduleLoadCalls.filter(call => call[0].Name === 'Ready');
+        expect(readyCalls).toEqual([[{ Name: 'Ready' }]]);
     });
 });
 

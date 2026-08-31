@@ -1,6 +1,11 @@
 import React from 'react';
 
-const DateTime = ({ date }) => {
+const DateTime = ({ date, fallback = 'unknown time' }) => {
+    if (!date) return <span>{fallback}</span>;
+
+    const d = date instanceof Date ? date : new Date(date);
+    if (Number.isNaN(d.getTime())) return <span>{fallback}</span>;
+
     const userLocale = navigator.language || 'en-US';
 
     // Formatting options
@@ -10,7 +15,7 @@ const DateTime = ({ date }) => {
         hour12: true,
     };
 
-    const formattedDate = new Intl.DateTimeFormat(userLocale, options).format(date);
+    const formattedDate = new Intl.DateTimeFormat(userLocale, options).format(d);
 
     return <span>{formattedDate}</span>;
 }

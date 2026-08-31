@@ -1,172 +1,163 @@
 import './App.css';
-import { useState, useEffect, useRef } from 'react';
-import CodeHighlighter from './components/highlighter';
-import ThinkingBlock from './components/thinkingBlock';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import AutoScrollComponent from './components/autoScroll';
-import DateTime from './components/dateTime';
+import TranscriptItem from './components/transcriptItem';
 import { isElementFullyVisible } from './util';
-import { getAuthorLabel, getEffortLabel, getRoleClass } from './messageMeta';
-import { logDebug, logInfo } from './logging';
+import { logInfo } from './logging';
 import { RENDERER_VERSION } from './version';
-//import initialData from './sample1.json';
+import {
+    applySnapshot,
+    applyUpsert,
+    isTranscriptPayload,
+    itemOrder
+} from './transcriptReducer';
 
 function App() {
-  const [data, setData] = useState(null);
-  const [selectedChat, setSelectedChat] = useState(null);
-  const [autoScroll, setAutoScroll] = useState(true);
-  const chatItemRefs = useRef({});
-  const scrolledDownRef = useRef(true);
-  // Mirror of selectedChat kept in a ref so the (once-registered) webview message
-  // listener never sees a stale selection value.
-  const selectedChatRef = useRef(null);
+    // Two render paths:
+    //  - data: legacy WebViewSetMessagesRequestDto { Messages: [...] } (tools-disabled chat)
+    //  - transcript: v2 versioned snapshot { Items, Revision, ConversationId } (agentic)
+    const [data, setData] = useState(null);
+    const [transcript, setTranscript] = useState(null);
+    const [selected, setSelected] = useState(null);      // legacy: index, v2: item id
+    const [expandedById, setExpandedById] = useState({});
+    const [autoScroll, setAutoScroll] = useState(true);
+    const chatItemRefs = useRef({});
+    const scrolledDownRef = useRef(true);
+    const selectedRef = useRef(null);
+    const expandedByIdRef = useRef({});
 
-  useEffect(() => { selectedChatRef.current = selectedChat; }, [selectedChat]);
+    // Track refs for callbacks that must not go stale inside the (once-registered) listener.
+    useEffect(() => { selectedRef.current = selected; }, [selected]);
+    useEffect(() => { expandedByIdRef.current = expandedById; }, [expandedById]);
 
-  useEffect(() => {
-    const handleMessage = (e) => {
-      let obj;
+    const toggleExpand = useCallback((itemId) => {
+        setExpandedById(prev => ({ ...prev, [itemId]: !prev[itemId] }));
+    }, []);
 
-      if (typeof e.data === 'string') {
-        //console.log(`String received: ${e.data}`);
-        obj = JSON.parse(e.data);
-      } else {
-        //console.log(`Obj received: ${JSON.stringify(e.data)}`);
-        obj = e.data;
-      }
+    const scrollToItem = useCallback((sel) => {
+        const el = chatItemRefs.current[sel];
+        if (el && !isElementFullyVisible(el)) {
+            setAutoScroll(false);
+            el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }, []);
 
-      if (obj.Name === 'SetMessages') {
-        setData(obj.Data);
-        const withReasoning = (obj.Data?.Messages || []).filter(m => m.Reasoning);
-        if (withReasoning.length > 0)
-          logInfo(`SetMessages: ${withReasoning.length} message(s) carry reasoning`);
-        else
-          logDebug('SetMessages: no reasoning on any message');
-      } else if (obj.Name === 'HideCaret')
-        setTimeout(hideCaret, 1000);
-      else if (obj.Name === 'SetSelection')
-        onSelectedChat(obj.Data, false);
-    }
+    const onSelectedChat = useCallback((sel, forward = true) => {
+        if (sel === selectedRef.current)
+            return;
+        setSelected(sel);
+        if (window.chrome.webview && forward)
+            window.chrome.webview.postMessage({ Name: 'SetSelection', Data: sel });
+        scrollToItem(sel);
+    }, [scrollToItem]);
 
-    if (window.chrome.webview)
-      window.chrome.webview.addEventListener('message', handleMessage);
+    // stable handle for the once-registered listener
+    const onSelectedChatRef = useRef(onSelectedChat);
+    useEffect(() => { onSelectedChatRef.current = onSelectedChat; }, [onSelectedChat]);
 
-    return () => {
-      if (window.chrome.webview)
-        window.chrome.webview.removeEventListener('message', handleMessage);
-    };
-  }, []);
+    useEffect(() => {
+        const handleMessage = (e) => {
+            let obj;
+            if (typeof e.data === 'string')
+                obj = JSON.parse(e.data);
+            else
+                obj = e.data;
 
-  const hideCaret = () => {
-    document
-      .querySelectorAll('#caret')
-      .forEach(element => element.remove());
-  }
-
-  const onSelectedChat = (index, forward = true) => {
-    if (index === selectedChatRef.current)
-      return;
-
-    setSelectedChat(index);
-
-    if (window.chrome.webview && forward) {
-      const selReq = {
-        Name: "SetSelection",
-        Data: index
-      };
-
-      window.chrome.webview.postMessage(selReq);
-    }
-
-    scrollToMessage(index);
-  }
-
-  const scrollToMessage = (index) => {
-    const chatItem = chatItemRefs.current[index];
-
-    if (chatItem) {
-      if (!isElementFullyVisible(chatItem)) {
-        setAutoScroll(false);
-        chatItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }
-    }
-  };
-
-  useEffect(() => {
-    const handleScroll = () => {
-      let scrolledDownNew = (window.innerHeight + window.scrollY) >= document.documentElement.scrollHeight - 5;
-      let scrolledDownChanged = scrolledDownRef.current !== scrolledDownNew;
-      scrolledDownRef.current = scrolledDownNew;
-
-      if (window.chrome.webview && scrolledDownChanged) {
-        const scrollDownMsg = {
-          Name: "IsScrollToBottom",
-          Data: scrolledDownNew
+            if (obj.Name === 'SetMessages') {
+                if (isTranscriptPayload(obj.Data)) {
+                    setTranscript(prev => applySnapshot(prev, obj.Data));
+                } else {
+                    setData(obj.Data);
+                    setSelected(null);
+                }
+            } else if (obj.Name === 'UpsertTranscriptItem') {
+                setTranscript(prev => applyUpsert(prev, obj.Data));
+            } else if (obj.Name === 'HideCaret') {
+                setTimeout(() => {
+                    document.querySelectorAll('#caret').forEach(el => el.remove());
+                }, 1000);
+            } else if (obj.Name === 'SetSelection') {
+                onSelectedChatRef.current(obj.Data, false);
+            }
         };
-        window.chrome.webview.postMessage(scrollDownMsg);
-      }
+
+        if (window.chrome.webview)
+            window.chrome.webview.addEventListener('message', handleMessage);
+        return () => {
+            if (window.chrome.webview)
+                window.chrome.webview.removeEventListener('message', handleMessage);
+        };
+    }, []);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            const scrolledDownNew =
+                (window.innerHeight + window.scrollY) >= document.documentElement.scrollHeight - 5;
+            const changed = scrolledDownRef.current !== scrolledDownNew;
+            scrolledDownRef.current = scrolledDownNew;
+            if (window.chrome.webview && changed)
+                window.chrome.webview.postMessage({ Name: 'IsScrollToBottom', Data: scrolledDownNew });
+        };
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    // Prune disclosure entries whose ids left the authoritative snapshot (v2 only).
+    useEffect(() => {
+        if (!transcript) return;
+        const live = new Set(itemOrder(transcript));
+        setExpandedById(prev => {
+            const stale = Object.keys(prev).filter(id => !live.has(id));
+            if (stale.length === 0) return prev;
+            const next = { ...prev };
+            for (const id of stale) delete next[id];
+            return next;
+        });
+    }, [transcript]);
+
+    const renderV2 = !!transcript;
+    const order = renderV2 ? itemOrder(transcript) : (data?.Messages || []);
+    const conversationId = transcript?.conversationId;
+
+    const renderItem = (item, key) => {
+        const itemId = renderV2 ? item.Id : key;
+        const isSelected = renderV2 ? (selected === item.Id) : (selected === key);
+        return (
+            <TranscriptItem
+                key={itemId}
+                item={item}
+                selected={isSelected}
+                expanded={expandedById[itemId]}
+                onToggle={() => toggleExpand(itemId)}
+                onSelect={() => onSelectedChat(renderV2 ? item.Id : key)}
+                forwardRef={el => { chatItemRefs.current[renderV2 ? item.Id : key] = el; }}
+                conversationId={conversationId}
+                turnId={renderV2 ? item.TurnId : undefined}
+            />
+        );
     };
 
-    window.addEventListener('scroll', handleScroll);
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-    };
-  }, []);
-
-
-  return (
-    <div className='App'>
-      <AutoScrollComponent
-        autoScroll={autoScroll}
-        setAutoScroll={setAutoScroll}>
-        <div className='chat-list'>
-          {(data?.Messages || []).map((item, index) => (
-            <div
-              ref={el => chatItemRefs.current[index] = el}
-              key={index}
-              onClick={() => onSelectedChat(index)}
-              className={`chat-item ${getRoleClass(item.Role)} ${selectedChat === index ? 'active' : ''}`}>
-              <div className='chat-item-marque' />
-              <div className='chat-item-info'>
-                <span className='chat-item-info-role'>
-                  {getAuthorLabel(item)}
-                </span>
-                {getEffortLabel(item) && (
-                  <span className='chat-item-info-effort'>
-                    {getEffortLabel(item)}
-                  </span>
-                )}
-                <span className='chat-item-info-createdts'>
-                  sent <DateTime date={new Date(item.CreatedTs)} />
-                </span>
-                {item.VersionCount > 1 && (
-                  <span
-                    className='chat-item-info-version'
-                    title='Version of the edited message'>{item.Version} / {item.VersionCount}</span>
-                )}
-              </div>
-              <div className='chat-item-content'>
-                <ThinkingBlock
-                  reasonHtml={item.Reasoning}
-                  preview={item.ReasoningPreview} />
-                <CodeHighlighter code={item.Content} />
-              </div>
+    return (
+        <div className='App'>
+            <AutoScrollComponent autoScroll={autoScroll} setAutoScroll={setAutoScroll}>
+                <div className='chat-list'>
+                    {renderV2
+                        ? order.map(id => renderItem(transcript.items[id], id))
+                        : order.map((item, index) => renderItem(item, index))
+                    }
+                </div>
+            </AutoScrollComponent>
+            <div className='renderer-version' title='Renderer version'>
+                v{RENDERER_VERSION}
             </div>
-          ))}
         </div>
-      </AutoScrollComponent>
-      <div className='renderer-version' title='Renderer version'>
-        v{RENDERER_VERSION}
-      </div>
-    </div>
-  );
+    );
 }
 
-const readyPing = {
-  Name: "Ready"
-};
+const readyPing = { Name: 'Ready' };
 
 if (window.chrome.webview)
-  window.chrome.webview.postMessage(readyPing);
+    window.chrome.webview.postMessage(readyPing);
 
 logInfo(`renderer v${RENDERER_VERSION} initialized`);
 

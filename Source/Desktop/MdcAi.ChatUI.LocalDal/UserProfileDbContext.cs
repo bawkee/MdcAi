@@ -1,4 +1,4 @@
-﻿#region Copyright Notice
+#region Copyright Notice
 // Copyright (c) 2023 Bojan Sala
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -22,6 +22,10 @@ public class UserProfileDbContext : DbContext
     public DbSet<DbMessage> Messages { get; set; }
     public DbSet<DbCategory> Categories { get; set; }
     public DbSet<DbChatSettings> ChatSettings { get; set; }
+    public DbSet<DbChatTurn> Turns { get; set; }
+    public DbSet<DbChatStep> Steps { get; set; }
+    public DbSet<DbModelRequestAttempt> ModelRequestAttempts { get; set; }
+    public DbSet<DbToolCall> ToolCalls { get; set; }
 
     public string DbPath { get; }
     public Action<string> Log { get; set; }
@@ -78,6 +82,61 @@ public class UserProfileDbContext : DbContext
                     .WithMany()
                     .HasForeignKey(c => c.IdSettings)
                     .IsRequired();
+
+        // --- Phase 1 agentic checkpoints ---
+        // A conversation owns many runs; deleting a conversation branch is done explicitly in
+        // one transaction so no cascade path can erase a fork unexpectedly (ClientSetNull).
+        modelBuilder.Entity<DbChatTurn>()
+                    .HasOne<DbConversation>()
+                    .WithMany(c => c.Turns)
+                    .HasForeignKey(t => t.IdConversation)
+                    .OnDelete(DeleteBehavior.ClientSetNull);
+
+        modelBuilder.Entity<DbChatTurn>()
+                    .HasMany(t => t.Steps)
+                    .WithOne(s => s.Turn)
+                    .HasForeignKey(s => s.IdTurn)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<DbChatTurn>()
+                    .HasMany(t => t.Messages)
+                    .WithOne(m => m.Turn)
+                    .HasForeignKey(m => m.IdTurn)
+                    .OnDelete(DeleteBehavior.ClientSetNull);
+
+        modelBuilder.Entity<DbChatStep>()
+                    .HasMany(s => s.Messages)
+                    .WithOne(m => m.Step)
+                    .HasForeignKey(m => m.IdStep)
+                    .OnDelete(DeleteBehavior.ClientSetNull);
+
+        modelBuilder.Entity<DbChatStep>()
+                    .HasMany(s => s.Attempts)
+                    .WithOne(a => a.Step)
+                    .HasForeignKey(a => a.IdStep)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<DbChatStep>()
+                    .HasIndex(s => new { s.IdTurn, s.StepNumber })
+                    .IsUnique();
+
+        modelBuilder.Entity<DbModelRequestAttempt>()
+                    .HasIndex(a => new { a.IdStep, a.AttemptNumber })
+                    .IsUnique();
+
+        modelBuilder.Entity<DbToolCall>()
+                    .HasIndex(t => new { t.IdAssistantMessage, t.ToolCallId })
+                    .IsUnique();
+
+        modelBuilder.Entity<DbToolCall>()
+                    .HasIndex(t => new { t.IdAssistantMessage, t.CallIndex })
+                    .IsUnique();
+
+        modelBuilder.Entity<DbChatTurn>()
+                    .HasIndex(t => t.IdConversation);
+
+        modelBuilder.Entity<DbChatTurn>()
+                    .HasIndex(t => t.IdTriggerMessage);
 
         modelBuilder.Entity<DbChatSettings>()
                     .HasData(CreateDefaultChatSettings("general"));

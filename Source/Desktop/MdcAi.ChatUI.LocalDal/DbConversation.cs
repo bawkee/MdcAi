@@ -1,4 +1,4 @@
-﻿#region Copyright Notice
+#region Copyright Notice
 // Copyright (c) 2023 Bojan Sala
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -24,7 +24,15 @@ public class DbConversation
     public bool IsTrash { get; set; }
     public DateTime CreatedTs { get; set; }
 
+    /// <summary>Workspace tools are OFF by default for every conversation; enabling them requires
+    /// selecting a workspace folder. Per-conversation on purpose - never silently global.</summary>
+    public bool ToolsEnabled { get; set; }
+
+    /// <summary>Selected workspace folder for this conversation; null until tools are enabled.</summary>
+    public string WorkspacePath { get; set; }
+
     public DbCategory Category { get; set; }
     public List<DbMessage> Messages { get; set; } = new();
+    public List<DbChatTurn> Turns { get; set; } = new();
     public DbChatSettings SettingsOverride { get; set; }
 }

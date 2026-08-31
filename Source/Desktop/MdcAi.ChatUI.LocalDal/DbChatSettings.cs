@@ -20,6 +20,12 @@ public class DbChatSettings
     [Key] public string IdSettings { get; set; }
     public string Model { get; set; }
 
+    /// <summary>
+    /// Which provider the default model belongs to; legacy rows derive it once from the model-id
+    /// heuristic and new selections persist the catalog model's stamped provider key.
+    /// </summary>
+    public string ProviderKey { get; set; }
+
     /// <summary>Default reasoning effort ("low"/"medium"/"high", or whatever the model
     /// advertises). Null = the category/conversation has no stored default - the app picks
     /// the level closest to medium for the model in use, and legacy rows stay null just like

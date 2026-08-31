@@ -20,6 +20,23 @@ const TranscriptItem = ({
     if (!item)
         return null;
 
+    if (item.Kind === 'turn_summary') {
+        const s = item.TurnSummary || {};
+        return (
+            <div ref={forwardRef} onClick={onSelect} className='chat-item chat-item-turn-summary'>
+                <div className='turn-summary-row'>
+                    <span className='activity-row-icon' aria-hidden='true'>∑</span>
+                    <span className='activity-row-title'>Turn usage</span>
+                    <span className='activity-row-summary'>
+                        {s.StepCount} step{s.StepCount === 1 ? '' : 's'} · {s.ToolCallCount} tool call{s.ToolCallCount === 1 ? '' : 's'}
+                        {s.PromptTokens != null && <> · {s.PromptTokens} in / {s.CompletionTokens ?? 0} out</>}
+                    </span>
+                    {s.Outcome && <span className='activity-row-pill'>{s.Outcome}</span>}
+                </div>
+            </div>
+        );
+    }
+
     if (item.Kind === 'activity') {
         const activity = item.Activity || {};
         const isApproval = activity.Status === 'awaiting_approval' && activity.ToolCallId;

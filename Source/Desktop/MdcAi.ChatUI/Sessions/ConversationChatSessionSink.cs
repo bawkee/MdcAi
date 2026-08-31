@@ -37,8 +37,27 @@ public sealed class ConversationChatSessionSink : IChatSessionSink
     private readonly List<ChatToolExecutionView> _toolStates = new();
     private SessionTurnContext _turn;
     private DateTime _startedUtc;
+    private long _promptTokens;
+    private long _completionTokens;
+    private long _reasoningTokens;
+    private long _cacheRead;
+    private decimal _cost;
+    private int _committedSteps;
 
     public IReadOnlyList<ChatToolExecutionView> ToolStates => _toolStates;
+
+    /// <summary>Whole-turn usage observed from committed steps (for the turn-summary activity).</summary>
+    public ChatTurnUsageSummary Usage =>
+        new(_turn?.TurnId, _turn == null ? null : $"{_turn.ProviderKey}/{_turn.Model}",
+            _committedSteps, _toolStates.Count,
+            _promptTokens == 0 ? null : _promptTokens,
+            _completionTokens == 0 ? null : _completionTokens,
+            _reasoningTokens == 0 ? null : _reasoningTokens,
+            _cacheRead == 0 ? null : _cacheRead,
+            null, // cache-write not reported by current providers
+            _cost == 0 ? null : _cost,
+            (long?)(DateTime.UtcNow - _startedUtc).TotalMilliseconds,
+            null);
 
     /// <summary>The trigger message (first user node) of the current turn; null until a turn starts.</summary>
     public ChatMessageVm TriggerMessage { get; private set; }
@@ -106,8 +125,20 @@ public sealed class ConversationChatSessionSink : IChatSessionSink
             }
         }));
 
-    public ValueTask CommitAssistantAsync(string messageId, ChatAssistantRecord record, CancellationToken ct) =>
-        new(MarshalUiAsync(() =>
+    public ValueTask CommitAssistantAsync(string messageId, ChatAssistantRecord record, CancellationToken ct)
+    {
+        _committedSteps++;
+
+        if (record.Usage != null)
+        {
+            _promptTokens += record.Usage.PromptTokens;
+            _completionTokens += record.Usage.CompletionTokens;
+            _reasoningTokens += record.Usage.CompletionDetails?.ReasoningTokens ?? 0;
+            _cacheRead += record.Usage.PromptDetails?.CachedTokens ?? 0;
+            _cost += record.Usage.Cost ?? 0m;
+        }
+
+        return new(MarshalUiAsync(() =>
         {
             if (!_activeAssistant.TryGetValue(messageId, out var node))
                 return;
@@ -124,6 +155,7 @@ public sealed class ConversationChatSessionSink : IChatSessionSink
 
             _activeAssistant.Remove(messageId);
         }));
+    }
 
     public ValueTask AbandonAssistantAsync(string messageId, bool keepDeliveredPrefix, CancellationToken ct) =>
         new(MarshalUiAsync(() =>

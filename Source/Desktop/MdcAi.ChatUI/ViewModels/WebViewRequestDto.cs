@@ -1,4 +1,4 @@
-﻿#region Copyright Notice
+#region Copyright Notice
 // Copyright (c) 2023 Bojan Sala
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -17,4 +17,13 @@ public class WebViewRequestDto
 {
     public string Name { get; set; }
     public object Data { get; set; }
+}
+
+/// <summary>Renderer → host approval intent: exact call id + immutable argument hash.</summary>
+public class ApprovalCmd
+{
+    public string ConversationId { get; set; }
+    public string TurnId { get; set; }
+    public string ToolCallId { get; set; }
+    public string ArgumentHash { get; set; }
 }

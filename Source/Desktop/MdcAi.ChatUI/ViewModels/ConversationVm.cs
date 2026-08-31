@@ -102,6 +102,18 @@ public class ConversationVm : ActivatableViewModel, ILogging
     /// <summary>Bumps the transcript revision (call after a fork/message mutation).</summary>
     public void BumpRevision() => Revision++;
 
+    /// <summary>
+    /// The inline approval seam (DSH proposal §7.6). Created per conversation, passed to every
+    /// agentic turn. Mutating/process tools now wait on this instead of denying by policy.
+    /// </summary>
+    public Sessions.ConversationToolApprovalService ApprovalService { get; }
+
+    /// <summary>The current pending approval card for the renderer; null when none is awaiting.</summary>
+    [Reactive] public Sessions.PendingApproval PendingApproval { get; private set; }
+
+    /// <summary>Whole-turn usage of the LAST completed agentic turn (turn-summary activity); null before any.</summary>
+    [Reactive] public Sessions.ChatTurnUsageSummary LastTurnUsage { get; private set; }
+
     public ReactiveCommand<Unit, Unit> DebugGeneratePromptCmd { get; }
     public ReactiveCommand<Unit, Unit> EditSelectedCmd { get; }
     public ReactiveCommand<Unit, Unit> CancelEditCmd { get; }
@@ -133,6 +145,7 @@ public class ConversationVm : ActivatableViewModel, ILogging
 
     private readonly ChatCore.Sessions.ChatSessionService _sessionService;
     private readonly Sessions.ConversationSessionController _controller;
+    private Sessions.ConversationChatSessionSink _sinkLast;
 
     public ConversationVm(IOpenAiApi api, SettingsVm globalSettings, ChatSettingsVm chatSettings)
     {
@@ -148,6 +161,14 @@ public class ConversationVm : ActivatableViewModel, ILogging
         // turn controller, so a conversation is never executing two agentic turns at once.
         _sessionService = ConversationSessionServices.Create(api);
         _controller = new ConversationSessionController();
+        ApprovalService = new Sessions.ConversationToolApprovalService();
+
+        // Surface pending approvals to the renderer (inline approve/deny cards).
+        ApprovalService.Pending
+                       .ObserveOnMainThread()
+                       .Do(p => PendingApproval = p)
+                       .Do(p => { if (p?.Request != null) BumpRevision(); })
+                       .SubscribeSafe();
 
         // Explicit agentic turn runner. Tools-enabled conversations are the ONLY path through
         // ChatSessionService for now; the classic tail-driven subscription below stays for
@@ -166,7 +187,13 @@ public class ConversationVm : ActivatableViewModel, ILogging
                 turn.Origin.ToString().ToLowerInvariant()));
 
             await _controller.RunAsync(async ct =>
-                await _sessionService.RunTurnAsync(turn, sink, ct));
+                await _sessionService.RunTurnAsync(turn, sink, ct), turn.TurnId);
+
+            // Surface the durable whole-turn usage for the turn-summary activity.
+            _sinkLast = sink;
+            LastTurnUsage = sink.Usage;
+            if (LastTurnUsage != null)
+                BumpRevision();
         });
 
         StopSessionCmd = ReactiveCommand.Create(
@@ -783,11 +810,15 @@ public class ConversationVm : ActivatableViewModel, ILogging
                 .Switch()
                 .Select(m =>
                 {
-                    // Tools-enabled conversations get the versioned transcript snapshot (Phase 2
-                    // contract); ordinary chat keeps the classic message list until P2-04.
-                    return ToolsEnabled
-                               ? ProjectTranscript()
-                               : m.CreateWebViewSetMessageRequest();
+                    if (!ToolsEnabled)
+                        return m.CreateWebViewSetMessageRequest();
+
+                    // Agentic conversations: while a turn is streaming, send the cheap
+                    // single-item upsert (P2-04) instead of the full snapshot per token; the
+                    // snapshot is re-posted whenever the structure settles or navigation resumes.
+                    return IsCompleting
+                               ? ProjectLiveItem() ?? ProjectTranscript()
+                               : ProjectTranscript();
                 })
                 .ObserveOnMainThread()
                 .Do(r => LastMessagesRequest = r)
@@ -908,12 +939,44 @@ public class ConversationVm : ActivatableViewModel, ILogging
     private WebViewRequestDto ProjectTranscript()
     {
         var nodes = Head?.Message.GetNextMessages().ToArray() ?? Array.Empty<ChatMessageVm>();
-        var snapshot = WebViewTranscriptProjector.Project(this, nodes, Revision);
+        var snapshot = WebViewTranscriptProjector.Project(this, nodes, Revision,
+                                                          pendingApproval: PendingApproval,
+                                                          turnUsage: LastTurnUsage);
 
         return new WebViewRequestDto
         {
             Name = "SetMessages",
             Data = snapshot
+        };
+    }
+
+    /// <summary>
+    /// P2-04 live item update: one UpsertTranscriptItem replacing just the ACTIVE node while the
+    /// agentic turn is streaming (the latest placeholder/tool progress). The renderer upserts by
+    /// stable id + revision; the full snapshot remains the recovery primitive (posted on settle).
+    /// </summary>
+    private WebViewRequestDto ProjectLiveItem()
+    {
+        var nodes = Head?.Message.GetNextMessages().ToArray() ?? Array.Empty<ChatMessageVm>();
+        if (nodes.Length == 0)
+            return null;
+
+        // Active = the streaming tail node (assistant placeholder / running tool progress).
+        var active = nodes[^1];
+
+        var item = WebViewTranscriptProjector.ProjectSingleItem(active, Revision);
+        if (item == null)
+            return null;
+
+        return new WebViewRequestDto
+        {
+            Name = "UpsertTranscriptItem",
+            Data = new
+            {
+                ConversationId = Id,
+                BaseRevision = Revision,
+                Item = item
+            }
         };
     }
 
@@ -937,9 +1000,17 @@ public class ConversationVm : ActivatableViewModel, ILogging
             WorkspacePath,
             ToolsEnabled ? ConversationSessionServices.BuiltInToolNames : Array.Empty<string>(),
             ChatTurnOrigin.Human,
-            null, // Phase 1: no approval UI yet - mutating/process tools deny by policy
+            ToolsEnabled ? ApprovalService : null, // inline approval for mutating/process tools
             ChatTurnLimits.Default);
     }
+
+    /// <summary>
+    /// Resolves a pending approval from a renderer click. The request must match conversation/
+    /// turn/tool-call id AND the immutable argument hash; a stale click is rejected (false) and
+    /// updates the card rather than executing anything.
+    /// </summary>
+    public bool ResolveApproval(string toolCallId, string argumentHash, ChatCore.Security.ChatApprovalDecision decision) =>
+        ApprovalService.Resolve(Id, _controller.ActiveTurnId, toolCallId, argumentHash, decision);
 
     /// <summary>
     /// Agentic regenerate: drop the final assistant node and re-run the LAST model step from the

@@ -234,4 +234,26 @@ public class WebViewTranscriptProjectorTests
         Assert.Contains("cancelled", tool.Summary);
         Assert.Equal("completed", tool.Status);
     }
+
+    [Fact]
+    public void ProjectSingleItem_matches_the_snapshot_message_item()
+    {
+        var (convo, _) = Make();
+        BuildAgenticBranch(convo);
+
+        // The tail is the final assistant message; its single-item upsert must match what a
+        // full snapshot would carry for that node (stable id, same DTO surface).
+        var tail = convo.Tail.Message;
+        var single = WebViewTranscriptProjector.ProjectSingleItem(tail, 9);
+
+        Assert.NotNull(single);
+        Assert.Equal($"message:{tail.Id}", single.Id);
+        Assert.Equal(9, single.Revision);
+        Assert.Equal("<p>The file says hello.</p>", single.Message.Content); // HTML surface, like the snapshot path
+        Assert.Equal("model", single.Message.Origin);
+
+        // Tool/result nodes are not individually upserted (snapshot covers them).
+        var toolNode = convo.Head.Message.GetNextMessages().First(m => m.Role == ChatMessageRole.Tool);
+        Assert.Null(WebViewTranscriptProjector.ProjectSingleItem(toolNode, 9));
+    }
 }

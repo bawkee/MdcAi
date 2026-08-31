@@ -163,6 +163,24 @@ public sealed partial class Conversation : ILogging
                     .SubscribeSafe()
                     .DisposeWith(disposables);
 
+            // Inline tool approval (DSH proposal §7.6): the renderer posts the exact call id +
+            // argument hash; the view validates against the current pending request and completes
+            // it exactly once. A stale click is rejected and updates the card, never executes.
+            messages.Where(r => r.Name is "ApproveToolCall" or "DenyToolCall")
+                    .ObserveOnMainThread()
+                    .Do(r =>
+                    {
+                        var approval = JsonConvert.DeserializeObject<ApprovalCmd>(JsonConvert.SerializeObject(r.Data));
+                        var decision = r.Name == "ApproveToolCall"
+                                          ? ChatCore.Security.ChatApprovalDecision.Approved
+                                          : ChatCore.Security.ChatApprovalDecision.Denied;
+                        var matched = viewModel.ResolveApproval(approval?.ToolCallId, approval?.ArgumentHash, decision);
+                        if (!matched)
+                            this.LogDebug("Stale approval click rejected for tool call {ToolCallId}", approval?.ToolCallId);
+                    })
+                    .SubscribeSafe()
+                    .DisposeWith(disposables);
+
             webReady.Select(_ => viewModel.WhenAnyValue(vm => vm.LastMessagesRequest)
                                           .WhereNotNull())
                     .Switch()

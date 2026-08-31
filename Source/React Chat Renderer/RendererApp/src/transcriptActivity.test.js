@@ -187,6 +187,84 @@ describe('v2 transcript SetMessages', () => {
     });
 });
 
+describe('v2 turn summary + approval', () => {
+    it('renders the turn summary with step/tool counts', () => {
+        const items = [
+            baseItem(),
+            {
+                Id: 'turn-summary:t1',
+                Kind: 'turn_summary',
+                TurnId: 't1',
+                TurnSummary: {
+                    TurnId: 't1',
+                    ProviderModel: 'openrouter/deepseek/deepseek-chat',
+                    StepCount: 3,
+                    ToolCallCount: 2,
+                    PromptTokens: 1000,
+                    CompletionTokens: 200,
+                    Outcome: 'Completed'
+                }
+            }
+        ];
+
+        render(<App />);
+        act(() => emitWebMessage(v2Snapshot(items)));
+
+        expect(screen.getByText('Turn usage')).toBeInTheDocument();
+        expect(screen.getByText(/3 steps/)).toBeInTheDocument();
+        expect(screen.getByText(/2 tool calls/)).toBeInTheDocument();
+        expect(screen.getByText(/1000 in \/ 200 out/)).toBeInTheDocument();
+    });
+
+    it('shows approve/deny only for a pending approval activity and posts the decision', () => {
+        const items = [
+            baseItem(),
+            {
+                Id: 'approval:call_x',
+                Kind: 'activity',
+                TurnId: 'turn-9',
+                Activity: {
+                    ActivityKind: 'tool',
+                    PresentationKind: 'diff',
+                    Status: 'awaiting_approval',
+                    Title: 'Write',
+                    Summary: 'Write · a.txt',
+                    ToolCallId: 'call_x',
+                    ArgumentHash: 'HASH',
+                    Details: {
+                        Version: 1,
+                        Kind: 'diff',
+                        Diff: { State: 'proposed', Diffs: [{ Path: 'a.txt', NewText: 'content' }] }
+                    }
+                }
+            }
+        ];
+
+        render(<App />);
+        act(() => emitWebMessage(v2Snapshot(items)));
+
+        const approve = screen.getByText('Approve');
+        const deny = screen.getByText('Deny');
+        expect(approve).toBeInTheDocument();
+        expect(deny).toBeInTheDocument();
+
+        fireEvent.click(approve);
+        expect(window.chrome.webview.postMessage).toHaveBeenCalledWith({
+            Name: 'ApproveToolCall',
+            Data: {
+                ConversationId: 'c-1',
+                TurnId: 'turn-9',
+                ToolCallId: 'call_x',
+                ArgumentHash: 'HASH'
+            }
+        });
+
+        // Disabled after the click - no double posts.
+        expect(approve).toBeDisabled();
+        expect(deny).toBeDisabled();
+    });
+});
+
 describe('v2 transcript selection & revision', () => {
     it('selects by stable item id and posts SetSelection with the id', () => {
         const items = [baseItem({ Id: 'message:u', Message: { Id: 'u', Role: 'user', Content: '<p>a</p>' } }),

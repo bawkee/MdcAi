@@ -14,6 +14,7 @@
 namespace MdcAi.ChatUI.ViewModels;
 
 using LocalDal;
+using MdcAi.ChatUI.Sessions;
 using Newtonsoft.Json.Linq;
 using OpenAiApi;
 
@@ -37,7 +38,9 @@ public static class WebViewTranscriptProjector
         ConversationVm convo,
         IEnumerable<ChatMessageVm> nodes,
         long revision,
-        Func<string, DbToolCall> toolCallLookup = null)
+        Func<string, DbToolCall> toolCallLookup = null,
+        PendingApproval pendingApproval = null,
+        ChatTurnUsageSummary turnUsage = null)
     {
         var items = new List<WebViewTranscriptItemDto>();
 
@@ -115,6 +118,48 @@ public static class WebViewTranscriptProjector
             }
         }
 
+        // Inline approval card (Phase 2.5): shown while a call awaits user consent. It is a
+        // live-only surface - approval grants are never inferred from persisted cards.
+        if (pendingApproval?.Request != null && pendingApproval.ToActivity() is { } approvalActivity)
+        {
+            items.Add(new WebViewTranscriptItemDto
+            {
+                Id = $"approval:{approvalActivity.ToolCallId}",
+                Kind = "activity",
+                TurnId = pendingApproval.Request.TurnId,
+                Revision = revision,
+                Activity = approvalActivity
+            });
+        }
+
+        // Turn usage disclosure: derived from durable step/call/usage records, labeled unknown rather
+// than zero when a metric wasn't supplied (DSH proposal §7.3).
+        if (turnUsage != null && turnUsage.StepCount > 0)
+        {
+            items.Add(new WebViewTranscriptItemDto
+            {
+                Id = $"turn-summary:{turnUsage.TurnId}",
+                Kind = "turn_summary",
+                TurnId = turnUsage.TurnId,
+                Revision = revision,
+                TurnSummary = new WebViewTurnSummaryDto
+                {
+                    TurnId = turnUsage.TurnId,
+                    ProviderModel = turnUsage.ProviderModel,
+                    StepCount = turnUsage.StepCount,
+                    ToolCallCount = turnUsage.ToolCallCount,
+                    PromptTokens = turnUsage.PromptTokens,
+                    CompletionTokens = turnUsage.CompletionTokens,
+                    ReasoningTokens = turnUsage.ReasoningTokens,
+                    PromptCacheReadTokens = turnUsage.PromptCacheReadTokens,
+                    PromptCacheWriteTokens = turnUsage.PromptCacheWriteTokens,
+                    Cost = turnUsage.Cost,
+                    WallTimeMs = turnUsage.WallTimeMs,
+                    Outcome = turnUsage.Outcome
+                }
+            });
+        }
+
         return new WebViewTranscriptSnapshotDto
         {
             ContractVersion = CurrentContractVersion,
@@ -122,6 +167,38 @@ public static class WebViewTranscriptProjector
             Revision = revision,
             Items = items.ToArray()
         };
+    }
+
+    /// <summary>
+    /// Projects a SINGLE node as one transcript item for UpsertTranscriptItem live updates.
+    /// Only streaming assistant nodes (content/reasoning) and completed nodes with tool calls go
+    /// through here; the renderer replaces the whole item by stable id + revision.
+    /// </summary>
+    public static WebViewTranscriptItemDto ProjectSingleItem(ChatMessageVm node, long revision)
+    {
+        if (node == null)
+            return null;
+
+        if (node.Role == ChatMessageRole.Assistant)
+        {
+            // The active streaming placeholder / completed assistant node.
+            var item = new WebViewTranscriptItemDto
+            {
+                Id = $"message:{node.Id}",
+                Kind = "message",
+                TurnId = null,
+                StepNumber = null,
+                Revision = revision,
+                Message = node.GetWebViewDtoEx()
+            };
+
+            return item;
+        }
+
+        if (node.Role == ChatMessageRole.Tool)
+            return null; // paired tool activity covers it; the snapshot already carries it
+
+        return null;
     }
 
     private static bool IsPaired(ChatMessageVm toolResult)

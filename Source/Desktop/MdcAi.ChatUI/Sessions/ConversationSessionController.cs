@@ -41,6 +41,9 @@ public sealed class ConversationSessionController
 
     public bool IsTurnActive { get; private set; }
 
+    /// <summary>Id of the active turn (for approval matching); null when idle.</summary>
+    public string ActiveTurnId { get; private set; }
+
     /// <summary>Fired when <see cref="IsTurnActive"/> changes (start/stop of a turn).</summary>
     public event Action ActiveChanged;
 
@@ -48,7 +51,7 @@ public sealed class ConversationSessionController
     /// Runs one turn if none is active. The runner factory receives the turn's cancellation
     /// token; the controller guarantees at most one in-flight turn per conversation.
     /// </summary>
-    public async Task RunAsync(Func<CancellationToken, Task> turnRunner)
+    public async Task RunAsync(Func<CancellationToken, Task> turnRunner, string turnId = null)
     {
         await _gate.WaitAsync();
         try
@@ -58,6 +61,7 @@ public sealed class ConversationSessionController
 
             _cts = new CancellationTokenSource();
             IsTurnActive = true;
+            ActiveTurnId = turnId;
             ActiveChanged?.Invoke();
 
             try
@@ -67,6 +71,7 @@ public sealed class ConversationSessionController
             finally
             {
                 IsTurnActive = false;
+                ActiveTurnId = null;
                 _cts.Dispose();
                 _cts = null;
                 ActiveChanged?.Invoke();

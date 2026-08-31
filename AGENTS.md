@@ -39,12 +39,15 @@ C:\Source\MdcAi\
    ├─ .editorconfig
    ├─ Common\
    │  ├─ MdcAi.OpenAiApi\        ← LLM API client library (pure .NET, no UI). OpenAI + OpenRouter via AiProviders/ChatApiRouter.
+   │  ├─ MdcAi.ChatCore\         ← agentic step loop, tools, workspace security (pure .NET, no UI/EF) - see Skills/ChatCore
    │  ├─ MdcAi.OpenAiApi.Tests\  ← unit tests (no network)
+   │  ├─ MdcAi.ChatCore.Tests\   ← step-loop/tool/security tests (scripted fake API, no network)
+   │  ├─ MdcAi.ChatUI.LocalDal.Tests\ ← EF migration/upgrade tests
    │  └─ MdcAi.OpenAiApi.IntegrationTests\ ← live smoke tests; keys via user secrets
    ├─ React Chat Renderer\
    │  └─ RendererApp\            ← the React app that renders chat inside the WebView2
    └─ Desktop\
-      ├─ MdcAi.sln               ← solution (5 app projects + 3 test projects, tests opt-in)
+      ├─ MdcAi.sln               ← solution (7 app projects + 4 test projects, tests opt-in)
       ├─ MdcAi\                  ← THE WinUI3 app shell (entry point, MainWindow, RootPage)
       ├─ MdcAi.ChatUI\           ← Views + ViewModels + WebView2 host (most of the UI logic)
       ├─ MdcAi.ChatUI.Tests\     ← ViewModel unit tests (OpenAiSettingsVm, OpenRouterSettingsVm, SettingsVm, ChatSettingsVm, ConversationVm)
@@ -57,13 +60,15 @@ C:\Source\MdcAi\
 ```
 MdcAi (exe, shell)
   └── MdcAi.ChatUI (Views/VMs/WebView)                     [net9-windows, WinUI]
+        ├── MdcAi.ChatCore        ← step loop, tools, security       [plain net9]
+        │     └── MdcAi.OpenAiApi (API client, common)               [plain net9]
         ├── MdcAi.Extensions.WinUI (helpers)               [net9-windows, WinUI]
         │      └── MdcAi.ChatUI.LocalDal                    [plain net9]
         └── MdcAi.OpenAiApi  (API client, common)           [plain net9]
 ```
 
 - `MdcAi.ChatUI` is the **heart**: all ViewModels, all Views, WebView2 bridge, and the reactive "fork tree" data model live there. `MdcAi` is just the MSIX shell + app bootstrap.
-- `MdcAi.OpenAiApi` and `MdcAi.ChatUI.LocalDal` are **plain .NET 9** class libraries usable outside WinUI.
+- `MdcAi.ChatCore`, `MdcAi.OpenAiApi` and `MdcAi.ChatUI.LocalDal` are **plain .NET 9** class libraries usable outside WinUI. `MdcAi.ChatCore` never references view models or EF entities - the transcript flows through `IChatSessionSink` (adapter in `MdcAi.ChatUI/Sessions`).
 
 ---
 

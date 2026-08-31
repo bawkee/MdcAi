@@ -13,15 +13,16 @@
 
 namespace MdcAi.ChatUI.Sessions;
 
-using OpenAiApi;
+using ChatCore.Helpers;
 using ChatCore.Sessions;
 using ChatCore.Tools;
 using ChatCore.Tools.BuiltIn;
+using OpenAiApi;
 
 /// <summary>
-/// Builds the shared ChatCore services from the app's built-in tools. The registry is
-/// immutable and cached; each conversation's session service is small and stateless across
-/// turns (DSH proposal §4).
+/// Builds the shared ChatCore services from the app's built-in tools. The plain tool registry is
+/// immutable and cached; the api-bound registry (delegate_task helper included) is built per
+/// conversation because it needs the live IOpenAiApi.
 /// </summary>
 public static class ConversationSessionServices
 {
@@ -30,7 +31,7 @@ public static class ConversationSessionServices
     public static IReadOnlyList<string> BuiltInToolNames { get; } = new[]
     {
         "read_file", "list_dir", "grep", "write_file", "patch_file", "run_powershell",
-        "get_job", "stop_job"
+        "get_job", "stop_job", "delegate_task"
     };
 
     public static ChatToolRegistry Registry =>
@@ -46,5 +47,15 @@ public static class ConversationSessionServices
             new StopJobChatTool()
         });
 
-    public static ChatSessionService Create(IOpenAiApi api) => new(api, Registry);
+    /// <summary>
+    /// Api-bound registry: adds delegate_task whose one-shot helpers share this conversation's
+    /// IOpenAiApi. Per-conversation instance (the helper closes over the live client).
+    /// </summary>
+    public static ChatToolRegistry BuildApiBoundRegistry(IOpenAiApi api)
+    {
+        var helpers = new HelperSessionService(api, Registry);
+        return ChatToolRegistry.Build(Registry.All.Append(new DelegateTaskChatTool(helpers)));
+    }
+
+    public static ChatSessionService Create(IOpenAiApi api) => new(api, BuildApiBoundRegistry(api));
 }

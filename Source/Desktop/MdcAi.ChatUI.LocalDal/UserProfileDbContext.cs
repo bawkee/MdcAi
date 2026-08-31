@@ -27,6 +27,7 @@ public class UserProfileDbContext : DbContext
     public DbSet<DbModelRequestAttempt> ModelRequestAttempts { get; set; }
     public DbSet<DbToolCall> ToolCalls { get; set; }
     public DbSet<DbBackgroundJob> BackgroundJobs { get; set; }
+    public DbSet<DbGoal> Goals { get; set; }
 
     public string DbPath { get; }
     public Action<string> Log { get; set; }
@@ -144,6 +145,9 @@ public class UserProfileDbContext : DbContext
 
         modelBuilder.Entity<DbBackgroundJob>()
                     .HasIndex(j => j.Status);
+
+        modelBuilder.Entity<DbGoal>()
+                    .HasIndex(g => new { g.IdConversation, g.Status });
 
         modelBuilder.Entity<DbChatSettings>()
                     .HasData(CreateDefaultChatSettings("general"));

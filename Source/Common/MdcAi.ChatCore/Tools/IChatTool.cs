@@ -91,7 +91,10 @@ public sealed record ChatToolExecutionContext(
     string WorkspacePath,
     WorkspaceReadObservationSet ReadObservations,
     IChatToolApprovalService ApprovalService,
-    IBackgroundJobService JobService = null);
+    IBackgroundJobService JobService = null,
+    string ProviderKey = null,
+    string Model = null,
+    string Effort = null);
 
 /// <summary>
 /// A registered tool. Name/Description/ParametersSchema are the model-facing surface; execution

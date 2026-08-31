@@ -27,6 +27,10 @@ using MdcAi.OpenAiApi;
 /// One stable assistant placeholder id is reserved before each request; deltas and the final
 /// commit address that same node, so a streaming placeholder and a second completed assistant
 /// can never both appear. On cancel, a delivered prefix is finalized as interrupted/honest.
+///
+/// Provider-request recovery (phase 1.11): an eligible transient failure BEFORE any accepted
+/// delta schedules a bounded retry over the SAME frozen request; failed attempt buffers are
+/// discarded and never enter model history. After the first accepted delta, no retry.
 /// </summary>
 public sealed class ChatSessionService
 {
@@ -34,17 +38,23 @@ public sealed class ChatSessionService
     private readonly ChatToolRegistry _registry;
     private readonly ChatToolScheduler _scheduler;
     private readonly ChatPromptBuilder _promptBuilder;
+    private readonly ChatRetryPolicy _retryPolicy;
+    private readonly IChatClock _clock;
 
     public ChatSessionService(
         IOpenAiApi api,
         ChatToolRegistry registry,
         ChatPromptBuilder promptBuilder = null,
-        ChatToolScheduler scheduler = null)
+        ChatToolScheduler scheduler = null,
+        ChatRetryPolicy retryPolicy = null,
+        IChatClock clock = null)
     {
         _api = api;
         _registry = registry;
         _promptBuilder = promptBuilder ?? ChatPromptBuilder.Default;
         _scheduler = scheduler ?? new ChatToolScheduler(registry);
+        _retryPolicy = retryPolicy ?? ChatRetryPolicy.Default;
+        _clock = clock ?? new SystemChatClock();
     }
 
     public async Task<ChatTurnResult> RunTurnAsync(
@@ -74,7 +84,7 @@ public sealed class ChatSessionService
             ChatAssistantRecord assembled;
             try
             {
-                assembled = await StreamAndAssembleAsync(request, messageId, sink, ct);
+                assembled = await StreamAndAssembleWithRetryAsync(request, messageId, step, turn, sink, ct);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
@@ -83,13 +93,15 @@ public sealed class ChatSessionService
             }
             catch (OpenAiApiException ex)
             {
-                await SafeAbandonAsync(sink, messageId, keepDeliveredPrefix: false);
+                // A delivered prefix is finalized honestly as failed/interrupted; no prefix
+                // means the placeholder is simply removed. Never mislabel either as complete.
+                await SafeAbandonAsync(sink, messageId, keepDeliveredPrefix: true);
                 return new ChatTurnResult(ChatTurnOutcome.Failed, step, totalToolCalls, turn.TurnId,
                                           ToErrorCode(ex), ex.Message);
             }
             catch (Exception ex)
             {
-                await SafeAbandonAsync(sink, messageId, keepDeliveredPrefix: false);
+                await SafeAbandonAsync(sink, messageId, keepDeliveredPrefix: true);
                 return new ChatTurnResult(ChatTurnOutcome.Failed, step, totalToolCalls, turn.TurnId,
                                           "unexpected_error", ex.Message);
             }
@@ -140,33 +152,68 @@ public sealed class ChatSessionService
         };
     }
 
-    private async Task<ChatAssistantRecord> StreamAndAssembleAsync(
+    private async Task<ChatAssistantRecord> StreamAndAssembleWithRetryAsync(
         ChatRequest request,
         string messageId,
+        int step,
+        ChatTurnRequest turn,
         IChatSessionSink sink,
         CancellationToken ct)
     {
-        var assembler = new ChatResponseAssembler();
-        var pushedAny = false;
-
-        await foreach (var chunk in _api.CreateChatCompletionsStream(request, ct))
+        for (var attempt = 1; attempt <= _retryPolicy.MaxAttempts; attempt++)
         {
-            assembler.Accept(chunk);
+            ct.ThrowIfCancellationRequested();
 
-            // Push the latest aggregate streaming state (the sink renders the newest state of the
-            // single placeholder node; Commit carries the canonical message).
-            if (assembler.HasAcceptedDelta || assembler.ToolCalls.Count > 0)
+            await sink.SetModelRequestAttemptAsync(new ChatModelRequestAttemptView(
+                attempt, "started", "none", null, null, null), ct);
+
+            // A FRESH assembler per attempt: failed attempt buffers are discarded and never
+            // enter model history. If this attempt accepts any delta, retry is disabled.
+            var assembler = new ChatResponseAssembler();
+
+            try
             {
-                await sink.ApplyAssistantDeltaAsync(messageId, assembler.BuildCurrentDelta(), ct);
-                pushedAny = true;
+                var pushedAny = false;
+                await foreach (var chunk in _api.CreateChatCompletionsStream(request, ct))
+                {
+                    assembler.Accept(chunk);
+
+                    if (assembler.HasAcceptedDelta || assembler.ToolCalls.Count > 0)
+                    {
+                        await sink.ApplyAssistantDeltaAsync(messageId, assembler.BuildCurrentDelta(), ct);
+                        pushedAny = true;
+                    }
+                }
+
+                if (!pushedAny)
+                    await sink.ApplyAssistantDeltaAsync(messageId, assembler.BuildCurrentDelta(), ct);
+
+                await sink.SetModelRequestAttemptAsync(new ChatModelRequestAttemptView(
+                    attempt, "completed", "none", null, null, null), ct);
+
+                return assembler.BuildRecord();
+            }
+            catch (OpenAiApiException ex) when (attempt < _retryPolicy.MaxAttempts
+                                                && !assembler.HasAcceptedDelta)
+            {
+                var category = ChatFailureClassifier.Classify(ex);
+                if (!ChatFailureClassifier.IsRetryable(category))
+                    throw;
+
+                // Persist the failed attempt with a scheduled disposition BEFORE waiting.
+                var scheduledUntil = _clock.UtcNow + _retryPolicy.DelayForRetry(attempt);
+                await sink.SetModelRequestAttemptAsync(new ChatModelRequestAttemptView(
+                    attempt, "failed", "scheduled", category, ex.GetType().Name,
+                    scheduledUntil), ct);
+
+                await _clock.DelayAsync(_retryPolicy.DelayForRetry(attempt), ct);
+
+                // Cancellation during backoff surfaces here (no retry dispatch).
+                continue;
             }
         }
 
-        // Ensure a final delta is visible even when the stream delivered no meaningful content.
-        if (!pushedAny)
-            await sink.ApplyAssistantDeltaAsync(messageId, assembler.BuildCurrentDelta(), ct);
-
-        return assembler.BuildRecord();
+        throw new InvalidOperationException("Retry policy exhausted without result - unreachable.");
     }
 
     private static async Task<ChatTurnResult> CompleteAsync(
@@ -200,8 +247,8 @@ public sealed class ChatSessionService
     }
 
     private static string ToErrorCode(OpenAiApiException ex) =>
-        ex is OpenAiApiQuotaException ? "rate_limit_or_quota"
+        ex is OpenAiInvalidApiKeyException ? "invalid_api_key"
       : ex is OpenAiApiAuthException ? "auth_error"
-      : ex is OpenAiInvalidApiKeyException ? "invalid_api_key"
+      : ex is OpenAiApiQuotaException ? "rate_limit_or_quota"
       : "api_error";
 }

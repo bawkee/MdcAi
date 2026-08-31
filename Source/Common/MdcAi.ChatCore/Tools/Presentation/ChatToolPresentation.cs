@@ -46,6 +46,12 @@ public sealed record ChatToolCallPresentation(
 {
     public static ChatToolCallPresentation Generic(string title, string summary, JObject payload = null) =>
         new(1, ChatToolCallPresentationKind.Generic, title, summary, payload ?? new JObject());
+
+    public static ChatToolCallPresentation Diff(string title, string summary, JObject payload = null) =>
+        new(1, ChatToolCallPresentationKind.Diff, title, summary, payload ?? new JObject());
+
+    public static ChatToolCallPresentation Terminal(string title, string summary, JObject payload = null) =>
+        new(1, ChatToolCallPresentationKind.Terminal, title, summary, payload ?? new JObject());
 }
 
 /// <summary>

@@ -58,6 +58,99 @@ public sealed class ScriptedFakeApi : IOpenAiApi
         _script.Enqueue(new HangingStream(prefixChunks));
     }
 
+    /// <summary>Enqueues a response that throws as soon as its stream is enumerated.</summary>
+    public void EnqueueThrows(Exception ex)
+    {
+        _inspectors.Enqueue(_ => { });
+        _script.Enqueue(new ThrowEnumerable(ex));
+    }
+
+    /// <summary>Enqueues a response that delivers prefix chunks, then throws mid-stream.</summary>
+    public void EnqueueThenThrow(Exception ex, params ChatResult[] prefix)
+    {
+        _inspectors.Enqueue(_ => { });
+        _script.Enqueue(new ThenThrowEnumerable(ex, prefix));
+    }
+
+    private sealed class ThenThrowEnumerable : IAsyncEnumerable<ChatResult>
+    {
+        private readonly Exception _ex;
+        private readonly ChatResult[] _prefix;
+
+        public ThenThrowEnumerable(Exception ex, ChatResult[] prefix)
+        {
+            _ex = ex;
+            _prefix = prefix;
+        }
+
+        public IAsyncEnumerator<ChatResult> GetAsyncEnumerator(CancellationToken ct) =>
+            new Enumerator(_ex, _prefix);
+
+        private sealed class Enumerator : IAsyncEnumerator<ChatResult>
+        {
+            private readonly Exception _ex;
+            private readonly ChatResult[] _prefix;
+            private int _phase;
+
+            public Enumerator(Exception ex, ChatResult[] prefix)
+            {
+                _ex = ex;
+                _prefix = prefix;
+            }
+
+            public ChatResult Current { get; private set; }
+
+            public ValueTask<bool> MoveNextAsync()
+            {
+                if (_phase < _prefix.Length)
+                {
+                    Current = _prefix[_phase++];
+                    return new ValueTask<bool>(true);
+                }
+
+                throw _ex;
+            }
+
+            public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class ThrowEnumerable : IAsyncEnumerable<ChatResult>
+    {
+        private readonly Exception _ex;
+
+        public ThrowEnumerable(Exception ex) => _ex = ex;
+
+        public IAsyncEnumerator<ChatResult> GetAsyncEnumerator(CancellationToken ct) => new Enumerator(_ex);
+
+        private sealed class Enumerator : IAsyncEnumerator<ChatResult>
+        {
+            private readonly Exception _ex;
+
+            public Enumerator(Exception ex) => _ex = ex;
+
+            public ChatResult Current => null;
+
+            public ValueTask<bool> MoveNextAsync() => throw _ex;
+
+            public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+        }
+    }
+
+    /// <summary>Deterministic clock: records delays, honor cancellation, no wall-clock waiting.</summary>
+    public sealed class FakeClock : IChatClock
+    {
+        // Clock contract is in ChatCore.Sessions.
+        public List<TimeSpan> Delays { get; } = new();
+        public DateTimeOffset UtcNow { get; set; } = DateTimeOffset.UtcNow;
+
+        public Task DelayAsync(TimeSpan duration, CancellationToken ct)
+        {
+            Delays.Add(duration);
+            return Task.Delay(duration, ct);
+        }
+    }
+
     private sealed class HangingStream : IAsyncEnumerable<ChatResult>
     {
         private readonly ChatResult[] _prefix;

@@ -13,6 +13,7 @@
 
 namespace MdcAi.OpenAiApi;
 
+using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using SalaTools.Core;
@@ -60,14 +61,22 @@ public static class HttpClientExtensions
             client.DefaultRequestHeaders.Add(headerName, headerValue);
     }
 
+    public static Task<T> RequestAsync<T>(
+        this HttpClient client,
+        Uri uri,
+        HttpMethod verb,
+        object postData = null) where T : ApiResult =>
+        RequestAsync<T>(client, uri, verb, postData, CancellationToken.None);
+
     public static async Task<T> RequestAsync<T>(
         this HttpClient client,
         Uri uri,
         HttpMethod verb,
-        object postData = null) where T : ApiResult
+        object postData,
+        CancellationToken ct) where T : ApiResult
     {
-        var response = await client.RequestAsync(uri, verb, postData);
-        var resultAsString = await response.Content.ReadAsStringAsync();
+        var response = await client.RequestAsync(uri, verb, postData, false, ct);
+        var resultAsString = await response.Content.ReadAsStringAsync(ct);
         var res = JsonConvert.DeserializeObject<T>(resultAsString);
 
         ParseHeaders(response.Headers, res);
@@ -75,23 +84,31 @@ public static class HttpClientExtensions
         return res;
     }
 
+    public static IAsyncEnumerable<T> RequestStreamingAsync<T>(
+        this HttpClient client,
+        Uri uri,
+        HttpMethod verb,
+        object postData = null) where T : ApiResult =>
+        RequestStreamingAsync<T>(client, uri, verb, postData, CancellationToken.None);
+
     public static async IAsyncEnumerable<T> RequestStreamingAsync<T>(
         this HttpClient client,
         Uri uri,
         HttpMethod verb,
-        object postData = null) where T : ApiResult
+        object postData,
+        [EnumeratorCancellation] CancellationToken ct) where T : ApiResult
     {
-        var response = await client.RequestAsync(uri, verb, postData, true);
+        var response = await client.RequestAsync(uri, verb, postData, true, ct);
 
         var headers = new ApiResult();
 
         ParseHeaders(response.Headers, headers);
 
-        await using var stream = await response.Content.ReadAsStreamAsync();
+        await using var stream = await response.Content.ReadAsStreamAsync(ct);
 
         using var reader = new StreamReader(stream);
 
-        while (await reader.ReadLineAsync() is { } line)
+        while (await reader.ReadLineAsync(ct) is { } line)
         {
             if (line.StartsWith("data:"))
                 line = line.Substring("data:".Length);
@@ -151,12 +168,21 @@ public static class HttpClientExtensions
         };
     }
 
-    public static async Task<HttpResponseMessage> RequestAsync(
+    public static Task<HttpResponseMessage> RequestAsync(
         this HttpClient client,
         Uri uri,
         HttpMethod verb,
         object postData = null,
-        bool streaming = false)
+        bool streaming = false) =>
+        RequestAsync(client, uri, verb, postData, streaming, CancellationToken.None);
+
+    public static async Task<HttpResponseMessage> RequestAsync(
+        this HttpClient client,
+        Uri uri,
+        HttpMethod verb,
+        object postData,
+        bool streaming,
+        CancellationToken ct)
     {
         var req = new HttpRequestMessage(verb, uri);
 
@@ -178,7 +204,8 @@ public static class HttpClientExtensions
         var response = await client.SendAsync(req,
                                               streaming ?
                                                   HttpCompletionOption.ResponseHeadersRead :
-                                                  HttpCompletionOption.ResponseContentRead);
+                                                  HttpCompletionOption.ResponseContentRead,
+                                              ct);
 
         if (response.IsSuccessStatusCode)
             return response;
@@ -188,7 +215,7 @@ public static class HttpClientExtensions
 
         try
         {
-            resultAsString = await response.Content.ReadAsStringAsync();
+            resultAsString = await response.Content.ReadAsStringAsync(ct);
 
             try
             {

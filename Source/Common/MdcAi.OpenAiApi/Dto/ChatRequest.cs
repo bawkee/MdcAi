@@ -15,6 +15,8 @@
 
 namespace MdcAi.OpenAiApi;
 
+using Newtonsoft.Json.Linq;
+
 public class ChatRequest
 {
     [JsonProperty("model")] public string Model { get; set; } = AiModel.Gpt35Turbo;
@@ -71,7 +73,35 @@ public class ChatRequest
     [JsonProperty("reasoning_effort", NullValueHandling = NullValueHandling.Ignore)]
     public string ReasoningEffort { get; set; }
 
+    /// <summary>
+    /// Adapter-owned provider reasoning request options. This is the wire shape for providers
+    /// that take a NESTED reasoning object (e.g. OpenRouter's <c>"reasoning": { "effort": ...,
+    /// "max_tokens": ... }</c>). VMs never decide which form a provider wants; the provider
+    /// capability adapter populates either this or <see cref="ReasoningEffort"/>. Null omits the
+    /// property entirely.
+    /// </summary>
+    [JsonProperty("reasoning", NullValueHandling = NullValueHandling.Ignore)]
+    public JObject ReasoningOptions { get; set; }
+
     [JsonProperty("tools")] public ChatTool[] Tools { get; set; }
+
+    /// <summary>
+    /// Which tool selection the API should apply: a plain string ("auto"/"none"/"required") or an
+    /// explicit function object. Kept as raw JSON so both forms round trip exactly; providers that
+    /// don't support a form simply don't fill it.
+    /// </summary>
+    [JsonProperty("tool_choice", NullValueHandling = NullValueHandling.Ignore)]
+    public JToken ToolChoice { get; set; }
+
+    /// <summary>Whether the model may issue several tool calls in one response (OpenAI-style).</summary>
+    [JsonProperty("parallel_tool_calls", NullValueHandling = NullValueHandling.Ignore)]
+    public bool? ParallelToolCalls { get; set; }
+
+    /// <summary>
+    /// Explicit provider routing hint. The router prefers this key; the legacy model-id heuristic
+    /// (slash => OpenRouter) is only a fallback for old callers that never stamp it.
+    /// </summary>
+    [JsonIgnore] public string ProviderKey { get; set; }
 
     public ChatRequest() { }
 
@@ -91,8 +121,12 @@ public class ChatRequest
         PresencePenalty = basedOn.PresencePenalty;
         LogitBias = basedOn.LogitBias;
         ReasoningEffort = basedOn.ReasoningEffort;
+        ReasoningOptions = basedOn.ReasoningOptions?.DeepClone() as JObject;
         User = basedOn.User;
         Tools = basedOn.Tools;
+        ToolChoice = basedOn.ToolChoice?.DeepClone();
+        ParallelToolCalls = basedOn.ParallelToolCalls;
+        ProviderKey = basedOn.ProviderKey;
     }
 }
 
@@ -106,19 +140,76 @@ public class FunctionTool
 {
     [JsonProperty("name")] public string Name { get; set; }
     [JsonProperty("description")] public string Description { get; set; }
-    [JsonProperty("parameters")] public FunctionToolParams Parameters { get; set; }
+
+    /// <summary>
+    /// The authoritative JSON Schema for this tool's arguments. Any rich schema is expressible
+    /// (nested objects, arrays, enums, anyOf, constraints, additionalProperties:false) - unlike
+    /// the legacy shallow <see cref="FunctionToolParams"/>.
+    /// </summary>
+    [JsonProperty("parameters")] public JObject Parameters { get; set; }
+
+    /// <summary>Optional strict-schema flag, controlled by provider capability (DeepSeek beta strict mode must not be enabled blindly).</summary>
+    [JsonProperty("strict", NullValueHandling = NullValueHandling.Ignore)]
+    public bool? Strict { get; set; }
+
+    /// <summary>Builds a tool from the legacy shallow param shape; parameters become a plain object schema.</summary>
+    public static FunctionTool FromLegacy(string name, string description, FunctionToolParams parameters)
+    {
+        return new FunctionTool
+        {
+            Name = name,
+            Description = description,
+            Parameters = parameters?.ToJObject()
+        };
+    }
 }
 
+/// <summary>
+/// Legacy shallow parameter schema, kept for source compatibility. New tool definitions should
+/// use a JObject JSON Schema via <see cref="FunctionTool.Parameters"/>; this shape cannot
+/// describe nested objects, arrays, enums or reusable definitions.
+/// </summary>
 public class FunctionToolParams
 {
     [JsonProperty("type")] public string Type { get; set; }
     [JsonProperty("properties")] public Dictionary<string, FunctionToolParamProperty> Properties { get; set; }
     [JsonProperty("required")] public string[] Required { get; set; }
     [JsonProperty("additionalProperties")] public bool AdditionalProperties { get; set; }
+
+    public JObject ToJObject()
+    {
+        var jObj = new JObject { ["type"] = Type ?? "object" };
+
+        if (Properties is { Count: > 0 })
+        {
+            var props = new JObject();
+            foreach (var kv in Properties)
+                props[kv.Key] = kv.Value?.ToJObject() ?? new JObject();
+            jObj["properties"] = props;
+        }
+
+        if (Required is { Length: > 0 })
+            jObj["required"] = JArray.FromObject(Required);
+
+        if (AdditionalProperties)
+            jObj["additionalProperties"] = true;
+
+        return jObj;
+    }
 }
 
 public class FunctionToolParamProperty
 {
     [JsonProperty("type")] public string Type { get; set; }
     [JsonProperty("description")] public string Description { get; set; }
+
+    public JObject ToJObject()
+    {
+        var jObj = new JObject();
+        if (!string.IsNullOrEmpty(Type))
+            jObj["type"] = Type;
+        if (!string.IsNullOrEmpty(Description))
+            jObj["description"] = Description;
+        return jObj;
+    }
 }

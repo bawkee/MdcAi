@@ -42,6 +42,14 @@ public interface IOpenAiApi
 
     Task<ChatResult> CreateChatCompletions(ChatRequest request);
     IAsyncEnumerable<ChatResult> CreateChatCompletionsStream(ChatRequest request);
+
+    /// <summary>
+    /// Cancellation-aware alternates: the token reaches the HTTP send, the response body read
+    /// and every SSE line read, so stopping observation also stops network work. Providers that
+    /// don't care keep using the token-less overloads which pass <see cref="CancellationToken.None"/>.
+    /// </summary>
+    Task<ChatResult> CreateChatCompletions(ChatRequest request, CancellationToken ct);
+    IAsyncEnumerable<ChatResult> CreateChatCompletionsStream(ChatRequest request, CancellationToken ct);
 }
 
 /// <summary>

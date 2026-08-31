@@ -48,6 +48,25 @@ public class AiModel
     [JsonProperty("pricing")] public AiModelPricing Pricing { get; set; }
     [JsonProperty("reasoning")] public AiModelReasoning Reasoning { get; set; }
 
+    /// <summary>
+    /// Provider-returned capability metadata (OpenRouter: <c>supported_parameters</c>). The app
+    /// derives tool support and other capability questions from this when present instead of
+    /// guessing from model ids. Null/absent when the provider does not report it.
+    /// </summary>
+    [JsonProperty("supported_parameters")] public string[] SupportedParameters { get; set; }
+
+    /// <summary>
+    /// Whether this model supports tool/function calling, derived from authoritative provider
+    /// metadata when available. Returns null when unknown - the capability adapter then decides
+    /// whether a tested heuristic may advertise tools; unknown models are never advertised tools
+    /// by default.
+    /// </summary>
+    [JsonIgnore]
+    public bool? SupportsTools =>
+        SupportedParameters is { Length: > 0 } parameters
+            ? parameters.Any(p => string.Equals(p, "tools", StringComparison.OrdinalIgnoreCase))
+            : (bool?)null;
+
     /// <summary>Which provider found this model ("openai", "openrouter", ...). Stamped by the client.</summary>
     [JsonIgnore] public string ProviderKey { get; set; }
 

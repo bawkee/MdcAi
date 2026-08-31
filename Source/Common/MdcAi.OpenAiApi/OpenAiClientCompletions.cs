@@ -1,4 +1,4 @@
-﻿#region Copyright Notice
+#region Copyright Notice
 // Copyright (c) 2023 Bojan Sala
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -19,15 +19,21 @@ public partial class OpenAiClient
 {
     internal const string ChatCompletionsUrl = "chat/completions";
 
-    public Task<ChatResult> CreateChatCompletions(ChatRequest request)
+    public Task<ChatResult> CreateChatCompletions(ChatRequest request) =>
+        CreateChatCompletions(request, CancellationToken.None);
+
+    public Task<ChatResult> CreateChatCompletions(ChatRequest request, CancellationToken ct)
     {
         request.Streaming = false;
-        return Client.RequestAsync<ChatResult>(new RelativeUri(ChatCompletionsUrl), HttpMethod.Post, request);        
+        return Client.RequestAsync<ChatResult>(new RelativeUri(ChatCompletionsUrl), HttpMethod.Post, request, ct);
     }
 
-    public IAsyncEnumerable<ChatResult> CreateChatCompletionsStream(ChatRequest request)
+    public IAsyncEnumerable<ChatResult> CreateChatCompletionsStream(ChatRequest request) =>
+        CreateChatCompletionsStream(request, CancellationToken.None);
+
+    public IAsyncEnumerable<ChatResult> CreateChatCompletionsStream(ChatRequest request, CancellationToken ct)
     {
         request.Streaming = true;
-        return Client.RequestStreamingAsync<ChatResult>(new RelativeUri(ChatCompletionsUrl), HttpMethod.Post, request);
+        return Client.RequestStreamingAsync<ChatResult>(new RelativeUri(ChatCompletionsUrl), HttpMethod.Post, request, ct);
     }
 }

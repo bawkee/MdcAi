@@ -86,6 +86,40 @@ public class ChatApiRouterTests
     }
 
     [Fact]
+    public void Routes_by_explicit_provider_key_over_heuristic()
+    {
+        var handler = AllModelsHandler();
+        using var router = Router(handler);
+
+        // A bare OpenAI-looking id explicitly routed to OpenRouter must hit OpenRouter.
+        router.CreateChatCompletions(new ChatRequest
+                                     {
+                                         Model = "gpt-4o",
+                                         ProviderKey = AiProviders.OpenRouterKey
+                                     })
+               .GetAwaiter().GetResult();
+
+        var request = Assert.Single(handler.Requests);
+        Assert.Equal("openrouter.ai", request.RequestUri.Host);
+    }
+
+    [Fact]
+    public void ResolveProviderForRequest_prefers_known_key_and_falls_back_to_heuristic()
+    {
+        using var router = Router(new FakeHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)));
+
+        Assert.Equal(AiProviders.OpenRouter,
+                     router.ResolveProviderForRequest(new ChatRequest { Model = "gpt-4o", ProviderKey = AiProviders.OpenRouterKey }));
+        Assert.Equal(AiProviders.OpenAi,
+                     router.ResolveProviderForRequest(new ChatRequest { Model = "gpt-4o" }));
+        Assert.Equal(AiProviders.OpenRouter,
+                     router.ResolveProviderForRequest(new ChatRequest { Model = "anthropic/claude-3-5-sonnet" }));
+        // Unknown provider key degrades to the legacy heuristic instead of throwing.
+        Assert.Equal(AiProviders.OpenAi,
+                     router.ResolveProviderForRequest(new ChatRequest { Model = "gpt-4o", ProviderKey = "deepseek" }));
+    }
+
+    [Fact]
     public void GetAllModels_skips_openai_when_no_key()
     {
         var handler = AllModelsHandler();

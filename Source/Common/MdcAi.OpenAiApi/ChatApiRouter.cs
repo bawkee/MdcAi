@@ -135,16 +135,35 @@ public class ChatApiRouter : IOpenAiApi, IDisposable
         return all.ToArray();
     }
 
-    public Task<ChatResult> CreateChatCompletions(ChatRequest request)
+    public Task<ChatResult> CreateChatCompletions(ChatRequest request) =>
+        CreateChatCompletions(request, CancellationToken.None);
+
+    public Task<ChatResult> CreateChatCompletions(ChatRequest request, CancellationToken ct)
     {
-        var provider = ResolveProviderForModel(request.Model);
-        return ClientFor(provider).CreateChatCompletions(request);
+        var provider = ResolveProviderForRequest(request);
+        return ClientFor(provider).CreateChatCompletions(request, ct);
     }
 
-    public IAsyncEnumerable<ChatResult> CreateChatCompletionsStream(ChatRequest request)
+    public IAsyncEnumerable<ChatResult> CreateChatCompletionsStream(ChatRequest request) =>
+        CreateChatCompletionsStream(request, CancellationToken.None);
+
+    public IAsyncEnumerable<ChatResult> CreateChatCompletionsStream(ChatRequest request, CancellationToken ct)
     {
-        var provider = ResolveProviderForModel(request.Model);
-        return ClientFor(provider).CreateChatCompletionsStream(request);
+        var provider = ResolveProviderForRequest(request);
+        return ClientFor(provider).CreateChatCompletionsStream(request, ct);
+    }
+
+    /// <summary>
+    /// Resolves the provider for a request: the explicit <see cref="ChatRequest.ProviderKey"/>
+    /// wins (that is how a direct DeepSeek provider or a bare duplicate model id stays clean),
+    /// legacy callers that never stamp it fall back to the model-id heuristic.
+    /// </summary>
+    public AiProvider ResolveProviderForRequest(ChatRequest request)
+    {
+        if (request.ProviderKey != null && AiProviders.IsKnown(request.ProviderKey))
+            return AiProviders.Get(request.ProviderKey);
+
+        return ResolveProviderForModel(request.Model);
     }
 
     private OpenAiClient ClientFor(AiProvider provider)

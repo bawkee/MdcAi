@@ -159,7 +159,7 @@ public sealed partial class Conversation : ILogging
                 async () => await SettingsDialog.ShowAsync() == ContentDialogResult.Primary);
 
             messages.Where(r => r.Name == "SetSelection")
-                    .Do(r => viewModel.SelectedMessage = viewModel.Messages[Convert.ToInt32(r.Data)].Selector)
+                    .Do(r => SelectFromRenderer(viewModel, r.Data))
                     .SubscribeSafe()
                     .DisposeWith(disposables);
 
@@ -208,7 +208,7 @@ public sealed partial class Conversation : ILogging
             webReady.Select(_ => viewModel.WhenAnyValue(vm => vm.SelectedMessage))
                     .Switch()
                     .Select(msg => msg?.Message == null ? -1 : viewModel.Messages.IndexOf(msg.Message))
-                    .Do(i => SetSelectedMessage(i))
+                    .Do(i => SetSelectedMessage(i, viewModel))
                     .SubscribeSafe()
                     .DisposeWith(disposables);
 
@@ -273,12 +273,63 @@ public sealed partial class Conversation : ILogging
 
         return;
 
-        void SetSelectedMessage(int index) => ChatWebView.CoreWebView2.PostWebMessageAsJson(
-            JsonConvert.SerializeObject(new WebViewRequestDto
+        /// <summary>
+        /// Renderer → host selection. Legacy chats post an array index; the agentic (v2
+        /// transcript) renderer posts a stable item id like "message:{guid}" / "thinking:{guid}"
+        /// / "tool:{callId}". Map both onto the matching ChatMessageVm's selector.
+        /// </summary>
+        void SelectFromRenderer(ConversationVm vm, object data)
+        {
+            if (data == null)
+                return;
+
+            ChatMessageVm target = null;
+
+            if (data is string text)
             {
-                Name = "SetSelection",
-                Data = index
-            }));
+                // Stable transcript item id (v2).
+                var nodes = vm.Head?.Message.GetNextMessages().ToArray() ?? Array.Empty<ChatMessageVm>();
+
+                if (text.StartsWith("message:", StringComparison.Ordinal) ||
+                    text.StartsWith("thinking:", StringComparison.Ordinal))
+                {
+                    var id = text[(text.IndexOf(':') + 1)..];
+                    target = nodes.FirstOrDefault(n => n.Id == id);
+                }
+                else if (text.StartsWith("tool:", StringComparison.Ordinal))
+                {
+                    var callId = text[(text.IndexOf(':') + 1)..];
+                    // Select the assistant message that owns the tool call (the activity pairs
+                    // with its call/result node).
+                    target = nodes.FirstOrDefault(n => n.ToolCalls?.Any(c => c.Id == callId) == true);
+                }
+            }
+            else if (int.TryParse(data?.ToString(), out var idx))
+            {
+                // Legacy numeric index.
+                if (idx >= 0 && idx < vm.Messages.Count)
+                    target = vm.Messages[idx];
+            }
+
+            if (target != null)
+                vm.SelectedMessage = target.Selector;
+        }
+
+        void SetSelectedMessage(int index, ConversationVm vm)
+        {
+            if (vm.ToolsEnabled && index >= 0 && index < vm.Messages.Count)
+            {
+                // Agentic mode: the renderer selects by stable item id, never an index.
+                var id = $"message:{vm.Messages[index].Id}";
+                ChatWebView.CoreWebView2.PostWebMessageAsJson(
+                    JsonConvert.SerializeObject(new WebViewRequestDto { Name = "SetSelection", Data = id }));
+                return;
+            }
+
+            // Legacy mode keeps posting the array index.
+            ChatWebView.CoreWebView2.PostWebMessageAsJson(
+                JsonConvert.SerializeObject(new WebViewRequestDto { Name = "SetSelection", Data = index }));
+        }
     }
 
     private void BuildModelsMenu(ConversationVm vm, IEnumerable<AiModel> models)

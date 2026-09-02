@@ -202,7 +202,18 @@ public class ConversationVm : ActivatableViewModel, ILogging
         });
 
         StopSessionCmd = ReactiveCommand.Create(
-            () => _controller.Stop(),
+            () =>
+            {
+                // Agentic turn active -> cancel the controller (streams, tools, backoff, jobs).
+                if (_controller.IsTurnActive)
+                {
+                    _controller.Stop();
+                    return;
+                }
+
+                // Classic mode -> stop the tail message's completion stream.
+                Tail?.Message.StopCompletionCmd.Execute().Subscribe();
+            },
             this.WhenAnyValue(vm => vm.IsCompleting));
 
         // In agentic mode the controller drives IsCompleting; the classic mode has its own
@@ -339,6 +350,10 @@ public class ConversationVm : ActivatableViewModel, ILogging
                           Head = data.Message.Selector;
                       else
                           Tail.Message.Next = data.Message;
+
+                      // Name the conversation from its first user message (deterministic; the
+                      // AI-suggest path in the list may follow later).
+                      GenerateConversationName();
 
                       // Agentic conversation: the user message is appended, then the explicit
                       // turn runner takes over (the tail-driven subscription is off for tools).
@@ -949,6 +964,27 @@ public class ConversationVm : ActivatableViewModel, ILogging
             return modelId;
 
         return $"{AiProviders.Get(model.ProviderKey).DisplayName} · {model.DisplayLabel}";
+    }
+
+    /// <summary>
+    /// Derives a short, human conversation title from the FIRST user message. Deterministic and
+    /// dependency-free (no API call), so a new conversation always gets a name even when the
+    /// AI-suggest path has no usable key. Only applies while the placeholder name is showing.
+    /// </summary>
+    public void GenerateConversationName()
+    {
+        if (!IsNew)
+            return;
+        if (Name != null && Name != "My Conversation")
+            return; // already named / deliberately named
+
+        var firstUser = Head?.Message.GetNextMessages().FirstOrDefault(m => m.Role == ChatMessageRole.User)?.Content;
+        if (string.IsNullOrWhiteSpace(firstUser))
+            return;
+
+        Name = firstUser.Trim().CompactWhitespace();
+        if (Name.Length > 48)
+            Name = Name[..48].TrimEnd() + "…";
     }
 
     /// <summary>Which provider the current working model belongs to (catalog-stamped when

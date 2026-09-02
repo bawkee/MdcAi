@@ -191,14 +191,15 @@
         <WebView2 x:Name="ChatWebView"
                   DefaultBackgroundColor="Transparent" />
 
-        <!-- Stop generating button -->
+        <!-- Stop generating button: conversation-level. In agentic mode IsCompleting + StopSessionCmd
+             are driven by the turn controller; the classic path mirrors them onto the tail message. -->
         <Grid VerticalAlignment="Bottom"
               HorizontalAlignment="Right"
               Margin="0,0,30,20"
-              Visibility="{x:Bind ViewModel.Tail.Message.IsCompleting, Mode=OneWay, Converter={StaticResource boolToVis}, FallbackValue=Collapsed}">
+              Visibility="{x:Bind ViewModel.IsCompleting, Mode=OneWay, Converter={StaticResource boolToVis}, FallbackValue=Collapsed}">
           <Button Content="Stop Generating"
                   Padding="10,5,10,8"
-                  Command="{x:Bind ViewModel.Tail.Message.StopCompletionCmd, Mode=OneWay}">
+                  Command="{x:Bind ViewModel.StopSessionCmd, Mode=OneWay}">
             <Button.Resources>
               <!-- Transparent backgrounds so the button is visible but translucent -->
               <SolidColorBrush x:Key="ButtonBackground" Color="{StaticResource ImportantTransButtonBackground}" />

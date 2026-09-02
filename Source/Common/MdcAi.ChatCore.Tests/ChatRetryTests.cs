@@ -72,6 +72,25 @@ public class ChatRetryTests
     }
 
     [Fact]
+    public async Task Stalled_stream_before_delta_is_retried_as_a_timeout()
+    {
+        // The SSE idle watchdog throws TaskCanceledException(TimeoutException) when a stream
+        // goes silent. Before any delta that must be classified as a retryable timeout and
+        // retried over the same frozen request; never left "working" forever.
+        _api.EnqueueThrows(new TaskCanceledException(
+            "stalled", new TimeoutException("The stream stalled - no data for 90s.")));
+        _api.EnqueueStream(FakeChunks.Content("recovered"), FakeChunks.Finish());
+
+        var sink = Sink();
+        var result = await BuildService(ChatRetryPolicy.Default).RunTurnAsync(Turn(), sink, CancellationToken.None);
+
+        Assert.Equal(ChatTurnOutcome.Completed, result.Outcome);
+        Assert.Equal("recovered", sink.Messages[^1].Content);
+        Assert.Equal(2, _api.Requests.Count);
+        Assert.Single(_clock.Delays);
+    }
+
+    [Fact]
     public async Task Ineligible_auth_failure_never_retries()
     {
         _api.EnqueueThrows(new OpenAiInvalidApiKeyException("invalid api key"));

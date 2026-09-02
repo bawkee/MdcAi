@@ -91,11 +91,28 @@ public static class HttpClientExtensions
         object postData = null) where T : ApiResult =>
         RequestStreamingAsync<T>(client, uri, verb, postData, CancellationToken.None);
 
+    public static IAsyncEnumerable<T> RequestStreamingAsync<T>(
+        this HttpClient client,
+        Uri uri,
+        HttpMethod verb,
+        object postData,
+        CancellationToken ct) where T : ApiResult =>
+        RequestStreamingAsync<T>(client, uri, verb, postData, StreamIdleTimeout, ct);
+
+    /// <summary>
+    /// Idle-stream watchdog: how long the SSE reader waits for ANY line (data or keep-alive
+    /// comment) before treating the stream as stalled. Reasoners can pause mid-stream, so the
+    /// default is generous; a real stall must NOT spin the UI forever - it surfaces as a
+    /// retryable timeout instead. Overridable per call (tests use small values).
+    /// </summary>
+    public static TimeSpan StreamIdleTimeout { get; set; } = TimeSpan.FromSeconds(90);
+
     public static async IAsyncEnumerable<T> RequestStreamingAsync<T>(
         this HttpClient client,
         Uri uri,
         HttpMethod verb,
         object postData,
+        TimeSpan idleTimeout,
         [EnumeratorCancellation] CancellationToken ct) where T : ApiResult
     {
         var response = await client.RequestAsync(uri, verb, postData, true, ct);
@@ -108,8 +125,39 @@ public static class HttpClientExtensions
 
         using var reader = new StreamReader(stream);
 
-        while (await reader.ReadLineAsync(ct) is { } line)
+        var lastActivityUtc = DateTime.UtcNow;
+
+        while (true)
         {
+            // A stream that delivers nothing for the idle window is stalled - fail it loudly
+            // (retryable timeout) instead of leaving the app "working" forever.
+            ct.ThrowIfCancellationRequested();
+
+            var idleMs = (int)Math.Max(1, idleTimeout.TotalMilliseconds);
+            var remaining = idleMs - (int)(DateTime.UtcNow - lastActivityUtc).TotalMilliseconds;
+
+            string line;
+            try
+            {
+                if (remaining <= 0)
+                    throw new OperationCanceledException(CancellationToken.None);
+
+                using var idleCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                idleCts.CancelAfter(remaining);
+                line = await reader.ReadLineAsync(idleCts.Token);
+            }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                // The idle watchdog fired (not user cancellation): treat as a retryable stall.
+                var stall = new TimeoutException($"The stream stalled - no data for {idleTimeout.TotalSeconds:0}s.");
+                throw new TaskCanceledException(null, stall);
+            }
+
+            if (line == null)
+                yield break; // EOF = stream finished
+
+            lastActivityUtc = DateTime.UtcNow;
+
             if (line.StartsWith("data:"))
                 line = line.Substring("data:".Length);
 

@@ -120,6 +120,112 @@ public class CancellationTests
         Assert.Equal("Hel", received[0].Choices[0].Delta.Content);
     }
 
+    [Fact]
+    public async Task Idle_stream_watchdog_fails_a_stalled_stream_as_a_timeout()
+    {
+        // A stream that delivers one chunk and then goes completely silent must be failed by the
+        // idle watchdog instead of leaving the caller "working" forever. The exception is a
+        // TaskCanceledException wrapping a TimeoutException - the retry classifier maps that to
+        // a retryable timeout (verified in ChatCore's retry tests).
+        using var handler = new CancellableStreamHandler(); // one chunk, then silence
+        using var client = new HttpClient(handler) { BaseAddress = BaseUri };
+
+        var received = new List<ChatResult>();
+
+        var ex = await Assert.ThrowsAsync<TaskCanceledException>(async () =>
+        {
+            await foreach (var chunk in client.RequestStreamingAsync<ChatResult>(
+                                new Uri("chat/completions", UriKind.Relative),
+                                HttpMethod.Post,
+                                new ChatRequest(),
+                                TimeSpan.FromMilliseconds(300),
+                                CancellationToken.None))
+            {
+                received.Add(chunk);
+            }
+        });
+
+        Assert.Single(received); // the first chunk was delivered before the stall killed the stream
+        Assert.IsType<TimeoutException>(ex.InnerException);
+        Assert.Contains("stalled", ex.InnerException.Message);
+    }
+
+    [Fact]
+    public async Task Keep_alive_comments_reset_the_idle_watchdog_window()
+    {
+        // Comments (": OPENROUTER PROCESSING") ARE liveness: a stream that keeps commenting is
+        // not stalled, even when the total span exceeds the idle window.
+        using var handler = new SlowCommentHandler();
+        using var client = new HttpClient(handler) { BaseAddress = BaseUri };
+
+        var chunks = await client.RequestStreamingAsync<ChatResult>(
+            new Uri("chat/completions", UriKind.Relative),
+            HttpMethod.Post,
+            new ChatRequest(),
+            TimeSpan.FromMilliseconds(150),
+            CancellationToken.None).CollectAsync();
+
+        Assert.Single(chunks);
+        Assert.Equal("done", chunks[0].Choices[0].Delta.Content);
+    }
+
+    /// <summary>A handler whose SSE stream comments every ~100 ms (under the window), then a chunk + DONE.</summary>
+    private sealed class SlowCommentHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            var content = new StreamContent(new TimedCommentStream());
+            content.Headers.ContentType = new MediaTypeHeaderValue("text/event-stream");
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = content });
+        }
+
+        private sealed class TimedCommentStream : Stream
+        {
+            private int _phase;
+
+            public override bool CanRead => true;
+            public override bool CanSeek => false;
+            public override bool CanWrite => false;
+            public override long Length => throw new NotSupportedException();
+            public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+
+            public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+            {
+                string data = null;
+                switch (_phase++)
+                {
+                    case 0: data = ": OPENROUTER PROCESSING\n"; break;
+                    case 1:
+                        await Task.Delay(100, cancellationToken);
+                        data = ": OPENROUTER PROCESSING\n";
+                        break;
+                    case 2:
+                        await Task.Delay(100, cancellationToken);
+                        data = ": OPENROUTER PROCESSING\n";
+                        break;
+                    case 3:
+                        await Task.Delay(100, cancellationToken);
+                        data = """data: {"id":"a","choices":[{"index":0,"delta":{"content":"done"}}]}""" + "\n\ndata: [DONE]\n\n";
+                        break;
+                    default:
+                        return 0;
+                }
+
+                var bytes = Encoding.UTF8.GetBytes(data);
+                bytes.CopyTo(buffer, offset);
+                return bytes.Length;
+            }
+
+            public override void Flush() { }
+            public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+            public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+            public override void SetLength(long value) => throw new NotSupportedException();
+            public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+        }
+    }
+
     /// <summary>
     /// A handler whose SSE stream delivers one chunk and then blocks until the request token
     /// cancels - so a caller that stops mid-stream observes the cancellation instead of a hang.

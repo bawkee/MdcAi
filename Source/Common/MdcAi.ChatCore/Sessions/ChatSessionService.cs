@@ -211,6 +211,24 @@ public sealed class ChatSessionService
                 // Cancellation during backoff surfaces here (no retry dispatch).
                 continue;
             }
+            catch (OperationCanceledException ex) when (!ct.IsCancellationRequested
+                                                        && attempt < _retryPolicy.MaxAttempts
+                                                        && !assembler.HasAcceptedDelta)
+            {
+                // The SSE idle watchdog fired (a stalled stream, not user cancellation):
+                // classify as a retryable timeout and retry the exact frozen request.
+                var category = ChatFailureClassifier.Classify(ex); // TaskCanceledException -> timeout
+                if (!ChatFailureClassifier.IsRetryable(category))
+                    throw;
+
+                var scheduledUntil = _clock.UtcNow + _retryPolicy.DelayForRetry(attempt);
+                await sink.SetModelRequestAttemptAsync(new ChatModelRequestAttemptView(
+                    attempt, "failed", "scheduled", category, ex.GetType().Name,
+                    scheduledUntil), ct);
+
+                await _clock.DelayAsync(_retryPolicy.DelayForRetry(attempt), ct);
+                continue;
+            }
         }
 
         throw new InvalidOperationException("Retry policy exhausted without result - unreachable.");

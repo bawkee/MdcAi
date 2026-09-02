@@ -1,4 +1,4 @@
-﻿#region Copyright Notice
+#region Copyright Notice
 // Copyright (c) 2023 Bojan Sala
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -74,30 +74,42 @@ public class ConversationPreviewVm : ActivatableViewModel, IConversationPreviewI
             .Where(_ => !Debugging.Enabled || Debugging.AutoSuggestNames)
             .SelectMany(_ => Observable.FromAsync(async () =>
             {
-                var convo = (ConversationVm)FullItem;
-                var result = await convo.Api.CreateChatCompletions(new()
+                try
                 {
-                    Messages = new List<ChatMessage>(
-                        new[]
-                        {                            
-                            new ChatMessage(
-                                ChatMessageRole.System,
-                                // This prompt doesn't really give the expected results with 3.5
-                                "Create a witty summary of the content with a maximum of 20 characters. Do not use " +
-                                "punctuation or line breaks. The names should be complete words or phrases, avoiding " +
-                                "any cutoffs. A sprinkle of humor is welcome, as long as it adheres to the character " +
-                                "limit. Maximum 20 characters!"
-                            ),
-                            new ChatMessage(
-                                ChatMessageRole.User,
-                                $"CONTENT:\r\n\r\n{convo.Head.Message.Content}")
-                        }),
-                    Model = AiModel.Gpt35Turbo
-                });
+                    var convo = (ConversationVm)FullItem;
+                    var result = await convo.Api.CreateChatCompletions(new()
+                    {
+                        Messages = new List<ChatMessage>(
+                            new[]
+                            {
+                                new ChatMessage(
+                                    ChatMessageRole.System,
+                                    // This prompt doesn't really give the expected results with 3.5
+                                    "Create a witty summary of the content with a maximum of 20 characters. Do not use " +
+                                    "punctuation or line breaks. The names should be complete words or phrases, avoiding " +
+                                    "any cutoffs. A sprinkle of humor is welcome, as long as it adheres to the character " +
+                                    "limit. Maximum 20 characters!"
+                                ),
+                                new ChatMessage(
+                                    ChatMessageRole.User,
+                                    $"CONTENT:\r\n\r\n{convo.Head.Message.Content}")
+                            }),
+                        // Use the conversation's own working model so the naming call routes to a
+                        // provider the user actually has a key for (the old hardcoded GPT-3.5
+                        // failed whenever OpenAI wasn't configured).
+                        Model = convo.SelectedModel ?? AiModel.Gpt35Turbo,
+                        ProviderKey = convo.ResolveProviderKey()
+                    });
 
-                var suggestion = result.Choices.Last().Message.Content.CompactWhitespace().Trim('\"');
+                    var suggestion = result.Choices.Last().Message.Content.CompactWhitespace().Trim('\"');
 
-                return suggestion;
+                    return suggestion;
+                }
+                catch (Exception)
+                {
+                    // Naming is best-effort; a missing key or hiccup keeps the generic name.
+                    return Name;
+                }
             }))
             .ObserveOnMainThread()
             .Do(name => Name = name)

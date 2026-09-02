@@ -18,6 +18,7 @@ using System.Threading;
 using LocalDal;
 using ChatCore.Sessions;
 using MdcAi.ChatUI.ViewModels;
+using Newtonsoft.Json.Linq;
 using OpenAiApi;
 
 /// <summary>
@@ -119,7 +120,10 @@ public sealed class ConversationChatSessionSink : IChatSessionSink
             if (_activeAssistant.TryGetValue(messageId, out var node))
             {
                 node.Content = delta.Content;
-                node.ReasoningContent = delta.ReasoningContent;
+                // Display reasoning: reasoning_content wins; when the provider only sent raw
+                // delta.reasoning (OpenRouter routes do this), surface it for the thinking block
+                // WITHOUT touching the protocol fields (raw + details are replayed verbatim).
+                node.ReasoningContent = delta.ReasoningContent ?? NormalizeRawReasoning(delta.Reasoning);
                 node.ReasoningRaw = delta.Reasoning;
                 node.ReasoningDetails = delta.ReasoningDetails;
                 node.CompletionState = "streaming";
@@ -146,7 +150,7 @@ public sealed class ConversationChatSessionSink : IChatSessionSink
 
             var message = record.Message;
             node.Content = message.Content;
-            node.ReasoningContent = message.ReasoningContent;
+            node.ReasoningContent = message.ReasoningContent ?? NormalizeRawReasoning(message.ReasoningRaw);
             node.ReasoningRaw = message.ReasoningRaw;
             node.ReasoningDetails = message.ReasoningDetails;
             node.ToolCalls = message.ToolCalls;
@@ -247,6 +251,19 @@ public sealed class ConversationChatSessionSink : IChatSessionSink
         }
 
         await _persistence.SaveTurnCheckpointAsync(turn, ct);
+    }
+
+    /// <summary>
+    /// Normalizes raw <c>delta.reasoning</c> / message <c>reasoning</c> into DISPLAY text when
+    /// <c>reasoning_content</c> is absent (some OpenRouter routes only send the raw field).
+    /// Display-only: never fed back onto the wire - protocol replay uses the raw tokens.
+    /// </summary>
+    private static string NormalizeRawReasoning(JToken raw)
+    {
+        if (raw == null)
+            return null;
+
+        return new ChatMessage(ChatMessageRole.Assistant) { ReasoningRaw = raw }.ReasoningText;
     }
 
     /// <summary>

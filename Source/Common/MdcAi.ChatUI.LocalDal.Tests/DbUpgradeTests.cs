@@ -216,6 +216,51 @@ public class DbUpgradeTests : IDisposable
     }
 
     [Fact]
+    public async Task Turn_without_owning_conversation_row_violates_fk()
+    {
+        // Documents the root cause of the "SQLite Error 19: FOREIGN KEY constraint failed" crash
+        // on a brand-new conversation: a DbChatTurn whose IdConversation has no Conversations row
+        // cannot be saved. The ChatUI persistence guards against this (skips the pre-save
+        // checkpoint until the app's own SaveCmd creates the conversation).
+        var dbPath = TempDb("orphan-turn.db");
+
+        await using (var db = new UserProfileDbContext(dbPath))
+        {
+            await db.Database.MigrateAsync();
+
+            db.Turns.Add(new DbChatTurn
+            {
+                IdTurn = "orphan-turn-1",
+                IdConversation = "convo-not-in-db",
+                Origin = "human",
+                Status = "started",
+                StartedTs = DateTime.UtcNow
+            });
+
+            await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+        }
+
+        // A fresh context: the same turn SAVES fine once the conversation row exists.
+        await using var db2 = new UserProfileDbContext(dbPath);
+        db2.Conversations.Add(new DbConversation
+        {
+            IdConversation = "convo-in-db",
+            IdCategory = "default",
+            Name = "existing",
+            CreatedTs = DateTime.UtcNow
+        });
+        db2.Turns.Add(new DbChatTurn
+        {
+            IdTurn = "orphan-turn-2",
+            IdConversation = "convo-in-db",
+            Origin = "human",
+            Status = "started",
+            StartedTs = DateTime.UtcNow
+        });
+        await db2.SaveChangesAsync();
+    }
+
+    [Fact]
     public async Task Agentic_checkpoints_round_trip_through_ef()
     {
         var dbPath = TempDb("agentic.db");

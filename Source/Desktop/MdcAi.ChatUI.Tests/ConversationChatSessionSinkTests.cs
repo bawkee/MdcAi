@@ -22,6 +22,23 @@ using Newtonsoft.Json.Linq;
 using OpenAiApi;
 
 /// <summary>
+/// The pure checkpoint precondition behind the FK crash fix: a turn checkpoint is only
+/// persisted when the owning conversation row exists (a brand-new conversation has none yet).
+/// </summary>
+public class TurnCheckpointPreconditionsTests
+{
+    [Theory]
+    [InlineData(null, true, true)]   // no conversation id -> nothing to guard
+    [InlineData("", true, true)]     // empty id -> nothing to guard
+    [InlineData("c1", true, true)]   // row exists -> persist
+    [InlineData("c1", false, false)] // row missing -> skip (the fix)
+    public void Conversation_exists_precondition(string conversationId, bool rowExists, bool expected)
+    {
+        Assert.Equal(expected, TurnCheckpointPreconditions.ConversationExists(conversationId, rowExists));
+    }
+}
+
+/// <summary>
 /// ConversationChatSessionSink in isolation: nodes are appended to the fork, the placeholder id
 /// stays stable through commit, branch projection is exact, and abandonment detaches cleanly.
 /// </summary>

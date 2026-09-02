@@ -30,6 +30,17 @@ public interface IChatSessionPersistence
 }
 
 /// <summary>
+/// Pure checkpoint precondition (unit-testable without a DB): a turn checkpoint may only be
+/// persisted when its owning conversation row already exists - otherwise the IdConversation
+/// FK would violate SQLite Error 19 on a brand-new, not-yet-saved conversation.
+/// </summary>
+public static class TurnCheckpointPreconditions
+{
+    public static bool ConversationExists(string conversationId, bool conversationRowExists) =>
+        string.IsNullOrEmpty(conversationId) || conversationRowExists;
+}
+
+/// <summary>
 /// SQLite implementation via the app's transient UserProfileDbContext. When the container has
 /// not been installed (plain unit tests) checkpointing is a deliberate no-op - the transcript
 /// behavior is what those tests exercise, not durable storage.
@@ -42,6 +53,17 @@ public sealed class SqliteChatSessionPersistence : IChatSessionPersistence
             return;
 
         await using var db = AppServices.GetUserProfileDb();
+
+        // A brand-new conversation has no SQLite row yet: the app's own SaveCmd creates it once
+        // the turn settles. Inserting a turn whose IdConversation FK points at a missing row
+        // violates the constraint (SQLite Error 19), so skip the checkpoint in that case - the
+        // turn is still fully durable in memory and the conversation save persists the rest.
+        // From the second turn onward the conversation exists and checkpoints persist normally.
+        var conversationRowExists = string.IsNullOrEmpty(turn.IdConversation)
+                                    || await db.Conversations.AnyAsync(c => c.IdConversation == turn.IdConversation, ct);
+        if (!TurnCheckpointPreconditions.ConversationExists(turn.IdConversation, conversationRowExists))
+            return;
+
         var existing = await db.Turns.FirstOrDefaultAsync(t => t.IdTurn == turn.IdTurn, ct);
 
         if (existing == null)

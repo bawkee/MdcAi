@@ -819,12 +819,11 @@ public class ConversationVm : ActivatableViewModel, ILogging
                     if (!ToolsEnabled)
                         return m.CreateWebViewSetMessageRequest();
 
-                    // Agentic conversations: while a turn is streaming, send the cheap
-                    // single-item upsert (P2-04) instead of the full snapshot per token; the
-                    // snapshot is re-posted whenever the structure settles or navigation resumes.
-                    return IsCompleting
-                               ? ProjectLiveItem() ?? ProjectTranscript()
-                               : ProjectTranscript();
+                    // Agentic: structural changes (new nodes / assembled commits / turn settle)
+                    // post a full snapshot; pure content deltas on the streaming tail post a
+                    // cheap single-item upsert. The FIRST post is ALWAYS a full snapshot - the
+                    // renderer must never see an upsert for an item it has no snapshot for.
+                    return ProjectForWebView();
                 })
                 .ObserveOnMainThread()
                 .Do(r => LastMessagesRequest = r)
@@ -957,6 +956,34 @@ public class ConversationVm : ActivatableViewModel, ILogging
     public string ResolveProviderKey() =>
         Models?.FirstOrDefault(m => m.ModelID == SelectedModel)?.ProviderKey
         ?? AiProviders.GetProviderForModelId(SelectedModel).Key;
+
+    /// <summary>
+    /// Projections are gated on structural-vs-delta by the per-conversation Revision:
+    /// structural mutations (sink bumps) force a full snapshot; pure content deltas on the
+    /// same tail node produce a cheap single-item upsert. The first-ever post for any
+    /// renderer session is ALWAYS a full snapshot, so the renderer never receives an upsert
+    /// for an item it has no snapshot for (the "empty root div on first message" bug).
+    /// </summary>
+    private long _postedSnapshotRevision = -1;
+
+    /// <summary>The next payload for the WebView, decided by this rule + the last-snapshot gate.</summary>
+    public WebViewRequestDto ProjectForWebView()
+    {
+        var nodes = Head?.Message.GetNextMessages().ToArray() ?? Array.Empty<ChatMessageVm>();
+        var structural = Revision != _postedSnapshotRevision;
+
+        // No snapshot delivered to the renderer yet (fresh conversation, or the tree changed
+        // since the last snapshot): always a full snapshot.
+        if (structural || _postedSnapshotRevision == -1)
+        {
+            _postedSnapshotRevision = Revision;
+            return ProjectTranscript();
+        }
+
+        // Same structure, only streaming content: a live single-item upsert if the tail node
+        // is a streaming/completed assistant placeholder; else fall back to a snapshot.
+        return ProjectLiveItem() ?? ProjectTranscript();
+    }
 
     /// <summary>
     /// Projects the current selected branch into the versioned transcript snapshot. Tool

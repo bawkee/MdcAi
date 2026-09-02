@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import App from './App';
 import { resetWebView, emitWebMessage } from './testUtils';
+import { applyUpsert } from './transcriptReducer';
 
 // Stub the heavy highlighter pipeline like the main App test does.
 jest.mock('./components/highlighter', () => {
@@ -276,5 +277,44 @@ describe('v2 transcript selection & revision', () => {
         fireEvent.click(screen.getByText('a').closest('.chat-item'));
         // selection posts with the stable id, not an index
         expect(window.chrome.webview.postMessage).toHaveBeenCalledWith({ Name: 'SetSelection', Data: 'message:u' });
+    });
+});
+
+describe('transcript reducer null-safety', () => {
+    it('applyUpsert does not crash when no snapshot arrived yet (the blank-root-div bug)', () => {
+        // Regression net: the host guarantees snapshot-first, but an upsert that somehow lands
+        // before any snapshot must be absorbed, never throw.
+        const payload = {
+            Item: { Id: 'message:x', Kind: 'message', Revision: 1, Message: { Role: 'assistant' } },
+            BaseRevision: 1
+        };
+
+        const next = applyUpsert(null, payload);
+        expect(next).toBeTruthy();
+        expect(next.items['message:x']).toBeDefined();
+    });
+
+    it('applyUpsert rejects stale deltas against the snapshot revision', () => {
+        const snapshot = {
+            items: { a: { Id: 'a' } },
+            order: ['a'],
+            revision: 5,
+            conversationId: 'c',
+            key: 'c@5'
+        };
+
+        const stale = applyUpsert(snapshot, {
+            Item: { Id: 'b', Kind: 'message', Revision: 2 },
+            BaseRevision: 2
+        });
+        expect(stale.items.b).toBeUndefined();
+        expect(stale.order).toEqual(['a']);
+
+        const fresh = applyUpsert(snapshot, {
+            Item: { Id: 'b', Kind: 'message', Revision: 6 },
+            BaseRevision: 6
+        });
+        expect(fresh.items.b).toBeDefined();
+        expect(fresh.order).toEqual(['a', 'b']);
     });
 });

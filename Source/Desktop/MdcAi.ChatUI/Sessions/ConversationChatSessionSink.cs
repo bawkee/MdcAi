@@ -106,6 +106,7 @@ public sealed class ConversationChatSessionSink : IChatSessionSink
                 _convo.Tail.Message.Next = node;
 
             _activeAssistant[node.Id] = node;
+            _convo.BumpRevision(); // structural: a new assistant node entered the fork
             id = node.Id;
         });
 
@@ -154,6 +155,7 @@ public sealed class ConversationChatSessionSink : IChatSessionSink
             node.ProviderKey = _turn?.ProviderKey;
 
             _activeAssistant.Remove(messageId);
+            _convo.BumpRevision(); // structural: assembled tool_calls/finish_reason now visible
         }));
     }
 
@@ -213,6 +215,8 @@ public sealed class ConversationChatSessionSink : IChatSessionSink
                 _convo.Head = node.Selector;
             else
                 _convo.Tail.Message.Next = node;
+
+            _convo.BumpRevision(); // structural: a tool-result node entered the fork
         }));
 
     public async ValueTask CheckpointTurnAsync(ChatTurnCheckpoint checkpoint, CancellationToken ct)

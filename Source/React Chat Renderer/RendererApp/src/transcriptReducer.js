@@ -46,13 +46,18 @@ export function applySnapshot(state, data) {
     };
 }
 
-// Merges one upserted item (id may be new or replace an existing one).
+// Merges one upserted item (id may be new or replace an existing one). Null-safe: an upsert
+// that arrives before any snapshot (the host guarantees snapshot-first, belt and braces) is
+// absorbed into a minimal state instead of crashing the renderer into a blank root div.
 export function applyUpsert(state, payload) {
     if (!payload || !payload.Item || !payload.Item.Id)
         return state;
 
     const item = payload.Item;
     const itemRev = item.Revision ?? 0;
+
+    if (!state)
+        state = { items: {}, order: [], revision: 0, conversationId: null, key: null };
 
     // Stale delta: the item's revision is older than the current snapshot revision,
     // or it was based on an older snapshot than what the renderer already holds.

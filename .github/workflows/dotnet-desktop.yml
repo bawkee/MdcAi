@@ -43,9 +43,9 @@ jobs:
       env:
         Configuration: ${{ matrix.configuration }}
 
-    # Build
+    # Build (use /m so independent projects build in parallel — MSBuild defaults to 1 job)
     - name: Build the app
-      run: msbuild $env:Solution_Name /p:Configuration=$env:Configuration /p:Platform=$env:Platform /t:Publish /p:PublishReadyToRun=False
+      run: msbuild $env:Solution_Name /m /p:Configuration=$env:Configuration /p:Platform=$env:Platform /t:Publish /p:PublishReadyToRun=False
       env:
         Configuration: ${{ matrix.configuration }}
         Platform: ${{ matrix.platform }}

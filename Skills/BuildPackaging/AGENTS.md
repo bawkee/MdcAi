@@ -54,16 +54,29 @@ Many code paths branch on `#if UNPACKAGED` / `&& (Packaged) != 'True'`. The impo
 
 ## How to build
 
+> **MSBuild parallelism gotcha (this bites everyone):** the `msbuild` CLI's default maximum job
+> count is **1** (`-m:1`) — without `/m`, every project in the solution builds one at a time and
+> extra cores sit idle. **Always pass `/m`** (all cores) or `/m:8` (cap it if you want headroom
+> while working). This repo's scripts and CI now pass `/m`; the VS 2022 IDE also lets you set
+> parallel builds — but note that within a single project the .NET/WinUI compile is still
+> single-threaded, and the WinUI app project is the long pole of this solution's graph, so `/m`
+> alone cuts a full clean rebuild by only ~20% here. **The far bigger daily win is not rebuilding
+> what hasn't changed:** prefer incremental `Build` (above) over `Rebuild`/`Clean`, and skip
+> `Publish` when you only need an exe to run — see below.
+
 ### From the CLI (unpackaged, quick dev build)
 ```
 # restore + build the solution (packaged default too heavy; use unpackaged for dev)
-msbuild Source/Desktop/MdcAi.sln /restore /p:Configuration=Debug-Unpackaged /p:Platform=x64
+msbuild Source/Desktop/MdcAi.sln /m /restore /p:Configuration=Debug-Unpackaged /p:Platform=x64
 ```
-or just `dotnet build` on a single class periphery project may not run the WinUI XAML compile — **prefer `msbuild`** for the app projects.
+or just `dotnet build` on a single class periphery project may not run the WinUI XAML compile — **prefer `msbuild`** for the app projects. If you edit a file in only one project, building the whole solution re-evaluates ~8 projects (≈30s of toolchain overhead alone); building just that project's `.csproj` is much faster:
+```
+msbuild Source/Desktop/MdcAi.ChatUI/MdcAi.ChatUI.csproj /m /p:Configuration=Debug-Unpackaged /p:Platform=x64
+```
 
 ### Packaged (Store-ready) build
 ```
-msbuild Source/Desktop/MdcAi.sln /p:Configuration=Release /p:Platform=x64 /t:Publish /p:UapAppxPackageBuildMode=StoreUpload /p:AppxBundle=Always /p:Packaged=True /p:PublishReadyToRun=False
+msbuild Source/Desktop/MdcAi.sln /m /p:Configuration=Release /p:Platform=x64 /t:Publish /p:UapAppxPackageBuildMode=StoreUpload /p:AppxBundle=Always /p:Packaged=True /p:PublishReadyToRun=False
 ```
 Output lands under `Source/Desktop/MdcAi/bin/<platform>/Release/<tfm>/win10-<platform>/AppPackages/…`.
 
@@ -71,7 +84,7 @@ Output lands under `Source/Desktop/MdcAi/bin/<platform>/Release/<tfm>/win10-<pla
 `Source/.github/workflows/dotnet-desktop.yml` builds **`Release-Unpackaged x64`**:
 ```
 msbuild $env:Solution_Name /t:Restore /p:Configuration=Release-Unpackaged
-msbuild $env:Solution_Name /p:Configuration=Release-Unpackaged /p:Platform=x64 /t:Publish /p:PublishReadyToRun=False
+msbuild $env:Solution_Name /m /p:Configuration=Release-Unpackaged /p:Platform=x64 /t:Publish /p:PublishReadyToRun=False
 ```
 and uploads `Source/Desktop/MdcAi/bin` as an artifact. It uses `setup-dotnet` 6.0.x (stale — the SDK is now 9 in `global.json`), `setup-msbuild`, checkout v3.
 

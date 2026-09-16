@@ -14,8 +14,10 @@ $targetFramework = "$($csprojContent.Project.PropertyGroup.TargetFramework)" -re
 
 dotnet restore
 
+# /m = build projects in parallel (MSBuild defaults to a single job without it).
 foreach ($platform in $platforms) {
   & $msbuild `
+    /m `
     /p:Configuration=Release `
     /p:Platform=$platform `
     /p:UapAppxPackageBuildMode=StoreUpload `

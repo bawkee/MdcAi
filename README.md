@@ -1,6 +1,6 @@
 ![WideBanner3](https://github.com/bawkee/MdcAi/assets/38323343/76a5b2f2-5afb-4810-b9f2-f341f59f7acd)
 
-# MDC Ai
+# MDC AI
 
 [![WinUI3 Unpackaged](https://github.com/bawkee/mdcai/actions/workflows/dotnet-desktop.yml/badge.svg?event=push)](https://github.com/bawkee/mdcai/actions/workflows/dotnet-desktop.yml)
 
